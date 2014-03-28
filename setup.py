@@ -74,20 +74,50 @@ params.update( {
     'version': "0.0.1",
     'description': doclines[0],
     'long_description': ' '.join(doclines[1:]),
-    'maintainer': 'Ilya Etingof <ilya@glas.net>',
+    'maintainer': 'Ilya Etingof <ilya@snmplabs.com>',
     'author': "Ilya Etingof",
-    'author_email': "ilya@glas.net ",
+    'author_email': "ilya@snmplabs.com",
     'url': "http://sourceforge.net/projects/snmpfwd/",
     'platforms': ['any'],
     'classifiers': [ x for x in classifiers.split('\n') if x ],
-    'scripts': [ 'snmpfwd.py' ],
+    'scripts': [ 'scripts/snmpfwd-client.py', 'scripts/snmpfwd-server.py' ],
+    'packages': [ 'snmpfwd', 'snmpfwd.trunking' ],
     'license': "BSD"
   } )
 
-if "py2exe" in sys.argv:
+if 'py2exe' in sys.argv:
     import py2exe
     # fix executables
     params['console'] = params['scripts']
     del params['scripts']
 
+    # pysnmp used by snmpfwd dynamically loads some of its *.py files
+    params['options'] = {
+        'py2exe': {
+            'includes': [
+                'pysnmp.smi.mibs.*',
+                'pysnmp.smi.mibs.instances.*',
+                'pysnmp.entity.rfc3413.oneliner.*'
+            ],
+            'bundle_files': 1,
+            'compressed': True
+        }
+    }
+
+    params['zipfile'] = None
+
+    del params['data_files']  # no need to store these in .exe
+
+    # additional modules used by snmpfwd but not seen by py2exe
+    for m in ('random',):
+        try:
+            __import__(m)
+        except ImportError:
+            continue
+        else:
+            params['options']['py2exe']['includes'].append(m)
+
+    print("!!! Make sure your pysnmp/pyasn1 packages are NOT .egg'ed!!!")
+
 setup(**params)
+

@@ -35,14 +35,14 @@ available on your system.
 http://sourceforge.net/projects/pyasn1/
 http://sourceforge.net/projects/pysnmp/
 
-For secure SNMPv3 communication,PyCrypto should also be installed:
+For secure SNMPv3 communication, PyCrypto should also be installed:
 
 http://www.pycrypto.org
 
 Getting help
 ------------
 
-If something does not work as expected, please try browsing snmpsim
+If something does not work as expected, please try browsing snmpfwd
 mailing list archives:
 
 http://lists.sourceforge.net/mailman/listinfo/snmpfwd-users
@@ -55,4 +55,4 @@ Feedback
 I'm interested in bug reports and fixes, suggestions and improvements.
 
 ---
-Written by Ilya Etingof <ilya@glas.net>, 2012
+Written by Ilya Etingof <ilya@snmplabs.com>, 2014
