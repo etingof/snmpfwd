@@ -11,10 +11,7 @@ import getopt
 import traceback
 import random
 import re
-if sys.version_info[0] < 3 and sys.version_info[1] < 5:
-    from md5 import md5
-else:
-    from hashlib import md5
+import socket
 from pyasn1.codec.ber import encoder, decoder
 from pyasn1.compat.octets import str2octs
 from pyasn1.error import PyAsn1Error
@@ -215,12 +212,10 @@ class CommandResponder(cmdrsp.CommandResponderBase):
         if trunkRsp['error-indication']:
             log.msg('remote end reported error-indication %s, NOT sending response to peer address %s' % (trunkRsp['error-indication'], trunkReq['transport-address']))
         else:
-            self.sendRsp(
+            self.sendPdu(
                 snmpEngine,
                 stateReference,
-                errorStatus = v2c.apiPDU.getErrorStatus(trunkRsp['pdu']),
-                errorIndex = v2c.apiPDU.getErrorIndex(trunkRsp['pdu']),
-                varBinds = v2c.apiPDU.getVarBinds(trunkRsp['pdu'])
+                trunkRsp['pdu']
             )
 
         self.releaseStateInformation(stateReference)
@@ -237,15 +232,9 @@ transportDispatcher.registerRoutingCbFun(lambda td,t,d: td)
 transportDispatcher.setSocketMap()  # use global asyncore socket map
 
 def requestObserver(snmpEngine, execpoint, variables, cbCtx):
-    snmpEngineId = ''.join(
-            [ '%2.2x' % x for x in snmpEngine.snmpEngineID.asNumbers() ]
-        )
-    contextEngineId = ''.join(
-            [ '%2.2x' % x for x in variables['contextEngineId'].asNumbers() ]
-        )
     cbCtx['credentials-id'] = macro.expandMacros(
         credIdMap.get(
-            ( snmpEngineId,
+            ( snmpEngine.snmpEngineID,
               variables['transportDomain'],
               variables['securityModel'],
               variables['securityLevel'],
@@ -254,7 +243,7 @@ def requestObserver(snmpEngine, execpoint, variables, cbCtx):
         variables
     )
 
-    k = '#'.join([str(x) for x in (contextEngineId, variables['contextName'])])
+    k = '#'.join([str(x) for x in (variables['contextEngineId'], variables['contextName'])])
     for x,y in contextIdList:
         if y.match(k):
             cbCtx['context-id'] = macro.expandMacros(x, variables)
@@ -280,13 +269,13 @@ def requestObserver(snmpEngine, execpoint, variables, cbCtx):
 # XXX          cbCtx['content-id']
     )
     cbCtx['request'] = {
-        'engine-id': snmpEngineId,
+        'engine-id': snmpEngine.snmpEngineID,
         'transport-domain': variables['transportDomain'],
         'transport-address': variables['transportAddress'][0], # XXX
         'security-model': variables['securityModel'],
         'security-level': variables['securityLevel'],
         'security-name': variables['securityName'],
-        'context-engine-id': contextEngineId,
+        'context-engine-id': variables['contextEngineId'],
         'context-name': variables['contextName']
     }
 
@@ -296,10 +285,6 @@ for configEntryPath in cfgTree.getPathsToAttr('credentials-id'):
     log.msg('configuring credentials %s (at %s)...' % (credId, '.'.join(configEntryPath)))
 
     engineId = cfgTree.getAttrValue('engine-id', *configEntryPath)
-    if engineId[:2].lower() == '0x':
-        engineId = rfc1902.OctetString(hexValue=engineId[2:])
-    else:
-        engineId = rfc1902.OctetString(engineId)
     
     if engineId in engineIdMap:
         snmpEngine, snmpContext, snmpEngineMap = engineIdMap[engineId]
@@ -324,7 +309,7 @@ for configEntryPath in cfgTree.getPathsToAttr('credentials-id'):
 
         log.msg('new engine-id %s' % snmpEngine.snmpEngineID.prettyPrint())
 
-    configKey.append(''.join([ '%2.2x' % x for x in snmpEngine.snmpEngineID.asNumbers() ]))
+    configKey.append(str(snmpEngine.snmpEngineID))
 
     transportDomain = cfgTree.getAttrValue('transport-domain', *configEntryPath)
     transportDomain = rfc1902.ObjectName(transportDomain)
@@ -434,19 +419,10 @@ for contextCfgPath in cfgTree.getPathsToAttr('context-id'):
           cfgTree.getAttrValue('context-name-pattern', *contextCfgPath) )
     )
     
-    log.msg('configuring context ID %s (at %s), composite key: %s' % (contextId, '.'.join(contextCfgPath), k))
-    
+    log.msg('configuring context ID %s (at %s), composite key: %r' % (contextId, '.'.join(contextCfgPath), k))
+
     contextIdList.append((contextId, re.compile(k)))
     
-for contentCfgPath in cfgTree.getPathsToAttr('content-id'):
-    contentId = cfgTree.getAttrValue('content-id', *contentCfgPath)
-    log.msg('configuring content ID %s (at %s)...' % (contentId, '.'.join(contentCfgPath)))
-    contentIdMap[
-        ( cfgTree.getAttrValue('pdu-type', *contentCfgPath),
-          cfgTree.getAttrValue('oid', *contentCfgPath),
-          cfgTree.getAttrValue('value', *contentCfgPath) )
-    ] = contentId
-
 for routeCfgPath in cfgTree.getPathsToAttr('using-trunk-id-list'):
     trunkIdList = cfgTree.getAttrValue('using-trunk-id-list', *routeCfgPath, vector=True)
     log.msg('configuring destination trunk ID(s) %s (at %s)...' % (','.join(trunkIdList), '.'.join(routeCfgPath)))
@@ -513,7 +489,7 @@ while True:
     except KeyboardInterrupt:
         log.msg('shutting down process...')
         break
-    except PySnmpError:
+    except (PySnmpError, SnmpfwdError, socket.error):
         log.msg('error: %s' % sys.exc_info()[1])
         continue
     except Exception:

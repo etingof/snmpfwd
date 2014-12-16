@@ -13,6 +13,7 @@ class TrunkingClient(asyncore.dispatcher_with_send):
         self.__secret = secret
         self.__dataCbFun = dataCbFun
         self.__pendingReqs = {}
+        self.__pendingCounter = 0
         self.__input = ''
         self.__announcementData = ''
         asyncore.dispatcher_with_send.__init__(self)
@@ -77,7 +78,15 @@ class TrunkingClient(asyncore.dispatcher_with_send):
                 self.__input, self.__secret
             )
             if msgId is None:
+                if self.__pendingCounter > 5:
+                    log.msg('incomplete message pending for too long, closing connection with %s' % (self,))
+                    self.close()
+                    return
+                else:
+                    self.__pendingCounter += 1
                 return
+
+            self.__pendingCounter = 0
 
             if contentId == 0:    # request
                 self.__dataCbFun(self, msgId, msg)

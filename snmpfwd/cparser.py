@@ -2,6 +2,7 @@ import os
 import sys
 import re
 import error
+from pysnmp.proto.rfc1902 import OctetString
 
 # Constants
 SYMBOL_OPTION = ':'
@@ -235,6 +236,9 @@ class Parser:
                         break
 
                     # Accept token as atribute value
+                    if token.lower()[:2] == '0x':
+                        token = str(OctetString(hexValue=token[2:]))
+
                     object[option].append(token)
                 
             # If FSM is gonna stop

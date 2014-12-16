@@ -28,7 +28,7 @@ class Request(univ.Sequence):
 class Response(univ.Sequence):
     componentType = namedtype.NamedTypes(
         namedtype.NamedType('error-indication', univ.OctetString('')),
-        namedtype.NamedType('pdu', univ.OctetString())
+        namedtype.NamedType('pdu', univ.OctetString(''))
     )
 
 class Announcement(univ.Sequence):
@@ -62,7 +62,7 @@ def prepareRequestData(msgId, req, secret):
 def prepareResponseData(msgId, rsp, secret):
     r = Response()
     r['error-indication'] = rsp.get('error-indication', '')
-    r['pdu'] = encoder.encode(rsp['pdu'])
+    r['pdu'] = rsp['pdu'] and encoder.encode(rsp['pdu']) or ''
 
     msg = Message()
     msg['version'] = 0
@@ -88,7 +88,7 @@ def prepareDataElements(octets, secret):
     try:
         msg, octets = decoder.decode(octets, asn1Spec=Message())
     except SubstrateUnderrunError:
-        return
+        return None, None, None, octets
 
     if msg['version'] > 0:
         raise SnmpfwdError('Unsupported protocol version: %s' % msg['version'])
@@ -109,7 +109,8 @@ def prepareDataElements(octets, secret):
         rsp['pdu'], _ = decoder.decode(r['pdu'], asn1Spec=rfc1905.PDUs())
     elif msg['content-id'] == 1:   # response
         rsp['error-indication'] = r['error-indication']
-        rsp['pdu'], _ = decoder.decode(r['pdu'], asn1Spec=rfc1905.PDUs())
+        if not r['error-indication']:
+            rsp['pdu'], _ = decoder.decode(r['pdu'], asn1Spec=rfc1905.PDUs())
     elif msg['content-id'] == 2:   # announcement
         rsp['trunk-id'] = r['trunk-id']
         

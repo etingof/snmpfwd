@@ -11,10 +11,7 @@ import getopt
 import traceback
 import random
 import re
-if sys.version_info[0] < 3 and sys.version_info[1] < 5:
-    from md5 import md5
-else:
-    from hashlib import md5
+import socket
 from pyasn1.codec.ber import encoder, decoder
 from pyasn1.compat.octets import str2octs
 from pyasn1.error import PyAsn1Error
@@ -186,50 +183,7 @@ random.seed()
 
 gCurrentRequestContext = {}
 
-class CommandGenerator(cmdgen.CommandGeneratorBase):
-    def sendReq(self,
-                snmpEngine,
-                addrName,
-                reqPdu,
-                cbFun,
-                cbCtx=None,
-                contextEngineId=None,
-                contextName=''):
-        ( transportDomain,
-          transportAddress,
-          timeout,
-          retryCount,
-          messageProcessingModel,
-          securityModel,
-          securityName,
-          securityLevel ) = getTargetInfo(snmpEngine, addrName)
-
-        sendRequestHandle = cmdgen.getNextHandle()
-
-        try:
-            self._sendPdu(snmpEngine,
-                          transportDomain,
-                          transportAddress,
-                          messageProcessingModel,
-                          securityModel,
-                          securityName,
-                          securityLevel,
-                          contextEngineId,
-                          contextName,
-                          reqPdu,
-                          timeout,
-                          retryCount,
-                          0, # retries
-                          sendRequestHandle,
-                          (self.processResponsePdu, (cbFun, cbCtx)))
-        except StatusInformation:
-            statusInformation = sys.exc_info()[1]
-            cbFun(sendRequestHandle, statusInformation['errorIndication'],
-                  0, 0, (), cbCtx)
-
-        return sendRequestHandle
-
-commandGenerator = CommandGenerator()
+commandGenerator = cmdgen.CommandGenerator()
 
 origCredIdList = []
 contentIdMap = {}
@@ -246,11 +200,6 @@ for peerEntryPath in cfgTree.getPathsToAttr('peer-id'):
     log.msg('configuring peer %s (at %s)...' % (peerId, '.'.join(peerEntryPath)))
 
     engineId = cfgTree.getAttrValue('engine-id', *peerEntryPath)
-    if engineId[:2].lower() == '0x':
-        engineId = rfc1902.OctetString(hexValue=engineId[2:])
-    else:
-        engineId = rfc1902.OctetString(engineId)
-
     if engineId in engineIdMap:
         snmpEngine, snmpContext, snmpEngineMap = engineIdMap[engineId]
         log.msg('using engine-id: %s' % snmpEngine.snmpEngineID.prettyPrint())
@@ -268,7 +217,7 @@ for peerEntryPath in cfgTree.getPathsToAttr('peer-id'):
         log.msg('new engine-id %s' % snmpEngine.snmpEngineID.prettyPrint())
 
     transportDomain = cfgTree.getAttrValue('transport-domain', *peerEntryPath)
-    transportDomain = rfc1902.ObjectName(transportDomain)
+    transportDomain = rfc1902.ObjectName(str(transportDomain))
 
     if transportDomain in snmpEngineMap['transportDomain']:
         log.msg('using transport endpoint with transport ID %s' % (transportDomain,))
@@ -301,12 +250,6 @@ for peerEntryPath in cfgTree.getPathsToAttr('peer-id'):
     securityName = cfgTree.getAttrValue('security-name', *peerEntryPath)
 
     contextEngineId = cfgTree.getAttrValue('context-engine-id', *peerEntryPath, default=None)
-    if contextEngineId is not None:
-        contextEngineId = rfc1902.OctetString(hexValue=contextEngineId)
-        if contextEngineId[:2].lower() == '0x':
-            contextEngineId = rfc1902.OctetString(hexValue=contextEngineId[2:])
-        else:
-            contextEngineId = rfc1902.OctetString(contextEngineId)
     contextName = cfgTree.getAttrValue('context-name', *peerEntryPath, default='')
 
     if securityModel in (1, 2):
@@ -355,14 +298,14 @@ for peerEntryPath in cfgTree.getPathsToAttr('peer-id'):
     else:
         raise SnmpfwdError('unknown security-model: %s' % securityModel)
 
-    credId = '/'.join([str(x) for x in securityName, securityLevel, securityModel, contextEngineId, contextName])
+    credId = '/'.join([str(x) for x in securityName, securityLevel, securityModel])
     if credId in snmpEngineMap['credIds']:
         log.msg('using credentials ID %s...' % credId)
     else:
         config.addTargetParams(
             snmpEngine, credId, securityName, securityLevel, securityModel-1
         )
-        log.msg('new credentials %s, security-name %s, security-level %s, security-model %s, context-engine-id %s, context-name %s' % (credId, securityName, securityLevel, securityModel, contextEngineId, contextName)) 
+        log.msg('new credentials %s, security-name %s, security-level %s, security-model %s' % (credId, securityName, securityLevel, securityModel)) 
         snmpEngineMap['credIds'].add(credId)
 
     h, p = cfgTree.getAttrValue('transport-address', *peerEntryPath).split(':',1)
@@ -387,7 +330,7 @@ for origCredCfgPath in cfgTree.getPathsToAttr('original-credentials-id'):
           cfgTree.getAttrValue('context-name-pattern', *origCredCfgPath) )
     )
 
-    log.msg('configuring original credentials ID %s (at %s), composite key: %s' % (origCredId, '.'.join(origCredCfgPath), k))
+    log.msg('configuring original credentials ID %s (at %s), composite key: %r' % (origCredId, '.'.join(origCredCfgPath), k))
 
     origCredIdList.append((origCredId, re.compile(k)))
 
@@ -403,8 +346,7 @@ for routeCfgPath in cfgTree.getPathsToAttr('using-peer-id-list'):
             else:
                 routingMap[k] = peerIdList
 
-def __rspCbFun(sendRequestHandle, errorIndication,
-               errorStatus, errorIndex, varBinds, cbCtx):
+def __rspCbFun(snmpEngine, sendRequestHandle, errorIndication, rspPDU, cbCtx):
     trunkId, msgId, trunkReq = cbCtx
     
     trunkRsp = {}
@@ -413,12 +355,7 @@ def __rspCbFun(sendRequestHandle, errorIndication,
         log.msg('SNMP error returned for message ID %s received from trunk %s: %s' % (msgId, trunkId, errorIndication))
         trunkRsp['error-indication'] = errorIndication
 
-    rspPdu = v2c.apiPDU.getResponse(trunkReq['pdu'])
-    v2c.apiPDU.setErrorStatus(rspPdu, errorStatus)
-    v2c.apiPDU.setErrorIndex(rspPdu, errorIndex)
-    v2c.apiPDU.setVarBinds(rspPdu, varBinds)
-
-    trunkRsp['pdu'] = rspPdu
+    trunkRsp['pdu'] = rspPDU
     
     log.msg('sending message ID %s received from trunk %s, original peer address %s' % (msgId, trunkId, trunkReq['transport-address']))
 
@@ -450,8 +387,7 @@ def dataCbFun(trunkId, msgId, msg):
     cbCtx = trunkId, msgId, msg
 
     if errorIndication:
-        __rspCbFun(None, errorIndication, 5, 1,
-                   v2c.apiPDU.getVarBinds(msg['pdu']), cbCtx)
+        __rspCbFun(snmpEngine, None, errorIndication, None, cbCtx)
         return
 
     for peerId in peerIdList:
@@ -460,11 +396,14 @@ def dataCbFun(trunkId, msgId, msg):
 
         snmpEngine, contextEngineId, contextName = peerIdMap[peerId]
 
-        commandGenerator.sendReq(
-            snmpEngine, peerId, msg['pdu'],
-            __rspCbFun, cbCtx,
-            contextEngineId=macro.expandMacros(contextEngineId, msg),
-            contextName=macro.expandMacros(contextName, msg)
+        commandGenerator.sendPdu(
+            snmpEngine,
+            peerId,
+            macro.expandMacros(contextEngineId, msg),
+            macro.expandMacros(contextName, msg),
+            msg['pdu'],
+            __rspCbFun,
+            cbCtx
         )
 
 trunkingManager = TrunkingManager(dataCbFun)
@@ -517,7 +456,7 @@ while True:
     except KeyboardInterrupt:
         log.msg('shutting down process...')
         break
-    except PySnmpError:
+    except (PySnmpError, SnmpfwdError, socket.error):
         log.msg('error: %s' % sys.exc_info()[1])
         continue
     except Exception:
