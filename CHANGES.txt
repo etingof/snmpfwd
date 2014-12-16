@@ -1,3 +1,13 @@
+0.0.2rc0 (released 21-12-2014)
+---------------------------
+
+- Switched to the latest pysnmp API
+- snmpEngineId and contextEngineId are always treated as hex in config
+- contextEngineId and contextName now configured separately from
+  SNMP authentication credentials
+- Dead trunk detection implemented
+- Switched to Python logging module
+
 0.0.1 (released 01-04-2014)
 ---------------------------
 
