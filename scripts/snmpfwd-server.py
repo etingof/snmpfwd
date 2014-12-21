@@ -198,7 +198,7 @@ class CommandResponder(cmdrsp.CommandResponderBase):
         trunkReq['pdu'] = PDU
 
         for trunkId in trunkIdList:
-            log.msg('sending request message from peer address %s through trunk %s' % (trunkReq['transport-address'], trunkId))
+            log.msg('received SNMP message from peer address %s, sending through trunk %s' % (trunkReq['transport-address'], trunkId))
 
             cbCtx = trunkId, trunkReq, snmpEngine, stateReference
 
@@ -207,11 +207,11 @@ class CommandResponder(cmdrsp.CommandResponderBase):
     def __recvCb(self, trunkRsp, cbCtx):
         trunkId, trunkReq, snmpEngine, stateReference = cbCtx
 
-        log.msg('received response message through trunk %s, sending to peer address %s' % (trunkId, trunkReq['transport-address']))
-
         if trunkRsp['error-indication']:
-            log.msg('remote end reported error-indication %s, NOT sending response to peer address %s' % (trunkRsp['error-indication'], trunkReq['transport-address']))
+            log.msg('received trunk message through trunk %s, remote end reported error-indication %s, NOT sending response to peer address %s' % (trunkId, trunkRsp['error-indication'], trunkReq['transport-address']))
         else:
+            log.msg('received trunk message through trunk %s, sending SNMP response to peer address %s' % (trunkId, trunkReq['transport-address'],))
+
             self.sendPdu(
                 snmpEngine,
                 stateReference,
@@ -223,6 +223,7 @@ class CommandResponder(cmdrsp.CommandResponderBase):
 credIdMap = {}
 peerIdMap = {}
 contextIdList = []
+contentIdList = []
 contentIdMap = {}
 trunkIdMap = {}
 engineIdMap = {}
@@ -230,6 +231,14 @@ engineIdMap = {}
 transportDispatcher = AsynsockDispatcher()
 transportDispatcher.registerRoutingCbFun(lambda td,t,d: td)
 transportDispatcher.setSocketMap()  # use global asyncore socket map
+
+snmpPduTypesMap = {
+    rfc1905.GetRequestPDU.tagSet: 'GET',
+    rfc1905.SetRequestPDU.tagSet: 'SET',
+    rfc1905.GetNextRequestPDU.tagSet: 'GETNEXT',
+    rfc1905.GetBulkRequestPDU.tagSet: 'GETBULK',
+    rfc1905.ResponsePDU.tagSet: 'RESPONSE'
+}
 
 def requestObserver(snmpEngine, execpoint, variables, cbCtx):
     cbCtx['credentials-id'] = macro.expandMacros(
@@ -259,14 +268,22 @@ def requestObserver(snmpEngine, execpoint, variables, cbCtx):
     else:
         cbCtx['peer-id'] = None
 
-    cbCtx['content-id'] = contentIdMap.get(
-        variables['pdu'].tagSet            # XXX oid/value
-    )
+    k = [ snmpPduTypesMap.get(variables['pdu'].tagSet, '?') ]
+    k.extend([ str(x[0]) for x in v2c.apiPDU.getVarBinds(variables['pdu']) ])
+    k = '#'.join(k)
+
+    for x,y in contentIdList:
+        if y.match(k):
+            cbCtx['content-id'] = macro.expandMacros(x, variables)
+            break
+        else:
+            cbCtx['content-id'] = None
+
     cbCtx['trunk-id-list'] = trunkIdMap.get(
         ( cbCtx['credentials-id'],
           cbCtx['context-id'],
-          cbCtx['peer-id'] )
-# XXX          cbCtx['content-id']
+          cbCtx['peer-id'],
+          cbCtx['content-id'] )
     )
     cbCtx['request'] = {
         'engine-id': snmpEngine.snmpEngineID,
@@ -423,18 +440,31 @@ for contextCfgPath in cfgTree.getPathsToAttr('context-id'):
 
     contextIdList.append((contextId, re.compile(k)))
     
+for contentCfgPath in cfgTree.getPathsToAttr('content-id'):
+    contentId = cfgTree.getAttrValue('content-id', *contentCfgPath)
+    k = [ cfgTree.getAttrValue('pdu-type-pattern', *contentCfgPath) ]
+    k.extend(
+        [ str(x) for x in cfgTree.getAttrValue('oid-prefix-pattern-list', *contentCfgPath, vector=True) ]
+    )
+    k = '#'.join(k)
+    
+    log.msg('configuring content ID %s (at %s), composite key: %r' % (contentId, '.'.join(contentCfgPath), k))
+
+    contentIdList.append((contentId, re.compile(k)))
+
 for routeCfgPath in cfgTree.getPathsToAttr('using-trunk-id-list'):
     trunkIdList = cfgTree.getAttrValue('using-trunk-id-list', *routeCfgPath, vector=True)
     log.msg('configuring destination trunk ID(s) %s (at %s)...' % (','.join(trunkIdList), '.'.join(routeCfgPath)))
     for credId in cfgTree.getAttrValue('matching-credentials-id-list', *routeCfgPath, vector=True):
         for peerId in cfgTree.getAttrValue('matching-peer-id-list', *routeCfgPath, vector=True):
             for contextId in cfgTree.getAttrValue('matching-context-id-list', *routeCfgPath, vector=True):
-                k = credId, contextId, peerId
-                if k in trunkIdMap:
-                    log.msg('duplicate credentials-id %s, context-id %s, peer-id %s at trunk-id(s) %s' % (credId, contextId, peerId, ','.join(trunkId)))
-                    sys.exit(-1)
-                else:
-                    trunkIdMap[k] = trunkIdList
+                for contentId in cfgTree.getAttrValue('matching-content-id-list', *routeCfgPath, vector=True):
+                    k = credId, contextId, peerId, contentId
+                    if k in trunkIdMap:
+                        log.msg('duplicate credentials-id %s, context-id %s, peer-id %s, content-id %s at trunk-id(s) %s' % (credId, contextId, peerId, contentId, ','.join(trunkId)))
+                        sys.exit(-1)
+                    else:
+                        trunkIdMap[k] = trunkIdList
 
 def dataCbFun(trunkId, msgId, msg):
     log.msg('message ID %s received from trunk %s' % (msgId, trunkId))
