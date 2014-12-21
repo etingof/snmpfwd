@@ -357,7 +357,7 @@ def __rspCbFun(snmpEngine, sendRequestHandle, errorIndication, rspPDU, cbCtx):
 
     trunkRsp['pdu'] = rspPDU
     
-    log.msg('sending message ID %s received from trunk %s, original peer address %s' % (msgId, trunkId, trunkReq['transport-address']))
+    log.msg('received SNMP response message, sending trunk message #%s to trunk %s, original peer address %s' % (msgId, trunkId, trunkReq['transport-address']))
 
     trunkingManager.sendRsp(trunkId, msgId, trunkRsp)
 
@@ -387,12 +387,12 @@ def dataCbFun(trunkId, msgId, msg):
     cbCtx = trunkId, msgId, msg
 
     if errorIndication:
-        __rspCbFun(snmpEngine, None, errorIndication, None, cbCtx)
+        __rspCbFun(None, None, errorIndication, None, cbCtx)
         return
 
     for peerId in peerIdList:
         peerId = macro.expandMacros(peerId, msg)
-        log.msg('sending message ID %s received from trunk %s to peer ID %s, peer address %s' % (msgId, trunkId, peerId, msg['transport-address']))
+        log.msg('received trunk message #%s from trunk %s, sending SNMP message to peer ID %s, peer address %s' % (msgId, trunkId, peerId, msg['transport-address']))
 
         snmpEngine, contextEngineId, contextName = peerIdMap[peerId]
 
