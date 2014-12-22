@@ -16,7 +16,6 @@ from pyasn1.codec.ber import encoder, decoder
 from pyasn1.compat.octets import str2octs
 from pyasn1.error import PyAsn1Error
 from pysnmp.error import PySnmpError
-from pysnmp.proto import rfc1902
 from pysnmp.entity import engine, config
 from pysnmp.entity.rfc3413 import cmdgen, context
 from pysnmp.entity.rfc3413.config import getTargetInfo
@@ -33,6 +32,7 @@ except ImportError:
 from pysnmp.carrier.asynsock.dispatch import AsynsockDispatcher
 from pysnmp.smi import exval, indices
 from pysnmp.smi.error import MibOperationError
+from pysnmp.proto import rfc1902, rfc1905
 from pysnmp.proto.api import v2c
 from pysnmp import error
 from pysnmp import debug
@@ -63,6 +63,14 @@ privProtocols = {
   'AES192': config.usmAesCfb192Protocol,
   'AES256': config.usmAesCfb256Protocol,
   'NONE': config.usmNoPrivProtocol
+}
+
+snmpPduTypesMap = {
+  rfc1905.GetRequestPDU.tagSet: 'GET',
+  rfc1905.SetRequestPDU.tagSet: 'SET',
+  rfc1905.GetNextRequestPDU.tagSet: 'GETNEXT',
+  rfc1905.GetBulkRequestPDU.tagSet: 'GETBULK',
+  rfc1905.ResponsePDU.tagSet: 'RESPONSE'
 }
 
 # main script body starts here
@@ -303,7 +311,8 @@ for peerEntryPath in cfgTree.getPathsToAttr('peer-id'):
         log.msg('using credentials ID %s...' % credId)
     else:
         config.addTargetParams(
-            snmpEngine, credId, securityName, securityLevel, securityModel-1
+            snmpEngine, credId, securityName, securityLevel, 
+            securityModel == 3 and 3 or securityModel-1
         )
         log.msg('new credentials %s, security-name %s, security-level %s, security-model %s' % (credId, securityName, securityLevel, securityModel)) 
         snmpEngineMap['credIds'].add(credId)
@@ -327,7 +336,9 @@ for origCredCfgPath in cfgTree.getPathsToAttr('original-credentials-id'):
           cfgTree.getAttrValue('security-level-pattern', *origCredCfgPath),
           cfgTree.getAttrValue('security-name-pattern', *origCredCfgPath),
           cfgTree.getAttrValue('context-engine-id-pattern', *origCredCfgPath),
-          cfgTree.getAttrValue('context-name-pattern', *origCredCfgPath) )
+          cfgTree.getAttrValue('context-name-pattern', *origCredCfgPath),
+          cfgTree.getAttrValue('pdu-type-pattern', *origCredCfgPath),
+          cfgTree.getAttrValue('oid-prefix-pattern', *origCredCfgPath) )
     )
 
     log.msg('configuring original credentials ID %s (at %s), composite key: %r' % (origCredId, '.'.join(origCredCfgPath), k))
@@ -362,14 +373,18 @@ def __rspCbFun(snmpEngine, sendRequestHandle, errorIndication, rspPDU, cbCtx):
     trunkingManager.sendRsp(trunkId, msgId, trunkRsp)
 
 def dataCbFun(trunkId, msgId, msg):
-    k = '#'.join([str(x) for x in ( msg['engine-id'],
-                                    msg['transport-domain'],
-                                    msg['transport-address'],
-                                    msg['security-model'],
-                                    msg['security-level'],
-                                    msg['security-name'],
-                                    msg['context-engine-id'],
-                                    msg['context-name'] ) ])
+    k = [ str(x) for x in ( msg['engine-id'],
+                            msg['transport-domain'],
+                            msg['transport-address'],
+                            msg['security-model'],
+                            msg['security-level'],
+                            msg['security-name'],
+                            msg['context-engine-id'],
+                            msg['context-name'] ) ]
+    k.append(snmpPduTypesMap.get(msg['pdu'].tagSet, '?'))
+    k.append('|'.join([str(x[0]) for x in v2c.apiPDU.getVarBinds(msg['pdu'])]))
+    k = '#'.join(k) 
+    
     for x,y in origCredIdList:
         if y.match(k):
             origCredentialsId = macro.expandMacros(x, msg)
@@ -392,7 +407,7 @@ def dataCbFun(trunkId, msgId, msg):
 
     for peerId in peerIdList:
         peerId = macro.expandMacros(peerId, msg)
-        log.msg('received trunk message #%s from trunk %s, sending SNMP message to peer ID %s, peer address %s' % (msgId, trunkId, peerId, msg['transport-address']))
+        log.msg('received trunk message #%s from trunk %s, sending SNMP message to peer ID %s (chosen by original credentials ID %s), peer address %s' % (msgId, trunkId, peerId, origCredentialsId, msg['transport-address']))
 
         snmpEngine, contextEngineId, contextName = peerIdMap[peerId]
 

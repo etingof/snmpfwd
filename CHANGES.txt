@@ -8,6 +8,7 @@
 - Dead trunk detection implemented
 - Switched to Python logging module
 - SNMP request PDU type and request OIDs can now be used for request routing
+- Fix to SNMPv3 operation on the Client part.
 
 0.0.1 (released 01-04-2014)
 ---------------------------
