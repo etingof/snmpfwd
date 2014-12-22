@@ -17,8 +17,6 @@ from pyasn1.compat.octets import str2octs
 from pyasn1.error import PyAsn1Error
 from pysnmp.error import PySnmpError
 from pysnmp.entity import engine, config
-from pysnmp.proto import rfc1902
-from pysnmp.proto.api import v2c
 from pysnmp.entity.rfc3413 import cmdrsp, context
 from pysnmp.carrier.asynsock.dgram import udp
 try:
@@ -32,7 +30,8 @@ except ImportError:
 from pysnmp.carrier.asynsock.dispatch import AsynsockDispatcher
 from pysnmp.smi import exval, indices
 from pysnmp.smi.error import MibOperationError
-from pysnmp.proto import rfc1902, rfc1905, api
+from pysnmp.proto import rfc1902, rfc1905
+from pysnmp.proto.api import v2c
 from pysnmp import error
 from pysnmp import debug
 from snmpfwd.error import SnmpfwdError
@@ -268,9 +267,10 @@ def requestObserver(snmpEngine, execpoint, variables, cbCtx):
     else:
         cbCtx['peer-id'] = None
 
-    k = [ snmpPduTypesMap.get(variables['pdu'].tagSet, '?') ]
-    k.extend([ str(x[0]) for x in v2c.apiPDU.getVarBinds(variables['pdu']) ])
-    k = '#'.join(k)
+    k = '#'.join(
+        [ snmpPduTypesMap.get(variables['pdu'].tagSet, '?'),
+        '|'.join([str(x[0]) for x in v2c.apiPDU.getVarBinds(variables['pdu'])]) ] 
+    )
 
     for x,y in contentIdList:
         if y.match(k):
@@ -442,15 +442,12 @@ for contextCfgPath in cfgTree.getPathsToAttr('context-id'):
     
 for contentCfgPath in cfgTree.getPathsToAttr('content-id'):
     contentId = cfgTree.getAttrValue('content-id', *contentCfgPath)
-    k = [ cfgTree.getAttrValue('pdu-type-pattern', *contentCfgPath) ]
-    k.extend(
-        [ str(x) for x in cfgTree.getAttrValue('oid-prefix-pattern-list', *contentCfgPath, vector=True) ]
-    )
-    k = '#'.join(k)
-    
-    log.msg('configuring content ID %s (at %s), composite key: %r' % (contentId, '.'.join(contentCfgPath), k))
+    for x in cfgTree.getAttrValue('oid-prefix-pattern-list', *contentCfgPath, vector=True):
+        k = '#'.join([ cfgTree.getAttrValue('pdu-type-pattern', *contentCfgPath), x ])
 
-    contentIdList.append((contentId, re.compile(k)))
+        log.msg('configuring content ID %s (at %s), composite key: %r' % (contentId, '.'.join(contentCfgPath), k))
+
+        contentIdList.append((contentId, re.compile(k)))
 
 for routeCfgPath in cfgTree.getPathsToAttr('using-trunk-id-list'):
     trunkIdList = cfgTree.getAttrValue('using-trunk-id-list', *routeCfgPath, vector=True)
