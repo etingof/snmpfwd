@@ -478,7 +478,7 @@ def getTrunkAddr(a, port=0):
 for trunkCfgPath in cfgTree.getPathsToAttr('trunk-id'):
     trunkId = cfgTree.getAttrValue('trunk-id', *trunkCfgPath)
     secret = cfgTree.getAttrValue('secret', *trunkCfgPath)
-    secret = (secret*((16/len(secret))+1))[:16]
+    secret = (secret*((16//len(secret))+1))[:16]
     log.msg('configuring trunk ID %s (at %s)...' % (trunkId, '.'.join(trunkCfgPath)))
     connectionMode = cfgTree.getAttrValue('connection-mode', *trunkCfgPath)
     if connectionMode == 'client':

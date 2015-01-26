@@ -83,8 +83,3 @@ class TrunkingManager:
         server.TrunkingSuperServer(
             localEndpoint, secret, self.__proxyDataCbFun, self.__ctlCbFun
         )
-
-if __name__ == '__main__':
-    tm = TrunkingManager()
-
-    tm.addServer(1, 'a'*16, ('127.0.0.1', 1225))

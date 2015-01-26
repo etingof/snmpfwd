@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-import error
+from snmpfwd import error
 from pysnmp.proto.rfc1902 import OctetString
 
 # Constants
@@ -308,12 +308,3 @@ class Config:
             return kwargs['default']
         else:
             raise error.SnmpfwdError('%s non-existing attribute "%s" at scope "%s"' % (self, attr, '.'.join(nodes)))
-
-if __name__ == '__main__':
-    c = Config().load('conf/agent.conf')
-
-#    print c.getAttrValue('engine-id', 'agents-group', 'snmp-engine-A')
-    for x in c.getPathsToAttr('credentials-id'):
-        print '.'.join(x)
-#        print c.getAttrValue('username', *x)
-    

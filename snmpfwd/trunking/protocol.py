@@ -94,7 +94,7 @@ def prepareDataElements(octets, secret):
         raise SnmpfwdError('Unsupported protocol version: %s' % msg['version'])
 
     r, _ = decoder.decode(
-        crypto.decrypt(secret, str(msg['payload'])),
+        crypto.decrypt(secret, msg['payload'].asOctets()),
         asn1Spec=pduMap.get(msg['content-id'])
     )
 

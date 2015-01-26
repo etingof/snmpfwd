@@ -1,12 +1,13 @@
 from Crypto import Random
 from Crypto.Cipher import AES
+from pyasn1.compat.octets import int2oct, oct2int
 
 class AESCipher:
     def pad(self, s, BS=16):
-        return s + (BS - len(s) % BS) * chr(BS - len(s) % BS)
+        return s + (BS - len(s) % BS) * int2oct(BS - len(s) % BS)
 
     def unpad(self, s, BS=16):
-        return s[0:-ord(s[-1])]
+        return s[0:-oct2int(s[-1])]
     
     def encrypt(self, key, raw):
         raw = self.pad(raw)

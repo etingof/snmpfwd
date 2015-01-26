@@ -4,6 +4,7 @@ import traceback
 import sys
 from snmpfwd import log, next, error
 from snmpfwd.trunking import protocol
+from pyasn1.compat.octets import null
 
 class TrunkingClient(asyncore.dispatcher_with_send):
     isUp = False
@@ -14,8 +15,8 @@ class TrunkingClient(asyncore.dispatcher_with_send):
         self.__dataCbFun = dataCbFun
         self.__pendingReqs = {}
         self.__pendingCounter = 0
-        self.__input = ''
-        self.__announcementData = ''
+        self.__input = null
+        self.__announcementData = null
         asyncore.dispatcher_with_send.__init__(self)
 
         try: 
@@ -63,7 +64,7 @@ class TrunkingClient(asyncore.dispatcher_with_send):
 
         if self.__announcementData:
             self.send(self.__announcementData)
-            self.__announcementData = ''
+            self.__announcementData = null
             log.msg('trunking client %s sent trunk announcement' % self)
 
         log.msg('trunk client %s is now connected' % self)
@@ -109,30 +110,3 @@ class TrunkingClient(asyncore.dispatcher_with_send):
             for line in traceback.format_exception(*exc_info):
                 log.msg(line.replace('\n', ';'))
         self.handle_close ()
-
-# test
-
-if __name__ == '__main__':
-    from pysnmp.proto import rfc1905
-    from pysnmp.proto.api import v2c
-
-    log.setLogger('snmpfwd', 'stdout')
-    tc = TrunkingClient(('127.0.0.1', 1225), 'a'*16)
-
-    def cbFun(msgId, rsp, cbCtx):
-        print msgId, rsp
-
-    pdu = rfc1905.GetRequestPDU()
-    v2c.apiPDU.setDefaults(pdu)
-
-    tc.sendReq( { 'transport-domain': (1,3,6,1,1,1),
-                  'transport-address': '127.0.0.1:161',
-                  'security-model': 1,
-                  'security-level': 1,
-                  'security-name': 'testname',
-                  'context-engine-id': '0x010202030304',
-                  'context-name': 'mycontext',
-                  'pdu': pdu }, cbFun)
-
-    asyncore.loop(1)
-

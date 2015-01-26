@@ -4,6 +4,7 @@ import traceback
 import sys
 from snmpfwd import log, next, error
 from snmpfwd.trunking import protocol
+from pyasn1.compat.octets import null
 
 class TrunkingSuperServer(asyncore.dispatcher):
     def __init__ (self, localEndpoint, secret, dataCbFun, ctlCbFun):
@@ -67,7 +68,7 @@ class TrunkingServer(asyncore.dispatcher_with_send):
         self.__ctlCbFun = ctlCbFun
         self.__pendingReqs = {}
         self.__pendingCounter = 0
-        self.__input = ''
+        self.__input = null
         self.socket = None  # asyncore strangeness
         asyncore.dispatcher_with_send.__init__(self, sock)
 
@@ -144,23 +145,3 @@ class TrunkingServer(asyncore.dispatcher_with_send):
             for line in traceback.format_exception(*exc_info):
                 log.msg(line.replace('\n', ';'))
         self.handle_close()
-
-# test
-
-if __name__ == '__main__':
-    from pysnmp.proto import rfc1905
-    from pysnmp.proto.api import v2c
-
-    def cbFun(srv, msgId, req):
-        print srv, msgId, req
-
-        pdu = rfc1905.ResponsePDU()
-        v2c.apiPDU.setDefaults(pdu)
-
-        srv.sendRsp(msgId, { 'pdu': pdu })
-
-    log.setLogger('snmpfwd', 'stdout')
-    ts = TrunkingSuperServer(('127.0.0.1', 1225), 'a'*16, cbFun)
-
-    asyncore.loop(1)
-
