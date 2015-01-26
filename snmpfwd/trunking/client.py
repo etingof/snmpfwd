@@ -104,9 +104,9 @@ class TrunkingClient(asyncore.dispatcher_with_send):
         self.close()
 
     def handle_error(self, *info):
-        log.msg('connection with %s broken: %s' % (self.__remoteEndpoint, info))
         exc_info = sys.exc_info()
-        if exc_info:
+        log.msg('connection with %s broken: %s' % (self.__remoteEndpoint, exc_info[1]))
+        if exc_info and not isinstance(exc_info[1], socket.error):
             for line in traceback.format_exception(*exc_info):
                 log.msg(line.replace('\n', ';'))
         self.handle_close ()

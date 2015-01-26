@@ -257,8 +257,8 @@ for peerEntryPath in cfgTree.getPathsToAttr('peer-id'):
     securityLevel = rfc1902.Integer(securityLevel)
     securityName = cfgTree.getAttrValue('security-name', *peerEntryPath)
 
-    contextEngineId = cfgTree.getAttrValue('context-engine-id', *peerEntryPath, default=None)
-    contextName = cfgTree.getAttrValue('context-name', *peerEntryPath, default='')
+    contextEngineId = cfgTree.getAttrValue('context-engine-id', *peerEntryPath, **dict(default=None))
+    contextName = cfgTree.getAttrValue('context-name', *peerEntryPath, **dict(default=''))
 
     if securityModel in (1, 2):
         if securityName in snmpEngineMap['securityName']:
@@ -285,15 +285,15 @@ for peerEntryPath in cfgTree.getPathsToAttr('peer-id'):
             log.msg('new USM user %s, security-model %s, security-level %s, security-name %s' % (usmUser, securityModel, securityLevel, securityName))
 
             if securityLevel in (2, 3):
-                usmAuthProto = cfgTree.getAttrValue('usm-auth-proto', *peerEntryPath, default=config.usmHMACMD5AuthProtocol)
+                usmAuthProto = cfgTree.getAttrValue('usm-auth-proto', *peerEntryPath, **dict(default=config.usmHMACMD5AuthProtocol))
                 usmAuthProto = rfc1902.ObjectName(usmAuthProto)
                 usmAuthKey = cfgTree.getAttrValue('usm-auth-key', *peerEntryPath)
                 log.msg('new USM authentication key: %s, authentication protocol: %s' % (usmAuthKey, usmAuthProto))
 
                 if securityLevel == 3:
-                    usmPrivProto = cfgTree.getAttrValue('usm-priv-proto', *peerEntryPath, default=config.usmDESPrivProtocol)
+                    usmPrivProto = cfgTree.getAttrValue('usm-priv-proto', *peerEntryPath, **dict(default=config.usmDESPrivProtocol))
                     usmPrivProto = rfc1902.ObjectName(usmPrivProto)
-                    usmPrivKey = cfgTree.getAttrValue('usm-priv-key', *peerEntryPath, default=None)
+                    usmPrivKey = cfgTree.getAttrValue('usm-priv-key', *peerEntryPath, **dict(default=None))
                     log.msg('new USM encryption key: %s, encryption protocol: %s' % (usmPrivKey, usmPrivProto))
             snmpEngineMap['securityName'][securityName] = securityModel
 
@@ -346,10 +346,10 @@ for origCredCfgPath in cfgTree.getPathsToAttr('original-credentials-id'):
     origCredIdList.append((origCredId, re.compile(k)))
 
 for routeCfgPath in cfgTree.getPathsToAttr('using-peer-id-list'):
-    peerIdList = cfgTree.getAttrValue('using-peer-id-list', *routeCfgPath, vector=True)
+    peerIdList = cfgTree.getAttrValue('using-peer-id-list', *routeCfgPath, **dict(vector=True))
     log.msg('configuring routing entry with peer IDs %s (at %s)...' % (','.join(peerIdList), '.'.join(routeCfgPath)))
-    for credId in cfgTree.getAttrValue('matching-original-credentials-id-list', *routeCfgPath, vector=True):
-        for trunkId in cfgTree.getAttrValue('matching-trunk-id-list', *routeCfgPath, vector=True):
+    for credId in cfgTree.getAttrValue('matching-original-credentials-id-list', *routeCfgPath, **dict(vector=True)):
+        for trunkId in cfgTree.getAttrValue('matching-trunk-id-list', *routeCfgPath, **dict(vector=True)):
             k = credId, trunkId
             if k in routingMap:
                 log.msg('duplicate credentials-id %s and trunk-id %s at peer-id %s' % (credId, trunkId, ','.join(peerIdList)))
