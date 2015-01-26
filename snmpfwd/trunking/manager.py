@@ -4,25 +4,27 @@ from snmpfwd import log, error
 class TrunkingManager:
     def __init__(self, dataCbFun):
         self.__clients = {}
-        self.__runningServers = {}
-        self.__runningClients = {}
+        self.__runningServersTrunkMap = {}
+        self.__runningServersConnMap = {}
+        self.__runningClientsTrunkMap = {}
+        self.__runningClientsConnMap = {}
         self.__dataCbFun = dataCbFun
 
     def sendReq(self, trunkId, req, cbFun, cbCtx):
-        if trunkId in self.__runningServers:
-            trunk = self.__runningServers[trunkId]
-        elif trunkId in self.__runningClients:
-            trunk = self.__runningClients[trunkId]
+        if trunkId in self.__runningServersTrunkMap:
+            trunk = self.__runningServersTrunkMap[trunkId]
+        elif trunkId in self.__runningClientsTrunkMap:
+            trunk = self.__runningClientsTrunkMap[trunkId]
         else:
             raise error.SnmpfwdError('Unknown trunk ID %s' % trunkId)
 
         return trunk.sendReq(req, cbFun, cbCtx)
 
     def sendRsp(self, trunkId, msgId, rsp):
-        if trunkId in self.__runningServers:
-            trunk = self.__runningServers[trunkId]
-        elif trunkId in self.__runningClients:
-            trunk = self.__runningClients[trunkId]
+        if trunkId in self.__runningServersTrunkMap:
+            trunk = self.__runningServersTrunkMap[trunkId]
+        elif trunkId in self.__runningClientsTrunkMap:
+            trunk = self.__runningClientsTrunkMap[trunkId]
         else:
             raise error.SnmpfwdError('Unknown trunk ID %s' % trunkId)
 
@@ -30,26 +32,28 @@ class TrunkingManager:
 
     def monitorTrunks(self, timeNow):
         for trunkId in self.__clients:
-            if trunkId in self.__runningClients and \
-                    not self.__runningClients[trunkId].isUp:
-                self.__runningClients[trunkId].close()
-                del self.__runningClients[trunkId]
-            if trunkId not in self.__runningClients:
-                self.__runningClients[trunkId] = client.TrunkingClient(
+            if trunkId in self.__runningClientsTrunkMap and \
+                    not self.__runningClientsTrunkMap[trunkId].isUp:
+                self.__runningClientsTrunkMap[trunkId].close()
+                del self.__runningClientsConnMap[self.__runningClientsTrunkMap[trunkId]]
+                del self.__runningClientsTrunkMap[trunkId]
+            if trunkId not in self.__runningClientsTrunkMap:
+                self.__runningClientsTrunkMap[trunkId] = client.TrunkingClient(
                     *self.__clients[trunkId]
                 )
-                self.__runningClients[trunkId].sendAnnouncement(trunkId)
+                self.__runningClientsConnMap[self.__runningClientsTrunkMap[trunkId]] = trunkId
+                self.__runningClientsTrunkMap[trunkId].sendAnnouncement(trunkId)
 
     def addClient(self, trunkId, localEndpoint, remoteEndpoint, secret):
-        if trunkId in self.__clients or trunkId in self.__runningServers:
+        if trunkId in self.__clients or trunkId in self.__runningServersTrunkMap:
             raise error.SnmpfwdError('Trunk %s already registered' % trunkId)
         self.__clients[trunkId] = localEndpoint, remoteEndpoint, secret, self.__proxyDataCbFun
 
     def __proxyDataCbFun(self, connection, msgId, msg):
-        for k,v in self.__runningServers.items()+self.__runningClients.items():
-            if v == connection:
-                trunkId = k
-                break
+        if connection in self.__runningServersConnMap:
+            trunkId = self.__runningServersConnMap[connection]
+        elif connection in self.__runningClientsConnMap:
+            trunkId = self.__runningClientsConnMap[connection]
         else:
             log.msg('data message from unknown connection %s ignored' % connection)
             return
@@ -58,26 +62,27 @@ class TrunkingManager:
         
     def __ctlCbFun(self, connection, msg=None):
         if msg:
-            if msg['trunk-id'] in self.__runningServers or \
-                    msg['trunk-id'] in self.__runningClients:
-                log.msg('duplicate trunk %s during negotiation with %s' % (msg['trunk-id'], connection))
+            trunkId = str(msg['trunk-id'])
+            if trunkId in self.__runningServersTrunkMap or \
+                    trunkId in self.__runningClientsTrunkMap:
+                log.msg('duplicate trunk %s during negotiation with %s' % (trunkId, connection))
                 connection.close()
                 return
 
-            log.msg('registering connection %s as trunk %s' % (connection, msg['trunk-id']))        
-            self.__runningServers[msg['trunk-id']] = connection
+            log.msg('registering connection %s as trunk %s' % (connection, trunkId))        
+            self.__runningServersTrunkMap[trunkId] = connection
+            self.__runningServersConnMap[connection] = trunkId
 
         else:
-            for k,v in self.__runningServers.items():
-                if v == connection:
-                    trunkId = k
-                    break
+            if connection in self.__runningServersConnMap:
+                trunkId = self.__runningServersConnMap[connection]
             else:
                 log.msg('control message from unknown connection %s ignored' % connection)
                 return
                 
-            log.msg('unregistering connection %s (trunk %s)' % (self.__runningServers[trunkId], trunkId))
-            del self.__runningServers[trunkId]
+            log.msg('unregistering connection %s (trunk %s)' % (self.__runningServersTrunkMap[trunkId], trunkId))
+            del self.__runningServersTrunkMap[trunkId]
+            del self.__runningServersConnMap[connection]
 
     def addServer(self, localEndpoint, secret):
         server.TrunkingSuperServer(
