@@ -2,7 +2,7 @@
 #
 # SNMP Proxy Forwarder: server part
 #
-# Written by Ilya Etingof <ilya@snmplabs.com>, 2014
+# Written by Ilya Etingof <ilya@snmplabs.com>, 2015. All rights reserved.
 #
 import os
 import stat
@@ -40,7 +40,7 @@ from snmpfwd.trunking.manager import TrunkingManager
 
 # Settings
 programName = 'snmpfwd-server'
-configVersion = '1'
+configVersion = '2'
 pidFile = ''
 cfgFile = '/usr/local/etc/snmpfwd/server.cfg'
 foregroundFlag = True
@@ -240,7 +240,7 @@ snmpPduTypesMap = {
 }
 
 def requestObserver(snmpEngine, execpoint, variables, cbCtx):
-    cbCtx['credentials-id'] = macro.expandMacros(
+    cbCtx['snmp-credentials-id'] = macro.expandMacros(
         credIdMap.get(
             ( snmpEngine.snmpEngineID,
               variables['transportDomain'],
@@ -280,7 +280,7 @@ def requestObserver(snmpEngine, execpoint, variables, cbCtx):
             cbCtx['content-id'] = None
 
     cbCtx['trunk-id-list'] = trunkIdMap.get(
-        ( cbCtx['credentials-id'],
+        ( cbCtx['snmp-credentials-id'],
           cbCtx['context-id'],
           cbCtx['peer-id'],
           cbCtx['content-id'] )
@@ -296,12 +296,12 @@ def requestObserver(snmpEngine, execpoint, variables, cbCtx):
         'context-name': variables['contextName']
     }
 
-for configEntryPath in cfgTree.getPathsToAttr('credentials-id'):
-    credId = cfgTree.getAttrValue('credentials-id', *configEntryPath)
+for configEntryPath in cfgTree.getPathsToAttr('snmp-credentials-id'):
+    credId = cfgTree.getAttrValue('snmp-credentials-id', *configEntryPath)
     configKey = []
     log.msg('configuring credentials %s (at %s)...' % (credId, '.'.join(configEntryPath)))
 
-    engineId = cfgTree.getAttrValue('engine-id', *configEntryPath)
+    engineId = cfgTree.getAttrValue('snmp-engine-id', *configEntryPath)
     
     if engineId in engineIdMap:
         snmpEngine, snmpContext, snmpEngineMap = engineIdMap[engineId]
@@ -328,7 +328,7 @@ for configEntryPath in cfgTree.getPathsToAttr('credentials-id'):
 
     configKey.append(snmpEngine.snmpEngineID)
 
-    transportDomain = cfgTree.getAttrValue('transport-domain', *configEntryPath)
+    transportDomain = cfgTree.getAttrValue('snmp-transport-domain', *configEntryPath)
     transportDomain = rfc1902.ObjectName(transportDomain)
 
     if transportDomain in snmpEngineMap['transportDomain']:
@@ -343,7 +343,7 @@ for configEntryPath in cfgTree.getPathsToAttr('credentials-id'):
             log.msg('unknown transport domain %s' % (transportDomain,))
             sys.exit(-1)
 
-        h, p = cfgTree.getAttrValue('transport-address', *configEntryPath).split(':',1)
+        h, p = cfgTree.getAttrValue('snmp-bind-address', *configEntryPath).split(':',1)
 
         snmpEngine.registerTransportDispatcher(
             transportDispatcher, transportDomain
@@ -359,20 +359,20 @@ for configEntryPath in cfgTree.getPathsToAttr('credentials-id'):
 
     configKey.append(transportDomain)
 
-    securityModel = cfgTree.getAttrValue('security-model', *configEntryPath)
+    securityModel = cfgTree.getAttrValue('snmp-security-model', *configEntryPath)
     securityModel = rfc1902.Integer(securityModel)
-    securityLevel = cfgTree.getAttrValue('security-level', *configEntryPath)
+    securityLevel = cfgTree.getAttrValue('snmp-security-level', *configEntryPath)
     securityLevel = rfc1902.Integer(securityLevel)
-    securityName = cfgTree.getAttrValue('security-name', *configEntryPath)
+    securityName = cfgTree.getAttrValue('snmp-security-name', *configEntryPath)
 
     if securityModel in (1, 2):
         if securityName in snmpEngineMap['securityName']:
             if snmpEngineMap['securityName'][securityModel] == securityModel:
                 log.msg('using security-name %s' % securityName)
             else:
-                raise error.SnmpfwdError('security-name %s already in use at security-model %s' % (securityName, securityModel))
+                raise error.SnmpfwdError('snmp-security-name %s already in use at snmp-security-model %s' % (securityName, securityModel))
         else:
-            communityName = cfgTree.getAttrValue('community-name', *configEntryPath)
+            communityName = cfgTree.getAttrValue('snmp-community-name', *configEntryPath)
             config.addV1System(snmpEngine, securityName, communityName, 
                                securityName=securityName)
             log.msg('new community-name %s, security-name %s, security-level %s' % (communityName, securityName, securityLevel))
@@ -386,19 +386,19 @@ for configEntryPath in cfgTree.getPathsToAttr('credentials-id'):
         if securityName in snmpEngineMap['securityName']:
             log.msg('using USM security-name: %s' % securityName)
         else:
-            usmUser = cfgTree.getAttrValue('usm-user', *configEntryPath)
+            usmUser = cfgTree.getAttrValue('snmp-usm-user', *configEntryPath)
             log.msg('new USM user %s, security-model %s, security-level %s, security-name %s' % (usmUser, securityModel, securityLevel, securityName))
 
             if securityLevel in (2, 3):
-                usmAuthProto = cfgTree.getAttrValue('usm-auth-proto', *configEntryPath, **dict(default=config.usmHMACMD5AuthProtocol))
+                usmAuthProto = cfgTree.getAttrValue('snmp-usm-auth-protocol', *configEntryPath, **dict(default=config.usmHMACMD5AuthProtocol))
                 usmAuthProto = rfc1902.ObjectName(usmAuthProto)
-                usmAuthKey = cfgTree.getAttrValue('usm-auth-key', *configEntryPath)
+                usmAuthKey = cfgTree.getAttrValue('snmp-usm-auth-key', *configEntryPath)
                 log.msg('new USM authentication key: %s, authentication protocol: %s' % (usmAuthKey, usmAuthProto))
 
                 if securityLevel == 3:
-                    usmPrivProto = cfgTree.getAttrValue('usm-priv-proto', *configEntryPath, **dict(default=config.usmDESPrivProtocol))
+                    usmPrivProto = cfgTree.getAttrValue('snmp-usm-priv-protocol', *configEntryPath, **dict(default=config.usmDESPrivProtocol))
                     usmPrivProto = rfc1902.ObjectName(usmPrivProto)
-                    usmPrivKey = cfgTree.getAttrValue('usm-priv-key', *configEntryPath, **dict(default=None))
+                    usmPrivKey = cfgTree.getAttrValue('snmp-usm-priv-key', *configEntryPath, **dict(default=None))
                     log.msg('new USM encryption key: %s, encryption protocol: %s' % (usmPrivKey, usmPrivProto))
 
             snmpEngineMap['securityName'][securityName] = securityModel
@@ -414,36 +414,36 @@ for configEntryPath in cfgTree.getPathsToAttr('credentials-id'):
         configKey.append(securityName)
 
     else:
-        raise SnmpfwdError('unknown security-model: %s' % securityModel)
+        raise SnmpfwdError('unknown snmp-security-model: %s' % securityModel)
 
     credIdMap[tuple(configKey)] = credId
 
-for peerCfgPath in cfgTree.getPathsToAttr('peer-id'):
-    peerId = cfgTree.getAttrValue('peer-id', *peerCfgPath)
+for peerCfgPath in cfgTree.getPathsToAttr('snmp-peer-id'):
+    peerId = cfgTree.getAttrValue('snmp-peer-id', *peerCfgPath)
     log.msg('configuring peer ID %s (at %s)...' % (peerId, '.'.join(peerCfgPath)))
-    transportDomain = cfgTree.getAttrValue('transport-domain', *peerCfgPath)
+    transportDomain = cfgTree.getAttrValue('snmp-transport-domain', *peerCfgPath)
     if transportDomain not in peerIdMap:
         peerIdMap[transportDomain] = []
-    for transportAddress in cfgTree.getAttrValue('transport-address-pattern-list', *peerCfgPath, **dict(vector=True)):
+    for transportAddress in cfgTree.getAttrValue('snmp-peer-address-pattern-list', *peerCfgPath, **dict(vector=True)):
         peerIdMap[transportDomain].append(
             (re.compile(transportAddress), peerId)
         )
 
-for contextCfgPath in cfgTree.getPathsToAttr('context-id'):
-    contextId = cfgTree.getAttrValue('context-id', *contextCfgPath)
+for contextCfgPath in cfgTree.getPathsToAttr('snmp-context-id'):
+    contextId = cfgTree.getAttrValue('snmp-context-id', *contextCfgPath)
     k = '#'.join(
-        ( cfgTree.getAttrValue('context-engine-id-pattern', *contextCfgPath),
-          cfgTree.getAttrValue('context-name-pattern', *contextCfgPath) )
+        ( cfgTree.getAttrValue('snmp-context-engine-id-pattern', *contextCfgPath),
+          cfgTree.getAttrValue('snmp-context-name-pattern', *contextCfgPath) )
     )
     
     log.msg('configuring context ID %s (at %s), composite key: %r' % (contextId, '.'.join(contextCfgPath), k))
 
     contextIdList.append((contextId, re.compile(k)))
     
-for contentCfgPath in cfgTree.getPathsToAttr('content-id'):
-    contentId = cfgTree.getAttrValue('content-id', *contentCfgPath)
-    for x in cfgTree.getAttrValue('oid-prefix-pattern-list', *contentCfgPath, **dict(vector=True)):
-        k = '#'.join([ cfgTree.getAttrValue('pdu-type-pattern', *contentCfgPath), x ])
+for contentCfgPath in cfgTree.getPathsToAttr('snmp-content-id'):
+    contentId = cfgTree.getAttrValue('snmp-content-id', *contentCfgPath)
+    for x in cfgTree.getAttrValue('snmp-pdu-oid-prefix-pattern-list', *contentCfgPath, **dict(vector=True)):
+        k = '#'.join([ cfgTree.getAttrValue('snmp-pdu-type-pattern', *contentCfgPath), x ])
 
         log.msg('configuring content ID %s (at %s), composite key: %r' % (contentId, '.'.join(contentCfgPath), k))
 
@@ -452,13 +452,13 @@ for contentCfgPath in cfgTree.getPathsToAttr('content-id'):
 for routeCfgPath in cfgTree.getPathsToAttr('using-trunk-id-list'):
     trunkIdList = cfgTree.getAttrValue('using-trunk-id-list', *routeCfgPath, **dict(vector=True))
     log.msg('configuring destination trunk ID(s) %s (at %s)...' % (','.join(trunkIdList), '.'.join(routeCfgPath)))
-    for credId in cfgTree.getAttrValue('matching-credentials-id-list', *routeCfgPath, **dict(vector=True)):
-        for peerId in cfgTree.getAttrValue('matching-peer-id-list', *routeCfgPath, **dict(vector=True)):
-            for contextId in cfgTree.getAttrValue('matching-context-id-list', *routeCfgPath, **dict(vector=True)):
-                for contentId in cfgTree.getAttrValue('matching-content-id-list', *routeCfgPath, **dict(vector=True)):
+    for credId in cfgTree.getAttrValue('matching-snmp-credentials-id-list', *routeCfgPath, **dict(vector=True)):
+        for peerId in cfgTree.getAttrValue('matching-snmp-peer-id-list', *routeCfgPath, **dict(vector=True)):
+            for contextId in cfgTree.getAttrValue('matching-snmp-context-id-list', *routeCfgPath, **dict(vector=True)):
+                for contentId in cfgTree.getAttrValue('matching-snmp-content-id-list', *routeCfgPath, **dict(vector=True)):
                     k = credId, contextId, peerId, contentId
                     if k in trunkIdMap:
-                        log.msg('duplicate credentials-id %s, context-id %s, peer-id %s, content-id %s at trunk-id(s) %s' % (credId, contextId, peerId, contentId, ','.join(trunkId)))
+                        log.msg('duplicate snmp-credentials-id %s, snmp-context-id %s, snmp-peer-id %s, snmp-content-id %s at trunk-id(s) %s' % (credId, contextId, peerId, contentId, ','.join(trunkId)))
                         sys.exit(-1)
                     else:
                         trunkIdMap[k] = trunkIdList
@@ -477,24 +477,24 @@ def getTrunkAddr(a, port=0):
 
 for trunkCfgPath in cfgTree.getPathsToAttr('trunk-id'):
     trunkId = cfgTree.getAttrValue('trunk-id', *trunkCfgPath)
-    secret = cfgTree.getAttrValue('secret', *trunkCfgPath)
+    secret = cfgTree.getAttrValue('trunk-crypto-key', *trunkCfgPath)
     secret = (secret*((16//len(secret))+1))[:16]
     log.msg('configuring trunk ID %s (at %s)...' % (trunkId, '.'.join(trunkCfgPath)))
-    connectionMode = cfgTree.getAttrValue('connection-mode', *trunkCfgPath)
+    connectionMode = cfgTree.getAttrValue('trunk-connection-mode', *trunkCfgPath)
     if connectionMode == 'client':
         trunkingManager.addClient(
             trunkId,
-            getTrunkAddr(cfgTree.getAttrValue('local-address', *trunkCfgPath)),
-            getTrunkAddr(cfgTree.getAttrValue('remote-address', *trunkCfgPath), 30201),
+            getTrunkAddr(cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath)),
+            getTrunkAddr(cfgTree.getAttrValue('trunk-peer-address', *trunkCfgPath), 30201),
             secret
         )
-        log.msg('new trunking client from %s to %s' % (cfgTree.getAttrValue('local-address', *trunkCfgPath), cfgTree.getAttrValue('remote-address', *trunkCfgPath)))
+        log.msg('new trunking client from %s to %s' % (cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath), cfgTree.getAttrValue('trunk-peer-address', *trunkCfgPath)))
     if connectionMode == 'server':
         trunkingManager.addServer(
-            getTrunkAddr(cfgTree.getAttrValue('local-address', *trunkCfgPath), 30201),
+            getTrunkAddr(cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath), 30201),
             secret
         )
-        log.msg('new trunking server at %s' % (cfgTree.getAttrValue('local-address', *trunkCfgPath)))
+        log.msg('new trunking server at %s' % (cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath)))
 
 transportDispatcher.registerTimerCbFun(
     trunkingManager.monitorTrunks, random.randrange(1,5)

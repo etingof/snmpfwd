@@ -1,3 +1,9 @@
+0.0.2rc1
+--------
+
+- Configuration options renamed for better clarity.
+- Multiple fixes supporting Python 2.4-3.4 compatibility.
+
 0.0.2rc0 (released 21-12-2014)
 ---------------------------
 
