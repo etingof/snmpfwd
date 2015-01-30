@@ -1,8 +1,13 @@
 0.0.2rc1
 --------
 
-- Configuration options renamed for better clarity.
 - Multiple fixes supporting Python 2.4-3.4 compatibility.
+- Configuration options renamed for better clarity.
+- Both source and destination network addresses of SNMP entities
+  can now be used for message routing and address spoofing.
+- Transparent proxy operation and secondary network interface
+  support implemented
+- Client-side SNMP timeout/retries now configurable
 
 0.0.2rc0 (released 21-12-2014)
 ---------------------------

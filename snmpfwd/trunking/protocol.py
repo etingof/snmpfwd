@@ -14,21 +14,24 @@ class Message(univ.Sequence):
 
 class Request(univ.Sequence):
     componentType = namedtype.NamedTypes(
-        namedtype.NamedType('engine-id', univ.OctetString()),
-        namedtype.NamedType('transport-domain', univ.ObjectIdentifier()),
-        namedtype.NamedType('transport-address', univ.OctetString()),
-        namedtype.NamedType('security-model', univ.Integer()),
-        namedtype.NamedType('security-level', univ.Integer()),
-        namedtype.NamedType('security-name', univ.OctetString()),
-        namedtype.NamedType('context-engine-id', univ.OctetString()),
-        namedtype.NamedType('context-name', univ.OctetString()),
-        namedtype.NamedType('pdu', univ.OctetString())
+        namedtype.NamedType('snmp-engine-id', univ.OctetString()),
+        namedtype.NamedType('snmp-transport-domain', univ.ObjectIdentifier()),
+        namedtype.NamedType('snmp-peer-address', univ.OctetString()),
+        namedtype.NamedType('snmp-peer-port', univ.Integer()),
+        namedtype.NamedType('snmp-bind-address', univ.OctetString()),
+        namedtype.NamedType('snmp-bind-port', univ.Integer()),
+        namedtype.NamedType('snmp-security-model', univ.Integer()),
+        namedtype.NamedType('snmp-security-level', univ.Integer()),
+        namedtype.NamedType('snmp-security-name', univ.OctetString()),
+        namedtype.NamedType('snmp-context-engine-id', univ.OctetString()),
+        namedtype.NamedType('snmp-context-name', univ.OctetString()),
+        namedtype.NamedType('snmp-pdu', univ.OctetString())
     )
 
 class Response(univ.Sequence):
     componentType = namedtype.NamedTypes(
         namedtype.NamedType('error-indication', univ.OctetString('')),
-        namedtype.NamedType('pdu', univ.OctetString(''))
+        namedtype.NamedType('snmp-pdu', univ.OctetString(''))
     )
 
 class Announcement(univ.Sequence):
@@ -44,12 +47,16 @@ pduMap = {
 
 def prepareRequestData(msgId, req, secret):
     r = Request()
-    for k in 'engine-id', 'transport-domain', \
-             'transport-address', 'security-model', 'security-level', \
-             'security-name', 'context-engine-id', 'context-name':
+    for k in 'snmp-engine-id', \
+             'snmp-transport-domain', \
+             'snmp-peer-address', 'snmp-peer-port', \
+             'snmp-bind-address', 'snmp-bind-port', \
+             'snmp-security-model', 'snmp-security-level', \
+             'snmp-security-name', 'snmp-context-engine-id', \
+             'snmp-context-name':
         r[k] = req[k]
 
-    r['pdu'] = encoder.encode(req['pdu'])
+    r['snmp-pdu'] = encoder.encode(req['snmp-pdu'])
 
     msg = Message()
     msg['version'] = 0
@@ -62,7 +69,7 @@ def prepareRequestData(msgId, req, secret):
 def prepareResponseData(msgId, rsp, secret):
     r = Response()
     r['error-indication'] = rsp.get('error-indication', '')
-    r['pdu'] = rsp['pdu'] and encoder.encode(rsp['pdu']) or ''
+    r['snmp-pdu'] = rsp['snmp-pdu'] and encoder.encode(rsp['snmp-pdu']) or ''
 
     msg = Message()
     msg['version'] = 0
@@ -101,20 +108,26 @@ def prepareDataElements(octets, secret):
     rsp = {}
 
     if msg['content-id'] == 0:     # request
-        for k in 'engine-id', 'transport-domain', \
-                'transport-address', 'security-model', 'security-level', \
-                'security-name', 'context-engine-id', 'context-name':
+        for k in 'snmp-engine-id', \
+                 'snmp-transport-domain', \
+                 'snmp-peer-address', 'snmp-peer-port', \
+                 'snmp-bind-address', 'snmp-bind-port', \
+                 'snmp-security-model', 'snmp-security-level', \
+                 'snmp-security-name', \
+                 'snmp-context-engine-id', 'snmp-context-name':
             rsp[k] = r[k]
 
-        rsp['pdu'], _ = decoder.decode(r['pdu'], asn1Spec=rfc1905.PDUs())
+        rsp['snmp-pdu'], _ = decoder.decode(r['snmp-pdu'],
+                                            asn1Spec=rfc1905.PDUs())
     elif msg['content-id'] == 1:   # response
         rsp['error-indication'] = r['error-indication']
         if not r['error-indication']:
-            rsp['pdu'], _ = decoder.decode(r['pdu'], asn1Spec=rfc1905.PDUs())
+            rsp['snmp-pdu'], _ = decoder.decode(r['snmp-pdu'],
+                                                asn1Spec=rfc1905.PDUs())
     elif msg['content-id'] == 2:   # announcement
         rsp['trunk-id'] = r['trunk-id']
         
-    if 'pdu' in rsp:
-        rsp['pdu'] = rsp['pdu'].getComponent()
+    if 'snmp-pdu' in rsp:
+        rsp['snmp-pdu'] = rsp['snmp-pdu'].getComponent()
 
     return msg['msg-id'], msg['content-id'], rsp, octets
