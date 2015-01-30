@@ -176,7 +176,7 @@ class CommandResponder(cmdrsp.CommandResponderBase):
         trunkIdList = gCurrentRequestContext['trunk-id-list']
         trunkReq = gCurrentRequestContext['request']
         if trunkIdList is None:
-            log.msg('no route configured for SNMP request (%s)' % (','.join(['%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq if x != 'snmp-pdu'])))
+            log.msg('no route configured (SNMP request %s), matched keys: %s' % (', '.join(['%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq if x != 'snmp-pdu']), ', '.join(['%s=%s' % (k,gCurrentRequestContext[k]) for k in gCurrentRequestContext if k[-2:] == 'id'])))
             self.releaseStateInformation(stateReference)
             return
 
@@ -289,7 +289,7 @@ def requestObserver(snmpEngine, execpoint, variables, cbCtx):
 for configEntryPath in cfgTree.getPathsToAttr('snmp-credentials-id'):
     credId = cfgTree.getAttrValue('snmp-credentials-id', *configEntryPath)
     configKey = []
-    log.msg('configuring credentials %s (at %s)...' % (credId, '.'.join(configEntryPath)))
+    log.msg('configuring snmp-credentials %s (at %s)...' % (credId, '.'.join(configEntryPath)))
 
     engineId = cfgTree.getAttrValue('snmp-engine-id', *configEntryPath)
     
