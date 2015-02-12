@@ -4,6 +4,7 @@
    to SNMPv3 ones or vice-versa.
 """
 import sys
+import os
 
 classifiers = """\
 Development Status :: 5 - Production/Stable
@@ -71,7 +72,7 @@ doclines = [ x.strip() for x in __doc__.split('\n') if x ]
 
 params.update( {
     'name': "snmpfwd",
-    'version': "0.0.1",
+    'version':  open(os.path.join('snmpfwd', '__init__.py')).read().split('\'')[1],
     'description': doclines[0],
     'long_description': ' '.join(doclines[1:]),
     'maintainer': 'Ilya Etingof <ilya@snmplabs.com>',
