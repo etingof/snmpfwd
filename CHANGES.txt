@@ -1,5 +1,5 @@
-0.0.2rc1
---------
+0.0.2rc0 (released 21-01-2015)
+------------------------------
 
 - Multiple fixes supporting Python 2.4-3.4 compatibility.
 - Configuration options renamed for better clarity.
@@ -10,7 +10,7 @@
 - Client-side SNMP timeout/retries now configurable
 
 0.0.2rc0 (released 21-12-2014)
----------------------------
+------------------------------
 
 - Switched to the latest pysnmp API
 - snmpEngineId and contextEngineId are always treated as hex in config
