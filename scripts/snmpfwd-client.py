@@ -419,6 +419,9 @@ for routeCfgPath in cfgTree.getPathsToAttr('using-snmp-peer-id-list'):
 
                 routingMap[k] = peerIdList
 
+def prettyVarBinds(pdu):
+    return ';'.join([ '%s:%s' % (vb[0].prettyPrint(), vb[1].prettyPrint()) for vb in v2c.apiPDU.getVarBinds(pdu) ])
+
 def __rspCbFun(snmpEngine, sendRequestHandle, errorIndication, rspPDU, cbCtx):
     trunkId, msgId, trunkReq = cbCtx
     
@@ -430,7 +433,7 @@ def __rspCbFun(snmpEngine, sendRequestHandle, errorIndication, rspPDU, cbCtx):
 
     trunkRsp['snmp-pdu'] = rspPDU
     
-    log.msg('received SNMP response message, sending trunk message #%s to trunk %s, original SNMP peer address %s:%s received at %s:%s' % (msgId, trunkId, trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port']))
+    log.msg('received SNMP response message, sending trunk message #%s to trunk %s, original SNMP peer address %s:%s received at %s:%s, var-binds: %s' % (msgId, trunkId, trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port'], prettyVarBinds(rspPDU)))
 
     trunkingManager.sendRsp(trunkId, msgId, trunkRsp)
 
@@ -476,7 +479,7 @@ def dataCbFun(trunkId, msgId, msg):
 
     peerIdList = routingMap.get((origPeerId, macro.expandMacros(trunkId, msg)))
     if not peerIdList:
-        log.msg('unroutable trunk message #%s from trunk %s, orig-peer-id %s (original SNMP info: %s)' % (msgId, trunkId, origPeerId or '<none>', ', '.join(['%s=%s' % (x, msg[x].prettyPrint()) for x in msg if x != 'snmp-pdu'])))
+        log.msg('unroutable trunk message #%s from trunk %s, orig-peer-id %s (original SNMP info: %s)' % (msgId, trunkId, origPeerId or '<none>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg])))
         errorIndication = 'no route to SNMP peer configured'
 
     cbCtx = trunkId, msgId, msg
@@ -502,7 +505,7 @@ def dataCbFun(trunkId, msgId, msg):
         if peerAddr:
             q.append(peerAddr)
 
-        log.msg('received trunk message #%s from trunk %s, sending SNMP message to peer ID %s, bind-address %s, peer-address %s (original SNMP info: %s)' % (msgId, trunkId, peerId, bindAddr[0] or '<default>', peerAddr[0] or '<default>', '.'.join(['%s=%s' % (x, msg[x].prettyPrint()) for x in msg if x != 'snmp-pdu'])))
+        log.msg('received trunk message #%s from trunk %s, sending SNMP message to peer ID %s, bind-address %s, peer-address %s (original SNMP info: %s)' % (msgId, trunkId, peerId, bindAddr[0] or '<default>', peerAddr[0] or '<default>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg])))
 
         commandGenerator.sendPdu(
             snmpEngine,

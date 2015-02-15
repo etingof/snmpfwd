@@ -160,6 +160,9 @@ if cfgTree.getAttrValue('config-version', '', default=None) != configVersion:
 
 random.seed()
 
+def prettyVarBinds(pdu):
+    return ';'.join([ '%s:%s' % (vb[0].prettyPrint(), vb[1].prettyPrint()) for vb in v2c.apiPDU.getVarBinds(pdu) ])
+
 #
 # SNMPv3 CommandResponder implementation
 #
@@ -175,15 +178,14 @@ class CommandResponder(cmdrsp.CommandResponderBase):
                             PDU, acInfo):
         trunkIdList = gCurrentRequestContext['trunk-id-list']
         trunkReq = gCurrentRequestContext['request']
+        trunkReq['snmp-pdu'] = PDU
         if trunkIdList is None:
-            log.msg('no route configured (SNMP request %s), matched keys: %s' % (', '.join(['%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq if x != 'snmp-pdu']), ', '.join(['%s=%s' % (k,gCurrentRequestContext[k]) for k in gCurrentRequestContext if k[-2:] == 'id'])))
+            log.msg('no route configured (SNMP request %s), matched keys: %s' % (', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(trunkReq['snmp-pdu']) or '%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq]), ', '.join(['%s=%s' % (k,gCurrentRequestContext[k]) for k in gCurrentRequestContext if k[-2:] == 'id'])))
             self.releaseStateInformation(stateReference)
             return
 
-        trunkReq['snmp-pdu'] = PDU
-
         for trunkId in trunkIdList:
-            log.msg('received SNMP message (%s), sending through trunk %s' % (', '.join(['%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq if x != 'snmp-pdu']), trunkId))
+            log.msg('received SNMP message (%s), sending through trunk %s' % (', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(trunkReq['snmp-pdu']) or '%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq]), trunkId))
 
             cbCtx = trunkId, trunkReq, snmpEngine, stateReference
 
@@ -195,7 +197,7 @@ class CommandResponder(cmdrsp.CommandResponderBase):
         if trunkRsp['error-indication']:
             log.msg('received trunk message through trunk %s, remote end reported error-indication %s, NOT sending response to peer address %s:%s from %s:%s' % (trunkId, trunkRsp['error-indication'], trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port']))
         else:
-            log.msg('received trunk message through trunk %s, sending SNMP response to peer address %s:%s from %s:%s' % (trunkId, trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port']))
+            log.msg('received trunk message through trunk %s, sending SNMP response to peer address %s:%s from %s:%s, snmp-var-binds=%s' % (trunkId, trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port'], prettyVarBinds(trunkRsp['snmp-pdu'])))
 
             self.sendPdu(
                 snmpEngine,
