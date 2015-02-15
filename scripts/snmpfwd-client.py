@@ -230,14 +230,14 @@ for peerEntryPath in cfgTree.getPathsToAttr('snmp-peer-id'):
             try:
                 bindAddr = bindAddr.split(':',1)
                 bindAddr = bindAddr[0], int(bindAddr[1])
-            except ValueError:
+            except (ValueError, IndexError):
                 log.msg('bad snmp-bind-address specification %s at %s' % (bindAddr, '.'.join(peerEntryPath)))
                 exit(-1)
     else:
         try:
             bindAddr = bindAddr.split(':',1)
             bindAddr = bindAddr[0], int(bindAddr[1])
-        except ValueError:
+        except (ValueError, IndexError):
             log.msg('bad snmp-bind-address specification %s at %s' % (bindAddr, '.'.join(peerEntryPath)))
             exit(-1)
 
@@ -350,14 +350,14 @@ for peerEntryPath in cfgTree.getPathsToAttr('snmp-peer-id'):
             try:
                 peerAddr = peerAddr.split(':',1)
                 peerAddr = peerAddr[0], int(peerAddr[1])
-            except ValueError:
+            except (ValueError, IndexError):
                 log.msg('bad snmp-peer-address specification %s at %s' % (peerAddr, '.'.join(peerEntryPath)))
                 exit(-1)
     else:
         try:
             peerAddr = peerAddr.split(':',1)
             peerAddr = peerAddr[0], int(peerAddr[1])
-        except ValueError:
+        except (ValueError, IndexError):
             log.msg('bad snmp-peer-address specification %s at %s' % (peerAddr, '.'.join(peerEntryPath)))
             exit(-1)
 
