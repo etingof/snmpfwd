@@ -292,7 +292,7 @@ for peerEntryPath in cfgTree.getPathsToAttr('snmp-peer-id'):
             config.addV1System(snmpEngine, securityName, communityName, 
                                securityName=securityName)
 
-            log.msg('new community-name %s, security-name %s, security-level %s' % (communityName, securityName, securityLevel))
+            log.msg('new community-name %s, security-model %s, security-name %s, security-level %s' % (communityName, securityModel, securityName, securityLevel))
             snmpEngineMap['securityName'][securityName] = securityModel
 
     elif securityModel == 3:

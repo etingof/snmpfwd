@@ -374,7 +374,7 @@ for configEntryPath in cfgTree.getPathsToAttr('snmp-credentials-id'):
             communityName = cfgTree.getAttrValue('snmp-community-name', *configEntryPath)
             config.addV1System(snmpEngine, securityName, communityName, 
                                securityName=securityName)
-            log.msg('new community-name %s, security-name %s, security-level %s' % (communityName, securityName, securityLevel))
+            log.msg('new community-name %s, security-model %s, security-name %s, security-level %s' % (communityName, securityModel, securityName, securityLevel))
             snmpEngineMap['securityName'][securityName] = securityModel
 
         configKey.append(securityModel)
