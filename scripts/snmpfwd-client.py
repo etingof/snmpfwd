@@ -420,7 +420,7 @@ for routeCfgPath in cfgTree.getPathsToAttr('using-snmp-peer-id-list'):
                 routingMap[k] = peerIdList
 
 def prettyVarBinds(pdu):
-    return ';'.join([ '%s:%s' % (vb[0].prettyPrint(), vb[1].prettyPrint()) for vb in v2c.apiPDU.getVarBinds(pdu) ])
+    return not pdu and '<none>' or ';'.join([ '%s:%s' % (vb[0].prettyPrint(), vb[1].prettyPrint()) for vb in v2c.apiPDU.getVarBinds(pdu) ])
 
 def __rspCbFun(snmpEngine, sendRequestHandle, errorIndication, rspPDU, cbCtx):
     trunkId, msgId, trunkReq = cbCtx

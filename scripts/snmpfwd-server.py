@@ -161,7 +161,7 @@ if cfgTree.getAttrValue('config-version', '', default=None) != configVersion:
 random.seed()
 
 def prettyVarBinds(pdu):
-    return ';'.join([ '%s:%s' % (vb[0].prettyPrint(), vb[1].prettyPrint()) for vb in v2c.apiPDU.getVarBinds(pdu) ])
+    return not pdu and '<none>' or ';'.join([ '%s:%s' % (vb[0].prettyPrint(), vb[1].prettyPrint()) for vb in v2c.apiPDU.getVarBinds(pdu) ])
 
 #
 # SNMPv3 CommandResponder implementation
