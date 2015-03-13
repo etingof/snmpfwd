@@ -182,7 +182,6 @@ gCurrentRequestContext = {}
 commandGenerator = cmdgen.CommandGenerator()
 
 origCredIdList = []
-contentIdMap = {}
 peerIdMap = {}
 routingMap = {}
 engineIdMap = {}
