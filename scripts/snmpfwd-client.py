@@ -432,7 +432,7 @@ def __rspCbFun(snmpEngine, sendRequestHandle, errorIndication, rspPDU, cbCtx):
 
     trunkRsp['snmp-pdu'] = rspPDU
     
-    log.msg('received SNMP response message, sending trunk message #%s to trunk %s, original SNMP peer address %s:%s received at %s:%s, var-binds: %s' % (msgId, trunkId, trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port'], prettyVarBinds(rspPDU)))
+    log.msg('received SNMP %s message, sending trunk message #%s to trunk %s, original SNMP peer address %s:%s received at %s:%s, var-binds: %s' % (errorIndication and 'error' or 'response', msgId, trunkId, trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port'], prettyVarBinds(rspPDU)))
 
     trunkingManager.sendRsp(trunkId, msgId, trunkRsp)
 
