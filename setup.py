@@ -5,6 +5,7 @@
 """
 import sys
 import os
+import glob
 
 classifiers = """\
 Development Status :: 5 - Production/Stable
@@ -82,9 +83,15 @@ params.update( {
     'platforms': ['any'],
     'classifiers': [ x for x in classifiers.split('\n') if x ],
     'scripts': [ 'scripts/snmpfwd-client.py', 'scripts/snmpfwd-server.py' ],
-    'packages': [ 'snmpfwd', 'snmpfwd.trunking' ],
+    'packages': [ 'snmpfwd', 'snmpfwd.trunking', 'snmpfwd.plugins' ],
     'license': "BSD"
   } )
+
+
+# install stock variation modules as data_files
+params['data_files'] = [
+    ( 'snmpfwd/' + 'plugins', glob.glob(os.path.join('plugins', '*.py')) )
+]
 
 if 'py2exe' in sys.argv:
     import py2exe

@@ -37,6 +37,8 @@ from pyasn1 import debug as pyasn1_debug
 from pysnmp import debug as pysnmp_debug
 from snmpfwd.error import SnmpfwdError
 from snmpfwd import log, daemon, cparser, macro
+from snmpfwd.plugins.manager import PluginManager
+from snmpfwd.plugins import status
 from snmpfwd.trunking.manager import TrunkingManager
 
 # Settings
@@ -46,6 +48,7 @@ pidFile = ''
 cfgFile = '/usr/local/etc/snmpfwd/server.cfg'
 foregroundFlag = True
 procUser = procGroup = None
+pluginApiVersion = 1
 
 authProtocols = {
   'MD5': config.usmHMACMD5AuthProtocol,
@@ -151,11 +154,11 @@ except SnmpfwdError:
     sys.exit(-1)
 
 if cfgTree.getAttrValue('program-name', '', default=None) != programName:
-    log.msg('ERROR: config file %s does not match program name %s' % (cfgFile, programName))
+    sys.stderr.write('ERROR: config file %s does not match program name %s\r\n' % (cfgFile, programName))
     sys.exit(-1)
 
 if cfgTree.getAttrValue('config-version', '', default=None) != configVersion:
-    log.msg('ERROR: config file %s version is not compatible with program version %s' % (cfgFile, configVersion))
+    sys.stderr.write('ERROR: config file %s version is not compatible with program version %s\r\n' % (cfgFile, configVersion))
     sys.exit(-1)
 
 random.seed()
@@ -174,8 +177,36 @@ class CommandResponder(cmdrsp.CommandResponderBase):
                  rfc1905.GetRequestPDU.tagSet,
                  rfc1905.GetNextRequestPDU.tagSet,
                  rfc1905.GetBulkRequestPDU.tagSet )
+
     def handleMgmtOperation(self, snmpEngine, stateReference, contextName,
                             PDU, acInfo):
+        usedPlugins = []
+        pluginIdList = gCurrentRequestContext['plugins-list']
+        snmpReqInfo = gCurrentRequestContext['request'].copy()
+        for pluginId in pluginIdList:
+            usedPlugins.append((pluginId, snmpReqInfo))
+
+            st, PDU = pluginManager.processCommandRequest(
+                pluginId, snmpEngine, PDU, **snmpReqInfo
+            )
+            if st == status.BREAK:
+                break
+            elif st == status.DROP:
+                log.msg('plugin %s muted request (SNMP request %s), matched keys: %s' % (pluginId, ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(trunkReq['snmp-pdu']) or '%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq]), ', '.join(['%s=%s' % (k,gCurrentRequestContext[k]) for k in gCurrentRequestContext if k[-2:] == 'id'])))
+                self.releaseStateInformation(stateReference)
+                return
+            elif st == status.RESPOND:
+                log.msg('plugin %s forced response (SNMP request %s), matched keys: %s' % (pluginId, ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(trunkReq['snmp-pdu']) or '%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq]), ', '.join(['%s=%s' % (k,gCurrentRequestContext[k]) for k in gCurrentRequestContext if k[-2:] == 'id'])))
+                self.sendPdu(
+                    snmpEngine,
+                    stateReference,
+                    PDU
+                )
+                self.releaseStateInformation(stateReference)
+                return
+
+        # pass query to trunk
+
         trunkIdList = gCurrentRequestContext['trunk-id-list']
         trunkReq = gCurrentRequestContext['request']
         trunkReq['snmp-pdu'] = PDU
@@ -187,22 +218,35 @@ class CommandResponder(cmdrsp.CommandResponderBase):
         for trunkId in trunkIdList:
             log.msg('received SNMP message (%s), sending through trunk %s' % (', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(trunkReq['snmp-pdu']) or '%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq]), trunkId))
 
-            cbCtx = trunkId, trunkReq, snmpEngine, stateReference
+            cbCtx = usedPlugins, trunkId, trunkReq, snmpEngine, stateReference
 
             trunkingManager.sendReq(trunkId, trunkReq, self.__recvCb, cbCtx)
 
     def __recvCb(self, trunkRsp, cbCtx):
-        trunkId, trunkReq, snmpEngine, stateReference = cbCtx
+        pluginIdList, trunkId, trunkReq, snmpEngine, stateReference = cbCtx
 
         if trunkRsp['error-indication']:
             log.msg('received trunk message through trunk %s, remote end reported error-indication %s, NOT sending response to peer address %s:%s from %s:%s' % (trunkId, trunkRsp['error-indication'], trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port']))
         else:
-            log.msg('received trunk message through trunk %s, sending SNMP response to peer address %s:%s from %s:%s, snmp-var-binds=%s' % (trunkId, trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port'], prettyVarBinds(trunkRsp['snmp-pdu'])))
+            PDU = trunkRsp['snmp-pdu']
+            for pluginId, snmpReqInfo in pluginIdList:
+                st, PDU = pluginManager.processCommandResponse(
+                    pluginId, snmpEngine, PDU, **snmpReqInfo
+                )
+
+                if st == status.BREAK:
+                    break
+                elif st == status.DROP:
+                    log.msg('received trunk message through trunk %s, snmp-var-binds=%s, plugin %s muted response' % (trunkId, prettyVarBinds(PDU), pluginId))
+                    self.releaseStateInformation(stateReference)
+                    return
+
+            log.msg('received trunk message through trunk %s, sending SNMP response to peer address %s:%s from %s:%s, snmp-var-binds=%s' % (trunkId, trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port'], prettyVarBinds(PDU)))
 
             self.sendPdu(
                 snmpEngine,
                 stateReference,
-                trunkRsp['snmp-pdu']
+                PDU
             )
 
         self.releaseStateInformation(stateReference)
@@ -212,6 +256,7 @@ peerIdMap = {}
 contextIdList = []
 contentIdList = []
 contentIdMap = {}
+pluginIdMap = {}
 trunkIdMap = {}
 engineIdMap = {}
 
@@ -268,6 +313,12 @@ def requestObserver(snmpEngine, execpoint, variables, cbCtx):
         else:
             cbCtx['content-id'] = None
 
+    cbCtx['plugins-list'] = pluginIdMap.get(
+        ( cbCtx['snmp-credentials-id'],
+          cbCtx['context-id'],
+          cbCtx['peer-id'],
+          cbCtx['content-id'] ), []
+    )
     cbCtx['trunk-id-list'] = trunkIdMap.get(
         ( cbCtx['snmp-credentials-id'],
           cbCtx['context-id'],
@@ -287,6 +338,24 @@ def requestObserver(snmpEngine, execpoint, variables, cbCtx):
         'snmp-context-engine-id': variables['contextEngineId'],
         'snmp-context-name': variables['contextName']
     }
+
+pluginManager = PluginManager(
+    cfgTree.getAttrValue('plugin-modules-path-list','',default=[],vector=True),
+    progId=programName,
+    apiVer=pluginApiVersion
+)
+
+for pluginCfgPath in cfgTree.getPathsToAttr('plugin-id'):
+    pluginId = cfgTree.getAttrValue('plugin-id', *pluginCfgPath)
+    pluginMod = cfgTree.getAttrValue('plugin-module', *pluginCfgPath)
+    pluginOptions = cfgTree.getAttrValue('plugin-options', *pluginCfgPath, **dict(default=''))
+
+    log.msg('configuring plugin ID %s (at %s) from module %s with options %s...' % (pluginId, '.'.join(pluginCfgPath), pluginMod, pluginOptions or '<none>'))
+    try:
+        pluginManager.loadPlugin(pluginId, pluginMod, pluginOptions)
+    except SnmpfwdError:
+        log.msg('ERROR: plugin %s not loaded: %s' % (pluginId, sys.exc_info()[1]))
+        sys.exit(-1)
 
 for configEntryPath in cfgTree.getPathsToAttr('snmp-credentials-id'):
     credId = cfgTree.getAttrValue('snmp-credentials-id', *configEntryPath)
@@ -369,7 +438,7 @@ for configEntryPath in cfgTree.getPathsToAttr('snmp-credentials-id'):
             if snmpEngineMap['securityName'][securityModel] == securityModel:
                 log.msg('using security-name %s' % securityName)
             else:
-                raise error.SnmpfwdError('snmp-security-name %s already in use at snmp-security-model %s' % (securityName, securityModel))
+                raise SnmpfwdError('snmp-security-name %s already in use at snmp-security-model %s' % (securityName, securityModel))
         else:
             communityName = cfgTree.getAttrValue('snmp-community-name', *configEntryPath)
             config.addV1System(snmpEngine, securityName, communityName, 
@@ -479,6 +548,27 @@ for contentCfgPath in cfgTree.getPathsToAttr('snmp-content-id'):
         contentIdList.append((contentId, re.compile(k)))
 
 del duplicates
+
+for pluginCfgPath in cfgTree.getPathsToAttr('using-plugin-id-list'):
+    pluginIdList = cfgTree.getAttrValue('using-plugin-id-list', *pluginCfgPath, **dict(vector=True))
+    log.msg('configuring plugin ID(s) %s (at %s)...' % (','.join(pluginIdList), '.'.join(pluginCfgPath)))
+    for credId in cfgTree.getAttrValue('matching-snmp-credentials-id-list', *pluginCfgPath, **dict(vector=True)):
+        for peerId in cfgTree.getAttrValue('matching-snmp-peer-id-list', *pluginCfgPath, **dict(vector=True)):
+            for contextId in cfgTree.getAttrValue('matching-snmp-context-id-list', *pluginCfgPath, **dict(vector=True)):
+                for contentId in cfgTree.getAttrValue('matching-snmp-content-id-list', *pluginCfgPath, **dict(vector=True)):
+                    k = credId, contextId, peerId, contentId
+                    if k in pluginIdMap:
+                        log.msg('duplicate snmp-credentials-id %s, snmp-context-id %s, snmp-peer-id %s, snmp-content-id %s at plugin-id(s) %s' % (credId, contextId, peerId, contentId, ','.join(pluginId)))
+                        sys.exit(-1)
+                    else:
+                        log.msg('configuring plugin(s) %s (at %s), composite key: %r' % (','.join(pluginIdList), '.'.join(pluginCfgPath), '/'.join(k)))
+
+                        for pluginId in pluginIdList:
+                            if not pluginManager.hasPlugin(pluginId):
+                                log.msg('ERRPR: undefined plugin ID %s referenced at %s' % (pluginId, '.'.join(pluginCfgPath)))
+                                sys.exit(-1)
+
+                        pluginIdMap[k] = pluginIdList
 
 for routeCfgPath in cfgTree.getPathsToAttr('using-trunk-id-list'):
     trunkIdList = cfgTree.getAttrValue('using-trunk-id-list', *routeCfgPath, **dict(vector=True))
