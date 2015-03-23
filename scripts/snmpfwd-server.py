@@ -180,6 +180,10 @@ class CommandResponder(cmdrsp.CommandResponderBase):
 
     def handleMgmtOperation(self, snmpEngine, stateReference, contextName,
                             PDU, acInfo):
+        trunkReq = gCurrentRequestContext['request']
+
+        logMsg = '(SNMP request %s), matched keys: %s' % (', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(trunkReq['snmp-pdu']) or '%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq]), ', '.join(['%s=%s' % (k,gCurrentRequestContext[k]) for k in gCurrentRequestContext if k[-2:] == 'id']))
+
         usedPlugins = []
         pluginIdList = gCurrentRequestContext['plugins-list']
         snmpReqInfo = gCurrentRequestContext['request'].copy()
@@ -192,11 +196,11 @@ class CommandResponder(cmdrsp.CommandResponderBase):
             if st == status.BREAK:
                 break
             elif st == status.DROP:
-                log.msg('plugin %s muted request (SNMP request %s), matched keys: %s' % (pluginId, ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(trunkReq['snmp-pdu']) or '%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq]), ', '.join(['%s=%s' % (k,gCurrentRequestContext[k]) for k in gCurrentRequestContext if k[-2:] == 'id'])))
+                log.msg('plugin %s muted request %s' % (pluginId, logMsg))
                 self.releaseStateInformation(stateReference)
                 return
             elif st == status.RESPOND:
-                log.msg('plugin %s forced response (SNMP request %s), matched keys: %s' % (pluginId, ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(trunkReq['snmp-pdu']) or '%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq]), ', '.join(['%s=%s' % (k,gCurrentRequestContext[k]) for k in gCurrentRequestContext if k[-2:] == 'id'])))
+                log.msg('plugin %s forced immediate response %s' % (pluginId, logMsg))
                 self.sendPdu(
                     snmpEngine,
                     stateReference,
@@ -207,11 +211,10 @@ class CommandResponder(cmdrsp.CommandResponderBase):
 
         # pass query to trunk
 
-        trunkIdList = gCurrentRequestContext['trunk-id-list']
-        trunkReq = gCurrentRequestContext['request']
         trunkReq['snmp-pdu'] = PDU
+        trunkIdList = gCurrentRequestContext['trunk-id-list']
         if trunkIdList is None:
-            log.msg('no route configured (SNMP request %s), matched keys: %s' % (', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(trunkReq['snmp-pdu']) or '%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq]), ', '.join(['%s=%s' % (k,gCurrentRequestContext[k]) for k in gCurrentRequestContext if k[-2:] == 'id'])))
+            log.msg('no route configured %s' % logMsg)
             self.releaseStateInformation(stateReference)
             return
 
