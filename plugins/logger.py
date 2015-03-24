@@ -2,9 +2,9 @@
 import logging
 from logging import handlers
 try:
-    from ConfigParser import RawConfigParser
+    from ConfigParser import RawConfigParser, Error
 except ImportError:
-    from configparser import RawConfigParser
+    from configparser import RawConfigParser, Error
 from snmpfwd.plugins import status
 from snmpfwd.log import msg
 from pysnmp.proto.api import v2c
@@ -16,6 +16,7 @@ apiVersions = 0, 1
 pduMap = {}
 method = 'null'
 format = ''
+parentheses = ('', '')
 
 logger = logging.getLogger('snmpfwd-logger')
 
@@ -56,13 +57,20 @@ if moduleOptions[0] == 'config':
         logging.Formatter(config.get('content', 'format').replace('-', '_'))
     )
 
+    try:
+        parentheses = tuple(config.get('content', 'parentheses').split())
+    except Error:
+        pass
+
+    msg('logger: using var-bind value parentheses "%s" "%s"' % parentheses)
+
     logger.addHandler(handler)
 
 msg('logger: plugin initialization complete')
 
 def _makeExtra(pdu, context):
     extra = dict([(x[0].replace('-', '_'),x[1]) for x in context.items()])
-    extra['snmp_var_binds'] = ' '.join([ '%s <%s>' % (vb[0].prettyPrint(), vb[1].prettyPrint()) for vb in v2c.apiPDU.getVarBinds(pdu) ])
+    extra['snmp_var_binds'] = ' '.join([ '%s %s%s%s' % (vb[0].prettyPrint(), parentheses[0], vb[1].prettyPrint(), parentheses[1]) for vb in v2c.apiPDU.getVarBinds(pdu) ])
     extra['snmp_pdu_type'] = pduMap[pdu.tagSet]
     return extra
 
