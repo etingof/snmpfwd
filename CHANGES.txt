@@ -3,6 +3,7 @@
 
 - Loadable extention plugin modules infrastructure first introduced.
 - Experimental SNMP PDU var-binds logging added.
+- Wheel distribution format now supported.
 
 0.0.2rc0 (released 21-01-2015)
 ------------------------------
