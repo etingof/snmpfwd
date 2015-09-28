@@ -19,6 +19,10 @@ is to use easy install:
 
 $ easy_install snmpfwd
 
+or
+
+$ pip install snmpfwd
+
 Alternatively, you can download SNMP Proxy from SourceForge download servers:
 
 https://sourceforge.net/projects/snmpfwd
@@ -55,4 +59,4 @@ Feedback
 I'm interested in bug reports and fixes, suggestions and improvements.
 
 ---
-Written by Ilya Etingof <ilya@snmplabs.com>, 2014
+Written by Ilya Etingof <ilya@snmplabs.com>, 2014-2015

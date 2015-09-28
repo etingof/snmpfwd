@@ -1,12 +1,17 @@
-0.0.2rc1 (released 14-02-2015)
-------------------------------
+Version 0.0.2, released 28-09-2015
+----------------------------------
+
+- Minor fixes towards Python 2.4 compatibility.
+
+Version 0.0.2rc1, released 14-02-2015
+-------------------------------------
 
 - Loadable extention plugin modules infrastructure first introduced.
 - Experimental SNMP PDU var-binds logging added.
 - Wheel distribution format now supported.
 
-0.0.2rc0 (released 21-01-2015)
-------------------------------
+Version 0.0.2rc0, released 21-01-2015
+-------------------------------------
 
 - Multiple fixes supporting Python 2.4-3.4 compatibility.
 - Configuration options renamed for better clarity.
@@ -16,8 +21,8 @@
   support implemented
 - Client-side SNMP timeout/retries now configurable
 
-0.0.2rc0 (released 21-12-2014)
-------------------------------
+Version 0.0.2rc0, released 21-12-2014
+-------------------------------------
 
 - Switched to the latest pysnmp API
 - snmpEngineId and contextEngineId are always treated as hex in config
@@ -28,7 +33,7 @@
 - SNMP request PDU type and request OIDs can now be used for request routing
 - Fix to SNMPv3 operation on the Client part.
 
-0.0.1 (released 01-04-2014)
----------------------------
+Version 0.0.1, released 01-04-2014
+----------------------------------
 
 - Initial public release.

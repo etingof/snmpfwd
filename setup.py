@@ -53,7 +53,7 @@ def howto_install_setuptools():
 try:
     from setuptools import setup
     params = {
-        'install_requires': [ 'pysnmp>=4.2.3' ],
+        'install_requires': [ 'pysnmp>=4.3.0' ],
         'zip_safe': True
         }
 except ImportError:
@@ -67,7 +67,7 @@ except ImportError:
     from distutils.core import setup
     params = {}
     if sys.version_info[:2] > (2, 4):
-        params['requires'] = [ 'pysnmp(>=4.2.3)' ]
+        params['requires'] = [ 'pysnmp(>=4.3.0)' ]
 
 doclines = [ x.strip() for x in __doc__.split('\n') if x ]
 
@@ -104,8 +104,7 @@ if 'py2exe' in sys.argv:
         'py2exe': {
             'includes': [
                 'pysnmp.smi.mibs.*',
-                'pysnmp.smi.mibs.instances.*',
-                'pysnmp.entity.rfc3413.oneliner.*'
+                'pysnmp.smi.mibs.instances.*'
             ],
             'bundle_files': 1,
             'compressed': True
