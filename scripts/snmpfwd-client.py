@@ -135,9 +135,9 @@ Software documentation and support at http://snmpfwd.sf.net
 """ % (snmpfwd.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
         sys.exit(-1)
     elif opt[0] == '--debug-snmp':
-        pysnmp_debug.setLogger(pysnmp_debug.Debug(*opt[1].split(','), loggerName=programName+'.pysnmp'))
+        pysnmp_debug.setLogger(pysnmp_debug.Debug(*opt[1].split(','), **dict(loggerName=programName+'.pysnmp')))
     elif opt[0] == '--debug-asn1':
-        pyasn1_debug.setLogger(pyasn1_debug.Debug(*opt[1].split(','), loggerName=programName+'.pyasn1'))
+        pyasn1_debug.setLogger(pyasn1_debug.Debug(*opt[1].split(','), **dict(loggerName=programName+'.pyasn1')))
     elif opt[0] == '--daemonize':
         foregroundFlag = False
     elif opt[0] == '--process-user':
@@ -148,7 +148,7 @@ Software documentation and support at http://snmpfwd.sf.net
         pidFile = opt[1]
     elif opt[0] == '--logging-method':
         try:
-            log.setLogger(programName, *opt[1].split(':'), force=True)
+            log.setLogger(programName, *opt[1].split(':'), **dict(force=True))
         except SnmpfwdError:
             sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
