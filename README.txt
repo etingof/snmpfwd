@@ -3,9 +3,9 @@ SNMP Proxy Forwarder
 --------------------
 
 This tool works as an application-level proxy with a built-in SNMP
-massages router. It can listen for SNMPv1/v2c/v3 messages on one interface,
+message router. It can listen for SNMPv1/v2c/v3 messages on one interface,
 parse them to choose their ultimate destinations, and finally send them
-out.
+out through possibly another interface.
 
 Typical use for an SNMP proxy is to work as an application-level firewall
 or a protocol translator that enables SNMPv3 access to a SNMPv1/SNMPv2c
@@ -17,11 +17,11 @@ Installation
 The easiest way to download and install SNMP Proxy and its dependencies
 is to use easy install:
 
-$ easy_install snmpfwd
+$ pip install snmpfwd
 
 or
 
-$ pip install snmpfwd
+$ easy_install snmpfwd
 
 Alternatively, you can download SNMP Proxy from SourceForge download servers:
 
@@ -31,17 +31,7 @@ Then you can either install the scripts with standard
 
 $ python setup.py install
 
-or simply run them off your home directory.
-
-To run SNMP Proxy you need to have pysnmp-4 and pyasn1 packages
-available on your system.
-
-http://sourceforge.net/projects/pyasn1/
-http://sourceforge.net/projects/pysnmp/
-
-For secure SNMPv3 communication, PyCrypto should also be installed:
-
-http://www.pycrypto.org
+or simply run them off your home directory (make sure to install dependencies).
 
 Getting help
 ------------
