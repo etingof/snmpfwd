@@ -62,8 +62,10 @@ def prepareRequestData(msgId, req, secret):
     msg['version'] = 0
     msg['msg-id'] = msgId
     msg['content-id'] = 'request'
-    msg['payload'] = crypto.encrypt(secret, encoder.encode(r))
-        
+    if secret:
+        msg['payload'] = crypto.encrypt(secret, encoder.encode(r))
+    else:
+        msg['payload'] = encoder.encode(r)
     return encoder.encode(msg)
 
 def prepareResponseData(msgId, rsp, secret):
@@ -75,8 +77,11 @@ def prepareResponseData(msgId, rsp, secret):
     msg['version'] = 0
     msg['msg-id'] = msgId
     msg['content-id'] = 'response'
-    msg['payload'] = crypto.encrypt(secret, encoder.encode(r))
-        
+    msg['payload'] = encoder.encode(r)
+    if secret:
+        msg['payload'] = crypto.encrypt(secret, encoder.encode(r))
+    else:
+        msg['payload'] = encoder.encode(r)
     return encoder.encode(msg)
 
 def prepareAnnouncementData(trunkId, secret):
@@ -87,8 +92,11 @@ def prepareAnnouncementData(trunkId, secret):
     msg['version'] = 0
     msg['msg-id'] = 0
     msg['content-id'] = 'announcement'
-    msg['payload'] = crypto.encrypt(secret, encoder.encode(r))
-        
+    msg['payload'] = encoder.encode(r)
+    if secret:
+        msg['payload'] = crypto.encrypt(secret, encoder.encode(r))
+    else:
+        msg['payload'] = encoder.encode(r)
     return encoder.encode(msg)
 
 def prepareDataElements(octets, secret):
@@ -101,7 +109,7 @@ def prepareDataElements(octets, secret):
         raise SnmpfwdError('Unsupported protocol version: %s' % msg['version'])
 
     r, _ = decoder.decode(
-        crypto.decrypt(secret, msg['payload'].asOctets()),
+        secret and crypto.decrypt(secret, msg['payload'].asOctets()) or msg['payload'].asOctets(),
         asn1Spec=pduMap.get(msg['content-id'])
     )
 

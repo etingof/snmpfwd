@@ -603,8 +603,8 @@ def getTrunkAddr(a, port=0):
 
 for trunkCfgPath in cfgTree.getPathsToAttr('trunk-id'):
     trunkId = cfgTree.getAttrValue('trunk-id', *trunkCfgPath)
-    secret = cfgTree.getAttrValue('trunk-crypto-key', *trunkCfgPath)
-    secret = (secret*((16//len(secret))+1))[:16]
+    secret = cfgTree.getAttrValue('trunk-crypto-key', *trunkCfgPath, **dict(default=''))
+    secret = secret and (secret*((16//len(secret))+1))[:16]
     log.msg('configuring trunk ID %s (at %s)...' % (trunkId, '.'.join(trunkCfgPath)))
     connectionMode = cfgTree.getAttrValue('trunk-connection-mode', *trunkCfgPath)
     if connectionMode == 'client':
