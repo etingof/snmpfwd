@@ -52,7 +52,7 @@ else:
         try:
             if pidfile:
                 fd, nm = tempfile.mkstemp(dir=os.path.dirname(pidfile))
-                os.write(fd, '%d\n' % os.getpid())
+                os.write(fd, ('%d\n' % os.getpid()).encode('utf-8'))
                 os.close(fd)
                 os.rename(nm, pidfile)
         except:
