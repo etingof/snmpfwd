@@ -5,9 +5,10 @@ SNMP Proxy Forwarder
 [![GitHub license](https://img.shields.io/badge/license-BSD-blue.svg)](https://raw.githubusercontent.com/etingof/snmpfwd/master/LICENSE.txt)
 
 This tool works as an application-level proxy with a built-in SNMP
-message router. It can listen for SNMPv1/v2c/v3 messages on one interface,
-parse them to choose their ultimate destinations, and finally send them
-out through possibly another interface.
+message router. SNMP forwarder design features split client/server operation
+that promotes having one part of the system in DMZ while the other is 
+facing the Internet. Message routing can be programmed via a declarative
+mini-language.
 
 Typical use for an SNMP proxy is to work as an application-level firewall
 or a protocol translator that enables SNMPv3 access to a SNMPv1/SNMPv2c
@@ -16,13 +17,13 @@ entity or vice versa.
 Features
 --------
 
-* SNMPv1/v2c/v3 operations with built-in translation capabilities
+* SNMPv1/v2c/v3 operations with built-in protocol and transport translation capabilities
 * Fully configurable, multiple SNMP engines and multiple transports
 * Split client and server parts interconnected through encrypted TCP links
 * Configurable SNMP message routing
-* Extension modules supporting custom processing logic
+* Extension modules supporting SNMP messages introspection and modification
 * Supports transparent proxy operation
-* Highly portable across major platforms
+* Works on Linux, Windows and OS X
 
 Download
 --------
