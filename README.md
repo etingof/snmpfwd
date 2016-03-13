@@ -6,11 +6,11 @@ SNMP Proxy Forwarder
 
 This tool works as an application-level proxy with a built-in SNMP
 message router. SNMP forwarder design features split client/server operation
-that promotes having one part of the system in DMZ while the other is 
+that promotes having one part of the system in DMZ while other part is 
 facing the Internet. Message routing can be programmed via a declarative
 mini-language.
 
-Typical use for an SNMP proxy is to work as an application-level firewall
+Typical use case for an SNMP proxy is to work as an application-level firewall
 or a protocol translator that enables SNMPv3 access to a SNMPv1/SNMPv2c
 entity or vice versa.
 
@@ -22,7 +22,7 @@ Features
 * Split client and server parts interconnected through encrypted TCP links
 * Configurable SNMP message routing
 * Extension modules supporting SNMP messages introspection and modification
-* Supports transparent proxy operation
+* Supports transparent proxy operation (Linux only)
 * Works on Linux, Windows and OS X
 
 Download
