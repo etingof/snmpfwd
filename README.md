@@ -2,6 +2,7 @@
 SNMP Proxy Forwarder
 --------------------
 [![Downloads](https://img.shields.io/pypi/dm/snmpfwd.svg)](https://pypi.python.org/pypi/snmpfwd)
+[![PyPI](https://img.shields.io/pypi/v/snmpfwd.svg?maxAge=2592000)](https://pypi.python.org/pypi/snmpfwd)
 [![GitHub license](https://img.shields.io/badge/license-BSD-blue.svg)](https://raw.githubusercontent.com/etingof/snmpfwd/master/LICENSE.txt)
 
 This tool works as an application-level proxy with a built-in SNMP
