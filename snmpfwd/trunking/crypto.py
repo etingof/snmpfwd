@@ -1,3 +1,9 @@
+#
+# This file is part of snmpfwd software.
+#
+# Copyright (c) 2014-2017, Ilya Etingof <etingof@gmail.com>
+# License: https://github.com/etingof/snmpfwd/blob/master/LICENSE.txt
+#
 from Crypto import Random
 from Crypto.Cipher import AES
 from pyasn1.compat.octets import int2oct, oct2int

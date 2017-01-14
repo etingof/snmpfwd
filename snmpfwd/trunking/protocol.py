@@ -1,3 +1,9 @@
+#
+# This file is part of snmpfwd software.
+#
+# Copyright (c) 2014-2017, Ilya Etingof <etingof@gmail.com>
+# License: https://github.com/etingof/snmpfwd/blob/master/LICENSE.txt
+#
 from pyasn1.type import univ, tag, constraint, namedtype, namedval
 from pyasn1.codec.ber import encoder, decoder
 from pyasn1.error import SubstrateUnderrunError

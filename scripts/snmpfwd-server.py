@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 #
-# SNMP Proxy Forwarder: server part
+# This file is part of snmpfwd software.
 #
-# Written by Ilya Etingof <ilya@snmplabs.com>, 2015. All rights reserved.
+# Copyright (c) 2014-2017, Ilya Etingof <etingof@gmail.com>
+# License: https://github.com/etingof/snmpfwd/blob/master/LICENSE.txt
 #
 import os
 import stat
