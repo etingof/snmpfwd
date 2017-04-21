@@ -34,45 +34,38 @@ Topic :: System :: Monitoring
 Topic :: System :: Networking :: Monitoring
 """
 
-def howto_install_distribute():
-    print("""
-   Error: You need the distribute Python package!
-
-   It's very easy to install it, just type (as root on Linux):
-
-   wget http://python-distribute.org/distribute_setup.py
-   python distribute_setup.py
-
-   Then you could make eggs from this package.
-""")
-
 def howto_install_setuptools():
     print("""
    Error: You need setuptools Python package!
 
-   It's very easy to install it, just type (as root on Linux):
+   It's very easy to install it, just type:
 
-   wget http://peak.telecommunity.com/dist/ez_setup.py
+   wget https://bootstrap.pypa.io/ez_setup.py
    python ez_setup.py
 
    Then you could make eggs from this package.
 """)
 
+if sys.version_info[:2] < (2, 4):
+    print("ERROR: this package requires Python 2.4 or later!")
+    sys.exit(1)
+
 try:
     from setuptools import setup
+
     params = {
         'install_requires': ['pysnmp>=4.3.0'],
         'zip_safe': True
-        }
+    }
+
 except ImportError:
     for arg in sys.argv:
-        if "egg" in arg:
-            if sys.version_info[0] > 2:
-                howto_install_distribute()
-            else:
-                howto_install_setuptools()
+        if 'egg' in arg:
+            howto_install_setuptools()
             sys.exit(1)
+
     from distutils.core import setup
+
     params = {}
     if sys.version_info[:2] > (2, 4):
         params['requires'] = ['pysnmp(>=4.3.0)']
@@ -96,7 +89,6 @@ params.update(
 )
 
 
-# install stock variation modules as data_files
 params['data_files'] = [
     ( 'snmpfwd/' + 'plugins', glob.glob(os.path.join('plugins', '*.py')) )
 ]
@@ -135,4 +127,3 @@ if 'py2exe' in sys.argv:
     print("!!! Make sure your pysnmp/pyasn1 packages are NOT .egg'ed!!!")
 
 setup(**params)
-
