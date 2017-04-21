@@ -10,7 +10,7 @@ import time
 import logging
 import socket
 from logging import handlers
-from snmpsim import error
+from snmpfwd import error
 
 class AbstractLogger:
     def __init__(self, progId, *priv):

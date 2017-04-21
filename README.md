@@ -1,8 +1,9 @@
 
 SNMP Proxy Forwarder
 --------------------
-[![Python Versions](https://img.shields.io/pypi/pyversions/snmpfwd.svg)](https://pypi.python.org/pypi/snmpfwd/)
+
 [![PyPI](https://img.shields.io/pypi/v/snmpfwd.svg?maxAge=2592000)](https://pypi.python.org/pypi/snmpfwd)
+[![Python Versions](https://img.shields.io/pypi/pyversions/snmpfwd.svg)](https://pypi.python.org/pypi/snmpfwd/)
 [![GitHub license](https://img.shields.io/badge/license-BSD-blue.svg)](https://raw.githubusercontent.com/etingof/snmpfwd/master/LICENSE.txt)
 
 This tool works as an application-level proxy with a built-in SNMP
@@ -46,19 +47,15 @@ How to use SNMP proxy forwarder
 Once installed, configure both client and server part of the tool by tackling
 [client.conf](https://raw.githubusercontent.com/etingof/snmpfwd/master/conf/client.conf) and
 [server.conf](https://raw.githubusercontent.com/etingof/snmpfwd/master/conf/server.conf)
-configuration files. See comments and examples inside for more intormation.
+configuration files. See comments and examples inside for more information.
 
 Getting help
 ------------
 
-If something does not work as expected, try browsing
-[mailing list archives](https://sourceforge.net/p/snmpsim/mailman/snmpfwd-users/) or post
-your question [to Stack Overflow](http://stackoverflow.com/questions/ask).
+If something does not work as expected,
+[open an issue](https://github.com/etingof/snmpfwd/issues) at GitHub or
+post your question [on Stack Overflow](http://stackoverflow.com/questions/ask).
 
-Feedback and collaboration
---------------------------
+Finally, your PRs are warmly welcome! ;-)
 
-I'm interested in bug reports, fixes, suggestions and improvements. Your
-pull requests are very welcome!
-
-Copyright (c) 2014-2017, [Ilya Etingof](mailto:etingof@gmail.com). All rights reserved.
+Copyright (c) 2005-2017, [Ilya Etingof](mailto:etingof@gmail.com). All rights reserved.
