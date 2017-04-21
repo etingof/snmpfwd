@@ -1,4 +1,4 @@
-Revision 0.0.3, released XX-XX-2017
+Revision 0.0.3, released XX-04-2017
 -----------------------------------
 
 - Unspecified trunk-crypto-key now indicates disabled trunk encryption.
