@@ -6,7 +6,7 @@
 #
 from Crypto import Random
 from Crypto.Cipher import AES
-from pyasn1.compat.octets import int2oct, oct2int
+from pyasn1.compat.octets import int2oct, oct2int, str2octs
 
 class AESCipher:
     def pad(self, s, BS=16):
@@ -18,12 +18,12 @@ class AESCipher:
     def encrypt(self, key, raw):
         raw = self.pad(raw)
         iv = Random.new().read(AES.block_size)
-        cipher = AES.new(key, AES.MODE_CBC, iv)
+        cipher = AES.new(str2octs(key), AES.MODE_CBC, iv)
         return iv + cipher.encrypt(raw) 
 
     def decrypt(self, key, enc):
         iv = enc[:16]
-        cipher = AES.new(key, AES.MODE_CBC, iv)
+        cipher = AES.new(str2octs(key), AES.MODE_CBC, iv)
         return self.unpad(cipher.decrypt(enc[16:]))
 
 encrypt = AESCipher().encrypt
