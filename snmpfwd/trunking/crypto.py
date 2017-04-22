@@ -8,11 +8,14 @@ from Crypto import Random
 from Crypto.Cipher import AES
 from pyasn1.compat.octets import int2oct, oct2int, str2octs
 
+
 class AESCipher:
-    def pad(self, s, BS=16):
+    @staticmethod
+    def pad(s, BS=16):
         return s + (BS - len(s) % BS) * int2oct(BS - len(s) % BS)
 
-    def unpad(self, s, BS=16):
+    @staticmethod
+    def unpad(s):
         return s[0:-oct2int(s[-1])]
     
     def encrypt(self, key, raw):

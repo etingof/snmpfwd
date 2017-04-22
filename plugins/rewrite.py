@@ -51,6 +51,7 @@ if moduleOptions[0] == 'config':
 
 msg('rewrite: plugin initialization complete')
 
+
 def processCommandResponse(pluginId, snmpEngine, pdu, **context):
     varBinds = []
     for oid, val in v2c.apiPDU.getVarBinds(pdu):

@@ -12,9 +12,11 @@ from snmpfwd import log, next, error
 from snmpfwd.trunking import protocol
 from pyasn1.compat.octets import null
 
+
 class TrunkingClient(asyncore.dispatcher_with_send):
     isUp = False
-    def __init__ (self, localEndpoint, remoteEndpoint, secret, dataCbFun):
+
+    def __init__(self, localEndpoint, remoteEndpoint, secret, dataCbFun):
         self.__localEndpoint = localEndpoint
         self.__remoteEndpoint = remoteEndpoint
         self.__secret = secret
@@ -115,4 +117,4 @@ class TrunkingClient(asyncore.dispatcher_with_send):
         if exc_info and not isinstance(exc_info[1], socket.error):
             for line in traceback.format_exception(*exc_info):
                 log.msg(line.replace('\n', ';'))
-        self.handle_close ()
+        self.handle_close()

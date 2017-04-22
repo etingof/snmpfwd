@@ -4,11 +4,13 @@
 # Copyright (c) 2014-2017, Ilya Etingof <etingof@gmail.com>
 # License: https://github.com/etingof/snmpfwd/blob/master/LICENSE.txt
 #
-from pyasn1.type import univ, tag, constraint, namedtype, namedval
+from pyasn1.type import univ, namedtype, namedval
 from pyasn1.codec.ber import encoder, decoder
 from pyasn1.error import SubstrateUnderrunError
 from pysnmp.proto import rfc1905
 from snmpfwd.trunking import crypto
+from snmpfwd.error import SnmpfwdError
+
 
 class Message(univ.Sequence):
     componentType = namedtype.NamedTypes(
@@ -17,6 +19,7 @@ class Message(univ.Sequence):
         namedtype.NamedType('content-id', univ.Integer(namedValues=namedval.NamedValues(('request', 0), ('response', 1), ('announcement', 2)))),
         namedtype.NamedType('payload', univ.OctetString())
     )
+
 
 class Request(univ.Sequence):
     componentType = namedtype.NamedTypes(
@@ -34,11 +37,13 @@ class Request(univ.Sequence):
         namedtype.NamedType('snmp-pdu', univ.OctetString())
     )
 
+
 class Response(univ.Sequence):
     componentType = namedtype.NamedTypes(
         namedtype.NamedType('error-indication', univ.OctetString('')),
         namedtype.NamedType('snmp-pdu', univ.OctetString(''))
     )
+
 
 class Announcement(univ.Sequence):
     componentType = namedtype.NamedTypes(
@@ -51,15 +56,16 @@ pduMap = {
     2: Announcement()
 }
 
+
 def prepareRequestData(msgId, req, secret):
     r = Request()
-    for k in 'snmp-engine-id', \
-             'snmp-transport-domain', \
-             'snmp-peer-address', 'snmp-peer-port', \
-             'snmp-bind-address', 'snmp-bind-port', \
-             'snmp-security-model', 'snmp-security-level', \
-             'snmp-security-name', 'snmp-context-engine-id', \
-             'snmp-context-name':
+    for k in ('snmp-engine-id',
+              'snmp-transport-domain',
+              'snmp-peer-address', 'snmp-peer-port',
+              'snmp-bind-address', 'snmp-bind-port',
+              'snmp-security-model', 'snmp-security-level',
+              'snmp-security-name', 'snmp-context-engine-id',
+              'snmp-context-name'):
         r[k] = req[k]
 
     r['snmp-pdu'] = encoder.encode(req['snmp-pdu'])
@@ -73,6 +79,7 @@ def prepareRequestData(msgId, req, secret):
     else:
         msg['payload'] = encoder.encode(r)
     return encoder.encode(msg)
+
 
 def prepareResponseData(msgId, rsp, secret):
     r = Response()
@@ -90,6 +97,7 @@ def prepareResponseData(msgId, rsp, secret):
         msg['payload'] = encoder.encode(r)
     return encoder.encode(msg)
 
+
 def prepareAnnouncementData(trunkId, secret):
     r = Announcement()
     r['trunk-id'] = trunkId
@@ -104,6 +112,7 @@ def prepareAnnouncementData(trunkId, secret):
     else:
         msg['payload'] = encoder.encode(r)
     return encoder.encode(msg)
+
 
 def prepareDataElements(octets, secret):
     try:

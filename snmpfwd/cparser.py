@@ -4,7 +4,6 @@
 # Copyright (c) 2014-2017, Ilya Etingof <etingof@gmail.com>
 # License: https://github.com/etingof/snmpfwd/blob/master/LICENSE.txt
 #
-import os
 import sys
 import re
 from snmpfwd import error
@@ -16,7 +15,14 @@ SYMBOL_SECTION_BEGIN = '{'
 SYMBOL_SECTION_END = '}'
 SYMBOL_WORD = ''
 
+
 class Scanner:
+    def __init__(self):
+        self.lines = None
+        self.tokens = []
+        self.index = 0
+        self.length = 0
+
     def load(self, filename):
         try:
             self.lines = open(filename).readlines()
@@ -35,8 +41,7 @@ class Scanner:
             for i in range(len(tokens)):
                 if tokens[i] and tokens[i][0] == '"' and tokens[i][-1] == '"':
                     tokens[i] = tokens[i][1:-1]
-            
-            
+
             if not tokens or not tokens[0] or tokens[0][0] == '#':
                 continue
 
@@ -60,6 +65,7 @@ class Scanner:
 
         self.index = 0
         self.length = len(self.tokens)
+
         return self
         
     def get_token(self):
@@ -75,8 +81,9 @@ class Scanner:
             raise error.SnmpfwdError('%s nothing to unget' % self)
         self.index -= 1
         
+
 class Parser:
-    """The parser class implements config file syntaxic analysing. Its
+    """The parser class implements config file syntactic analysing. Its
        output is an almost AST. Config file syntax is as follows:
    
        <object-name>
@@ -89,9 +96,10 @@ class Parser:
         self.scanner = scanner
 
     def load_section(self):
-        object = { '_name': '', '_children': [] }
+        obj = {'_name': '',
+               '_children': []}
 
-        state='FSM_START'
+        state = 'FSM_START'
         
         while 1:
             # Initial state
@@ -119,7 +127,7 @@ class Parser:
                 
             # If object name expected
             elif state == 'FSM_SECTION_NAME':
-                token, symbol = self.scanner.get_token()
+                self.scanner.get_token()
 
                 self.scanner.unget_token()
 
@@ -128,7 +136,7 @@ class Parser:
 
             # If object body delimiter expected
             elif state == 'FSM_SECTION_BEGIN':
-                token, symbol = self.scanner.get_token()
+                self.scanner.get_token()
 
                 # Get section begin
                 token, symbol = self.scanner.get_token()
@@ -150,14 +158,14 @@ class Parser:
             elif state == 'FSM_CHILD_BEGIN':
                 name, symbol = self.scanner.get_token()
 
-                token, symbol = self.scanner.get_token()
+                self.scanner.get_token()
                 
                 child_object = self.load_section()
 
                 child_object['_name'] = name
 
-                # Attach child object to the list of inclosed objects
-                object['_children'].append(child_object)
+                # Attach child object to the list of enclosed objects
+                obj['_children'].append(child_object)
 
                 state = 'FSM_CHILD_END'
 
@@ -178,7 +186,7 @@ class Parser:
             # If object body closure delimiter expected
             elif state == 'FSM_SECTION_END':
                 # Get next token
-                token, symbol = self.scanner.get_token ()
+                token, symbol = self.scanner.get_token()
 
                 # Now unget token to be used at upper level FSM instance
                 self.scanner.unget_token()
@@ -198,11 +206,11 @@ class Parser:
                 token, symbol = self.scanner.get_token()
 
                 # See if this attribute does not yet exist
-                if token in object:
-                    raise error.SnmpfwdError ('%s multiple option occurance: %s' % (self, token))
+                if token in obj:
+                    raise error.SnmpfwdError('%s multiple option occurrence: %s' % (self, token))
                     
-                # Accept token as atribute name
-                object[token] = []
+                # Accept token as attribute name
+                obj[token] = []
 
                 # Now unget token to be used at the next FSM state
                 self.scanner.unget_token()
@@ -234,33 +242,34 @@ class Parser:
 
                             # Remove previously added last value of
                             # the list as it turned to be section name
-                            del object[option][-1]
+                            del obj[option][-1]
 
-                        # Move to the begining of FSM
+                        # Move to the beginning of FSM
                         state = 'FSM_START'
                         
                         break
 
-                    # Accept token as atribute value
+                    # Accept token as attribute value
                     if token.lower()[:2] == '0x':
                         token = str(OctetString(hexValue=token[2:]))
 
-                    object[option].append(token)
+                    obj[option].append(token)
                 
             # If FSM is gonna stop
             elif state == 'FSM_STOP':
                 # Return object loaded
-                return object
+                return obj
 
             # If this FSM state is not known
             else:
-                raise error.SnmpfwdError ('%s unknown FSM state: %s' % (self, state))
+                raise error.SnmpfwdError('%s unknown FSM state: %s' % (self, state))
 
     def parse(self):
         try:
             return self.load_section()
         except error.EofError:
             raise error.SnmpfwdError('%s premature EOF while reading config file' % self)
+
 
 class Config:
     def __init__(self):
@@ -289,10 +298,13 @@ class Config:
                     return r
 
     def getPathsToAttr(self, attr, objects=None, nodes=None, paths=None):
-        if objects is None: objects = self.objects
-        if nodes is None: nodes = ()
-        if paths is None: paths = []
-        nodes = nodes + (objects['_name'],)
+        if objects is None:
+            objects = self.objects
+        if nodes is None:
+            nodes = ()
+        if paths is None:
+            paths = []
+        nodes += objects['_name'],
         if attr in objects:
             paths.append(nodes)
         for _objs in objects['_children']:

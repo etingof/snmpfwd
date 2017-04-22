@@ -11,10 +11,16 @@ from snmpfwd import error
 if sys.platform[:3] == 'win':
     def daemonize(pidfile):
         raise error.SnmpfwdError('Windows is not inhabited with daemons!')
+
     def dropPrivileges(uname, gname):
         return
 else:
-    import os, pwd, grp, atexit, signal, tempfile
+    import os
+    import pwd
+    import grp
+    import atexit
+    import signal
+    import tempfile
 
     def daemonize(pidfile):
         try: 
@@ -42,7 +48,7 @@ else:
         except OSError:
             raise error.SnmpfwdError('ERROR: fork #2 failed: %s' % sys.exc_info()[1])
 
-        def signal_cb(s,f):
+        def signal_cb(s, f):
             raise KeyboardInterrupt
         for s in signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT:
             signal.signal(s, signal_cb)
@@ -50,7 +56,8 @@ else:
         # write pidfile
         def atexit_cb():
             try:
-                if pidfile: os.remove(pidfile)
+                if pidfile:
+                    os.remove(pidfile)
             except OSError:
                 pass
         atexit.register(atexit_cb)
@@ -84,7 +91,7 @@ else:
                 return
         else:
             if not uname or not gname:
-                raise error.SnmpfwdError('Must drop priveleges to a non-priveleged user&group')
+                raise error.SnmpfwdError('Must drop privileges to a non-privileged user&group')
 
         try:
             runningUid = pwd.getpwnam(uname).pw_uid

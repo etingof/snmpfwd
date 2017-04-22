@@ -74,16 +74,19 @@ if moduleOptions[0] == 'config':
 
 msg('logger: plugin initialization complete')
 
+
 def _makeExtra(pdu, context):
-    extra = dict([(x[0].replace('-', '_'),x[1]) for x in context.items()])
-    extra['snmp_var_binds'] = ' '.join([ '%s %s%s%s' % (vb[0].prettyPrint(), parentheses[0], vb[1].prettyPrint(), parentheses[1]) for vb in v2c.apiPDU.getVarBinds(pdu) ])
+    extra = dict([(x[0].replace('-', '_'), x[1]) for x in context.items()])
+    extra['snmp_var_binds'] = ' '.join(['%s %s%s%s' % (vb[0].prettyPrint(), parentheses[0], vb[1].prettyPrint(), parentheses[1]) for vb in v2c.apiPDU.getVarBinds(pdu)])
     extra['snmp_pdu_type'] = pduMap[pdu.tagSet]
     return extra
+
 
 def processCommandRequest(pluginId, snmpEngine, pdu, **context):
     if pdu.tagSet in pduMap:
         logger.info('', extra=_makeExtra(pdu, context))
     return status.NEXT, pdu
+
 
 def processCommandResponse(pluginId, snmpEngine, pdu, **context):
     if pdu.tagSet in pduMap:

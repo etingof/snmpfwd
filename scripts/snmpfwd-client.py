@@ -5,23 +5,16 @@
 # Copyright (c) 2014-2017, Ilya Etingof <etingof@gmail.com>
 # License: https://github.com/etingof/snmpfwd/blob/master/LICENSE.txt
 #
-import os
-import stat
 import sys
 import getopt
 import traceback
 import random
 import re
 import socket
-from pyasn1.codec.ber import encoder, decoder
-from pyasn1.compat.octets import str2octs
-from pyasn1.error import PyAsn1Error
 from pysnmp.error import PySnmpError
 from pysnmp.entity import engine, config
 from pysnmp.entity.rfc3413 import config as lcd
 from pysnmp.entity.rfc3413 import cmdgen, context
-from pysnmp.entity.rfc3413.config import getTargetInfo
-from pysnmp.proto.error import StatusInformation
 from pysnmp.carrier.asynsock.dgram import udp
 try:
     from pysnmp.carrier.asynsock.dgram import udp6
@@ -32,11 +25,8 @@ try:
 except ImportError:
     unix = None
 from pysnmp.carrier.asynsock.dispatch import AsynsockDispatcher
-from pysnmp.smi import exval, indices
-from pysnmp.smi.error import MibOperationError
 from pysnmp.proto import rfc1902, rfc1905
 from pysnmp.proto.api import v2c
-from pysnmp import error
 from pyasn1 import debug as pyasn1_debug
 from pysnmp import debug as pysnmp_debug
 from snmpfwd import macro
@@ -89,8 +79,8 @@ Usage: %s [--help]
     [--logging-method=<%s[:args>]>]
     [--config-file=<file>]""" % (
         sys.argv[0],
-        '|'.join([ x for x in pysnmp_debug.flagMap.keys() if x != 'mibview' ]),
-        '|'.join([ x for x in pyasn1_debug.flagMap.keys() ]),
+        '|'.join([x for x in pysnmp_debug.flagMap.keys() if x != 'mibview']),
+        '|'.join([x for x in pyasn1_debug.flagMap.keys()]),
         '|'.join(log.gMap.keys())
     )
 
@@ -126,12 +116,14 @@ Documentation:
 """ % helpMessage)
         sys.exit(-1)
     if opt[0] == '-v' or opt[0] == '--version':
-        import snmpfwd, pysnmp, pyasn1
+        import snmpfwd
+        import pysnmp
+        import pyasn1
         sys.stderr.write("""\
-SNMP Proxy Forwarder version %s, written by Ilya Etingof <ilya@snmplabs.com>
+SNMP Proxy Forwarder version %s, written by Ilya Etingof <etingof@gmail.com>
 Using foundation libraries: pysnmp %s, pyasn1 %s.
 Python interpreter: %s
-Software documentation and support at http://snmpfwd.sf.net
+Software documentation and support at https://github.com/etingof/snmpfwd
 %s
 """ % (snmpfwd.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
         sys.exit(-1)
@@ -188,7 +180,7 @@ routingMap = {}
 engineIdMap = {}
 
 transportDispatcher = AsynsockDispatcher()
-transportDispatcher.registerRoutingCbFun(lambda td,t,d: td)
+transportDispatcher.registerRoutingCbFun(lambda td, t, d: td)
 transportDispatcher.setSocketMap()  # use global asyncore socket map
 
 for peerEntryPath in cfgTree.getPathsToAttr('snmp-peer-id'):
@@ -221,8 +213,7 @@ for peerEntryPath in cfgTree.getPathsToAttr('snmp-peer-id'):
     bindAddrMacro = None
     bindAddr = cfgTree.getAttrValue('snmp-bind-address', *peerEntryPath)
 
-    if 'transparent-proxy' in transportOptions or \
-           'virtual-interface' in transportOptions:
+    if 'transparent-proxy' in transportOptions or 'virtual-interface' in transportOptions:
         if '$' in bindAddr:
             bindAddrMacro = bindAddr
             bindAddr = '0.0.0.0', 0
@@ -286,7 +277,7 @@ for peerEntryPath in cfgTree.getPathsToAttr('snmp-peer-id'):
             if snmpEngineMap['securityName'][securityName] == securityModel:
                 log.msg('using security-name %s' % securityName)
             else:
-                raise error.SnmpfwdError('security-name %s already in use at security-model %s' % (securityName, securityModel))
+                raise SnmpfwdError('security-name %s already in use at security-model %s' % (securityName, securityModel))
         else:
             communityName = cfgTree.getAttrValue('snmp-community-name', *peerEntryPath)
             config.addV1System(snmpEngine, securityName, communityName, 
@@ -298,9 +289,9 @@ for peerEntryPath in cfgTree.getPathsToAttr('snmp-peer-id'):
     elif securityModel == 3:
         if securityName in snmpEngineMap['securityName']:
             if snmpEngineMap['securityName'][securityName] == securityModel:
-                log.msg('using USM security-name: %s' % usmUser)
+                log.msg('using USM security-name: %s' % securityName)
             else:
-                raise error.SnmpfwdError('security-name %s already in use at security-model %s' % (securityName, securityModel))
+                raise SnmpfwdError('security-name %s already in use at security-model %s' % (securityName, securityModel))
         else:
             usmUser = cfgTree.getAttrValue('snmp-usm-user', *peerEntryPath)
             log.msg('new USM user %s, security-model %s, security-level %s, security-name %s' % (usmUser, securityModel, securityLevel, securityName))
@@ -316,13 +307,20 @@ for peerEntryPath in cfgTree.getPathsToAttr('snmp-peer-id'):
                     usmPrivProto = rfc1902.ObjectName(usmPrivProto)
                     usmPrivKey = cfgTree.getAttrValue('snmp-usm-priv-key', *peerEntryPath, **dict(default=None))
                     log.msg('new USM encryption key: %s, encryption protocol: %s' % (usmPrivKey, usmPrivProto))
-            snmpEngineMap['securityName'][securityName] = securityModel
 
-        config.addV3User(
-            snmpEngine, usmUser,
-            usmAuthProto, usmAuthKey,
-            usmPrivProto, usmPrivKey
-        )
+                    config.addV3User(
+                        snmpEngine, usmUser,
+                        usmAuthProto, usmAuthKey,
+                        usmPrivProto, usmPrivKey
+                    )
+
+                else:
+                    config.addV3User(snmpEngine, usmUser, usmAuthProto, usmAuthKey)
+
+            else:
+                config.addV3User(snmpEngine, usmUser)
+
+            snmpEngineMap['securityName'][securityName] = securityModel
 
     else:
         raise SnmpfwdError('unknown security-model: %s' % securityModel)
@@ -341,21 +339,20 @@ for peerEntryPath in cfgTree.getPathsToAttr('snmp-peer-id'):
     peerAddrMacro = None
     peerAddr = cfgTree.getAttrValue('snmp-peer-address', *peerEntryPath)
 
-    if 'transparent-proxy' in transportOptions or \
-           'virtual-interface' in transportOptions:
+    if 'transparent-proxy' in transportOptions or 'virtual-interface' in transportOptions:
         if '$' in peerAddr:
             peerAddrMacro = peerAddr
             peerAddr = '0.0.0.0', 0
         else:
             try:
-                peerAddr = peerAddr.split(':',1)
+                peerAddr = peerAddr.split(':', 1)
                 peerAddr = peerAddr[0], int(peerAddr[1])
             except (ValueError, IndexError):
                 log.msg('bad snmp-peer-address specification %s at %s' % (peerAddr, '.'.join(peerEntryPath)))
                 exit(-1)
     else:
         try:
-            peerAddr = peerAddr.split(':',1)
+            peerAddr = peerAddr.split(':', 1)
             peerAddr = peerAddr[0], int(peerAddr[1])
         except (ValueError, IndexError):
             log.msg('bad snmp-peer-address specification %s at %s' % (peerAddr, '.'.join(peerEntryPath)))
@@ -383,17 +380,17 @@ for origCredCfgPath in cfgTree.getPathsToAttr('orig-snmp-peer-id'):
     duplicates[origCredId] = origCredCfgPath
     
     k = '#'.join(
-        ( cfgTree.getAttrValue('orig-snmp-engine-id-pattern', *origCredCfgPath),
-          cfgTree.getAttrValue('orig-snmp-transport-domain-pattern', *origCredCfgPath),
-          cfgTree.getAttrValue('orig-snmp-peer-address-pattern', *origCredCfgPath),
-          cfgTree.getAttrValue('orig-snmp-bind-address-pattern', *origCredCfgPath),
-          cfgTree.getAttrValue('orig-snmp-security-model-pattern', *origCredCfgPath),
-          cfgTree.getAttrValue('orig-snmp-security-level-pattern', *origCredCfgPath),
-          cfgTree.getAttrValue('orig-snmp-security-name-pattern', *origCredCfgPath),
-          cfgTree.getAttrValue('orig-snmp-context-engine-id-pattern', *origCredCfgPath),
-          cfgTree.getAttrValue('orig-snmp-context-name-pattern', *origCredCfgPath),
-          cfgTree.getAttrValue('orig-snmp-pdu-type-pattern', *origCredCfgPath),
-          cfgTree.getAttrValue('orig-snmp-oid-prefix-pattern', *origCredCfgPath) )
+        (cfgTree.getAttrValue('orig-snmp-engine-id-pattern', *origCredCfgPath),
+         cfgTree.getAttrValue('orig-snmp-transport-domain-pattern', *origCredCfgPath),
+         cfgTree.getAttrValue('orig-snmp-peer-address-pattern', *origCredCfgPath),
+         cfgTree.getAttrValue('orig-snmp-bind-address-pattern', *origCredCfgPath),
+         cfgTree.getAttrValue('orig-snmp-security-model-pattern', *origCredCfgPath),
+         cfgTree.getAttrValue('orig-snmp-security-level-pattern', *origCredCfgPath),
+         cfgTree.getAttrValue('orig-snmp-security-name-pattern', *origCredCfgPath),
+         cfgTree.getAttrValue('orig-snmp-context-engine-id-pattern', *origCredCfgPath),
+         cfgTree.getAttrValue('orig-snmp-context-name-pattern', *origCredCfgPath),
+         cfgTree.getAttrValue('orig-snmp-pdu-type-pattern', *origCredCfgPath),
+         cfgTree.getAttrValue('orig-snmp-oid-prefix-pattern', *origCredCfgPath))
     )
 
     log.msg('configuring original SNMP peer ID %s (at %s), composite key: %r' % (origCredId, '.'.join(origCredCfgPath), k))
@@ -419,8 +416,10 @@ for routeCfgPath in cfgTree.getPathsToAttr('using-snmp-peer-id-list'):
 
                 routingMap[k] = peerIdList
 
+
 def prettyVarBinds(pdu):
-    return not pdu and '<none>' or ';'.join([ '%s:%s' % (vb[0].prettyPrint(), vb[1].prettyPrint()) for vb in v2c.apiPDU.getVarBinds(pdu) ])
+    return not pdu and '<none>' or ';'.join(['%s:%s' % (vb[0].prettyPrint(), vb[1].prettyPrint()) for vb in v2c.apiPDU.getVarBinds(pdu)])
+
 
 def __rspCbFun(snmpEngine, sendRequestHandle, errorIndication, rspPDU, cbCtx):
     trunkId, msgId, trunkReq = cbCtx
@@ -445,30 +444,33 @@ q = []
 
 origGetTargetAddr = lcd.getTargetAddr
 
+
 def getTargetAddr(snmpEngine, snmpTargetAddrName):
     r = list(origGetTargetAddr(snmpEngine, snmpTargetAddrName))
     if q:
         r[1] = r[1].__class__(q[1]).setLocalAddress(q[0])
-        q.pop(); q.pop()
+        q.pop()
+        q.pop()
     return r
 
 lcd.getTargetAddr = getTargetAddr
 
+
 def dataCbFun(trunkId, msgId, msg):
-    k = [ str(x) for x in ( msg['snmp-engine-id'],
-                            msg['snmp-transport-domain'],
-                            msg['snmp-peer-address']+':'+str(msg['snmp-peer-port']),
-                            msg['snmp-bind-address']+':'+str(msg['snmp-bind-port']),
-                            msg['snmp-security-model'],
-                            msg['snmp-security-level'],
-                            msg['snmp-security-name'],
-                            msg['snmp-context-engine-id'],
-                            msg['snmp-context-name'] ) ]
+    k = [str(x) for x in (msg['snmp-engine-id'],
+                          msg['snmp-transport-domain'],
+                          msg['snmp-peer-address']+':'+str(msg['snmp-peer-port']),
+                          msg['snmp-bind-address']+':'+str(msg['snmp-bind-port']),
+                          msg['snmp-security-model'],
+                          msg['snmp-security-level'],
+                          msg['snmp-security-name'],
+                          msg['snmp-context-engine-id'],
+                          msg['snmp-context-name'])]
     k.append(snmpPduTypesMap.get(msg['snmp-pdu'].tagSet, '?'))
     k.append('|'.join([str(x[0]) for x in v2c.apiPDU.getVarBinds(msg['snmp-pdu'])]))
     k = '#'.join(k) 
    
-    for x,y in origCredIdList:
+    for x, y in origCredIdList:
         if y.match(k):
             origPeerId = macro.expandMacros(x, msg)
             break
@@ -519,8 +521,9 @@ def dataCbFun(trunkId, msgId, msg):
 
 trunkingManager = TrunkingManager(dataCbFun)
 
+
 def getTrunkAddr(a, port=0):
-    f = lambda h,p=port: (h, int(p))
+    f = lambda h, p=port: (h, int(p))
     try:
         return f(*a.split(':'))
     except:
@@ -548,13 +551,13 @@ for trunkCfgPath in cfgTree.getPathsToAttr('trunk-id'):
         log.msg('new trunking server at %s' % (cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath)))
 
 transportDispatcher.registerTimerCbFun(
-    trunkingManager.monitorTrunks, random.randrange(1,5)
+    trunkingManager.monitorTrunks, random.randrange(1, 5)
 )
 
 try:
     daemon.dropPrivileges(procUser, procGroup)
 except:
-    sys.stderr.write('ERROR: cant drop priveleges: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+    sys.stderr.write('ERROR: cant drop privileges: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
     sys.exit(-1)
 
 if not foregroundFlag:
@@ -568,7 +571,7 @@ if not foregroundFlag:
 
 log.msg('starting I/O engine...')
 
-transportDispatcher.jobStarted(1) # server job would never finish
+transportDispatcher.jobStarted(1)  # server job would never finish
 
 # Python 2.4 does not support the "finally" clause
 

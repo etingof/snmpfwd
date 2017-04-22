@@ -9,6 +9,7 @@ import sys
 from snmpfwd.plugins.status import *
 from snmpfwd import log, error
 
+
 class PluginManager:
     def __init__(self, path, progId, apiVer):
         self.__path = path
@@ -34,9 +35,9 @@ class PluginManager:
                 log.msg('Variation module "%s" not found' % mod)
                 continue
             
-            ctx = { 'modulePath': mod,
-                    'moduleContext': {},
-                    'moduleOptions': pluginOptions }
+            ctx = {'modulePath': mod,
+                   'moduleContext': {},
+                   'moduleOptions': pluginOptions}
 
             try:
                 if sys.version_info[0] > 2:
@@ -45,7 +46,7 @@ class PluginManager:
                     execfile(mod, ctx)
 
             except Exception:
-                raise error.SnmpfwdError('plugin module "%s" execution failure: %s' %  (mod, sys.exc_info()[1]))
+                raise error.SnmpfwdError('plugin module "%s" execution failure: %s' % (mod, sys.exc_info()[1]))
 
             else:
                 pluginModule = ctx

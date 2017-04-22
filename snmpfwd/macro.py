@@ -5,6 +5,7 @@
 # License: https://github.com/etingof/snmpfwd/blob/master/LICENSE.txt
 #
 
+
 def expandMacros(s, d):
     for k in d:
         if not s or '${' not in s:

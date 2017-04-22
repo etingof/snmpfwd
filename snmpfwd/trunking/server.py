@@ -12,8 +12,9 @@ from snmpfwd import log, next, error
 from snmpfwd.trunking import protocol
 from pyasn1.compat.octets import null
 
+
 class TrunkingSuperServer(asyncore.dispatcher):
-    def __init__ (self, localEndpoint, secret, dataCbFun, ctlCbFun):
+    def __init__(self, localEndpoint, secret, dataCbFun, ctlCbFun):
         self.__localEndpoint = localEndpoint
         self.__secret = secret
         self.__dataCbFun = dataCbFun
@@ -34,7 +35,8 @@ class TrunkingSuperServer(asyncore.dispatcher):
             self.listen(10)
         except socket.error:
             raise error.SnmpfwdError('%s socket error: %s' % (self, sys.exc_info()[1]))
-            log.msg('%s: listening...' % self)
+
+        log.msg('%s: listening...' % self)
 
     def __str__(self):
         return '%s at %s' % (self.__class__.__name__, ':'.join([str(x) for x in self.__localEndpoint]))
@@ -67,8 +69,8 @@ class TrunkingSuperServer(asyncore.dispatcher):
 
 
 class TrunkingServer(asyncore.dispatcher_with_send):
-    def __init__ (self, sock, localEndpoint, remoteEndpoint, secret,
-                  dataCbFun, ctlCbFun):
+    def __init__(self, sock, localEndpoint, remoteEndpoint, secret,
+                 dataCbFun, ctlCbFun):
         self.__localEndpoint = localEndpoint
         self.__remoteEndpoint = remoteEndpoint
         self.__secret = secret
@@ -132,11 +134,11 @@ class TrunkingServer(asyncore.dispatcher_with_send):
 
             if contentId == 0:   # request
                 self.__dataCbFun(self, msgId, msg)
-            elif contentId == 1: # response
+            elif contentId == 1:  # response
                 if msgId in self.__pendingReqs:
                     cbFun, cbCtx = self.__pendingReqs.pop(msgId)
                     cbFun(msg, cbCtx)
-            elif contentId == 2: # announcement
+            elif contentId == 2:  # announcement
                 self.__ctlCbFun(self, msg)
             else:
                 log.msg('unknown message content-id %s from %s ignored' % (contentId, self))
