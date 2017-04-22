@@ -11,7 +11,7 @@ from logging import handlers
 from snmpfwd import error
 
 
-class AbstractLogger:
+class AbstractLogger(object):
     def __init__(self, progId, *priv):
         self._logger = logging.getLogger(progId)
         self._logger.setLevel(logging.DEBUG)

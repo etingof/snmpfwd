@@ -16,7 +16,7 @@ SYMBOL_SECTION_END = '}'
 SYMBOL_WORD = ''
 
 
-class Scanner:
+class Scanner(object):
     def __init__(self):
         self.lines = None
         self.tokens = []
@@ -82,7 +82,7 @@ class Scanner:
         self.index -= 1
         
 
-class Parser:
+class Parser(object):
     """The parser class implements config file syntactic analysing. Its
        output is an almost AST. Config file syntax is as follows:
    
@@ -271,7 +271,7 @@ class Parser:
             raise error.SnmpfwdError('%s premature EOF while reading config file' % self)
 
 
-class Config:
+class Config(object):
     def __init__(self):
         self.objects = {}
     

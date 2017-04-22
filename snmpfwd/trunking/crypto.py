@@ -9,7 +9,7 @@ from Crypto.Cipher import AES
 from pyasn1.compat.octets import int2oct, oct2int, str2octs
 
 
-class AESCipher:
+class AESCipher(object):
     @staticmethod
     def pad(s, BS=16):
         return s + (BS - len(s) % BS) * int2oct(BS - len(s) % BS)

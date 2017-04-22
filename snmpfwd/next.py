@@ -6,7 +6,7 @@
 #
 
 
-class Numbers:
+class Numbers(object):
     current = 0
 
     def getId(self):

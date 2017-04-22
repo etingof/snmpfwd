@@ -8,7 +8,7 @@ from snmpfwd.trunking import client, server
 from snmpfwd import log, error
 
 
-class TrunkingManager:
+class TrunkingManager(object):
     def __init__(self, dataCbFun):
         self.__clients = {}
         self.__runningServersTrunkMap = {}

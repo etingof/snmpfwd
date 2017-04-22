@@ -10,7 +10,7 @@ from snmpfwd.plugins.status import *
 from snmpfwd import log, error
 
 
-class PluginManager:
+class PluginManager(object):
     def __init__(self, path, progId, apiVer):
         self.__path = path
         self.__progId = progId
