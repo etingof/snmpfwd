@@ -391,7 +391,7 @@ def main():
              cfgTree.getAttrValue('orig-snmp-oid-prefix-pattern', *origCredCfgPath))
         )
 
-        log.msg('configuring original SNMP peer ID %s (at %s), composite key: %r' % (origCredId, '.'.join(origCredCfgPath), k))
+        log.msg('configuring original SNMP peer ID %s (at %s), composite key: %s' % (origCredId, '.'.join(origCredCfgPath), k))
 
         origCredIdList.append((origCredId, re.compile(k)))
 

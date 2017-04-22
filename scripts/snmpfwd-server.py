@@ -534,7 +534,7 @@ def main():
              cfgTree.getAttrValue('snmp-context-name-pattern', *contextCfgPath))
         )
 
-        log.msg('configuring context ID %s (at %s), composite key: %r' % (contextId, '.'.join(contextCfgPath), k))
+        log.msg('configuring context ID %s (at %s), composite key: %s' % (contextId, '.'.join(contextCfgPath), k))
 
         contextIdList.append((contextId, re.compile(k)))
 
@@ -551,7 +551,7 @@ def main():
         for x in cfgTree.getAttrValue('snmp-pdu-oid-prefix-pattern-list', *contentCfgPath, **dict(vector=True)):
             k = '#'.join([cfgTree.getAttrValue('snmp-pdu-type-pattern', *contentCfgPath), x])
 
-            log.msg('configuring content ID %s (at %s), composite key: %r' % (contentId, '.'.join(contentCfgPath), k))
+            log.msg('configuring content ID %s (at %s), composite key: %s' % (contentId, '.'.join(contentCfgPath), k))
 
             contentIdList.append((contentId, re.compile(k)))
 
@@ -569,7 +569,7 @@ def main():
                             log.msg('duplicate snmp-credentials-id %s, snmp-context-id %s, snmp-peer-id %s, snmp-content-id %s at plugin-id(s) %s' % (credId, contextId, peerId, contentId, ','.join(pluginIdList)))
                             sys.exit(-1)
                         else:
-                            log.msg('configuring plugin(s) %s (at %s), composite key: %r' % (','.join(pluginIdList), '.'.join(pluginCfgPath), '/'.join(k)))
+                            log.msg('configuring plugin(s) %s (at %s), composite key: %s' % (','.join(pluginIdList), '.'.join(pluginCfgPath), '/'.join(k)))
 
                             for pluginId in pluginIdList:
                                 if not pluginManager.hasPlugin(pluginId):
@@ -592,7 +592,7 @@ def main():
                         else:
                             trunkIdMap[k] = trunkIdList
 
-                        log.msg('configuring trunk routing to %s (at %s), composite key: %r' % (','.join(trunkIdList), '.'.join(routeCfgPath), '/'.join(k)))
+                        log.msg('configuring trunk routing to %s (at %s), composite key: %s' % (','.join(trunkIdList), '.'.join(routeCfgPath), '/'.join(k)))
 
 
     def dataCbFun(trunkId, msgId, msg):
