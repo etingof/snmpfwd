@@ -2,34 +2,39 @@
 Server configuration
 ====================
 
-Basic configuration strategy for server part is:
+Server part acts as the SNMP agent side of the SNMP proxy system.
+It is normally linked with one or more `clients <client-configuration>`_
+via *trunks*.
+
+Basic configuration strategy for the server part is:
 
 * Configure SNMP credentials and SNMP Agent(s) listening for SNMP
   Managers to communicate with. Each Agent is identified by
-  snmp-credentials-id.
+  `snmp-credentials-id`_.
 
 * Configure SNMP contexts. Each SNMP context is identified by
-  snmp-context-id option.
+  `snmp-context-id`_ option.
 
 * Configure individual SNMP Managers or groups of Managers. Each Manager
-  or group is identified by the snmp-peer-id option.
+  or group is identified by the `snmp-peer-id`_ option.
 
 * Configure server<->client communication link(s) called "trunks". Both
   Forwarder client and server could initiate and/or receive trunking
-  connections. Each trunk is identified by a trunk-id which is used
-  for message routing. Trunk initiator is responsible for trunk ID
+  connections. Each trunk is identified by a `trunk-id`_ which is used
+  for message routing. Trunk initiator is responsible for `trunk-id`_
   definition.
 
 * Optionally configure plugins. These are small Python code snippets
   capable to access/modify/block passing SNMP message. You should
   configure each module you intend to use (giving search path, module
-  file name, options) and assign it an ID. Then you could list these
-  IDs in the routing section (see below).
+  file name, options) and assign it `plugin-id`_. Then you could list
+  these IDs in the routing section.
 
-* Configure message routing in form of matching-snmp-credentials-id-list,
-  matching-snmp-peer-id-list and matching-snmp-context-id-list options
-  mapped to the contents of using-trunk-id-list. The latter identifies
-  Manager part(s) of SNMP Forwarder to pass received SNMP message over.
+* Configure message routing in form of `matching-snmp-credentials-id-list`_,
+  `matching-snmp-peer-id-list`_, `matching-snmp-content-id-list`_ and
+  `matching-snmp-context-id-list`_ options mapped to the contents of
+  `using-trunk-id-list`_. The latter identifies Manager part(s) of
+  SNMP Forwarder to pass received SNMP message over.
 
 Global options
 --------------
@@ -37,7 +42,7 @@ Global options
 *config-version*
 ++++++++++++++++
 
-Configuration file language version. Currently recognized version is **2**.
+Configuration file language version. Currently recognized version is *2*.
 
 *program-name*
 ++++++++++++++
@@ -101,7 +106,9 @@ Enable specific networking options. Valid values:
   a secondary IP interface and learns actual destination IP address
   used by the Manager regardless of the one we are bound to
 
-Both options only work on Linux and require Python 3.3+.
+.. note::
+
+    Both options only work on Linux and require P
 
 *snmp-bind-address*
 +++++++++++++++++++
@@ -138,7 +145,7 @@ SNMPv3 security level to use. Valid values are
 ++++++++++++++++++++
 
 Identifier for SNMP user configuration entry. In most cases can be set
-to the same value as **snmp-community-name** or **snmp-usm-user**.
+to the same value as `snmp-community-name`_ or `snmp-usm-user`_.
 
 *snmp-community-name*
 +++++++++++++++++++++
@@ -162,7 +169,11 @@ SNMPv3 message authentication protocol to use. Valid values are:
 *snmp-usm-auth-key*
 +++++++++++++++++++
 
-SNMPv3 message authentication key. Must be 8 or more characters.
+SNMPv3 message authentication key.
+
+.. note::
+
+    Must be 8 or more characters.
 
 *snmp-usm-priv-protocol*
 ++++++++++++++++++++++++
@@ -179,7 +190,11 @@ SNMPv3 message encryption protocol to use. Valid values are:
 *snmp-usm-priv-key*
 +++++++++++++++++++
 
-SNMPv3 message encryption key. Must be 8 or more characters.
+SNMPv3 message encryption key.
+
+.. note::
+
+    Must be 8 or more characters.
 
 *snmp-credentials-id*
 +++++++++++++++++++++
@@ -229,8 +244,8 @@ Plugin-specific configuration option to pass to plugin.
 *plugin-id*
 +++++++++++
 
-Unique identifier of a plugin module (*plugin-module*) and its
-options (*plugin-options*). The *plugin-id* identifier is
+Unique identifier of a plugin module (`plugin-module`_) and its
+options (`plugin-options`_). The *plugin-id* identifier is
 typically used to invoke plugin in the course of SNMP message
 processing.
 
@@ -324,7 +339,7 @@ A regular expression matching SNMPv3 messages by SNMP context name.
 
 Unique identifier of a collection of SNMP context configuration options. Used for
 matching SNMP context options in inbound SNMP messages
-(e.g. *snmp-context-engine-id-pattern*, *snmp-context-name-pattern*) for
+(e.g. `snmp-context-engine-id-pattern`_, `snmp-context-name-pattern`_) for
 message routing purposes.
 
 Example:
@@ -357,7 +372,7 @@ List of regular expressions matching OIDs in SNMP PDU var-binds.
 
 Unique identifier of a collection of SNMP content matching options. Used for
 matching the contents of inbound SNMP messages (e.g.
-*snmp-pdu-type-pattern*, *snmp-pdu-oid-prefix-pattern-list*) for
+`snmp-pdu-type-pattern`_, `snmp-pdu-oid-prefix-pattern-list`_) for
 message routing purposes.
 
 Example:
@@ -399,8 +414,8 @@ of SNMP message.
 ++++++++++++++
 
 Unique identifier matching pairs of source and destination SNMP transport
-endpoints. Most importantly, *snmp-bind-address-pattern-list* and
-*snmp-peer-address-pattern-list* as well as *snmp-transport-domain*.
+endpoints. Most importantly, `snmp-bind-address-pattern-list`_ and
+`snmp-peer-address-pattern-list`_ as well as `snmp-transport-domain`_.
 The *snmp-peer-id* is typically used for message routing purposes.
 
 Example:
@@ -429,18 +444,18 @@ This is done by searching for a combination of matching IDs.
 +++++++++++++++++++++++++++++++
 
 Evaluates to True if incoming SNMP message matches at least one
-of *snmp-context-id* in the list.
+of `snmp-context-id`_ in the list.
 
 *matching-snmp-content-id-list*
 +++++++++++++++++++++++++++++++
 
 Evaluates to True if incoming SNMP message matches at least one
-of *snmp-content-id* in the list.
+of `snmp-content-id`_ in the list.
 
 *matching-snmp-credentials-id-list*
 +++++++++++++++++++++++++++++++++++
 
-Evaluates to True if *snmp-credentials-id* used for processing incoming
+Evaluates to True if `snmp-credentials-id`_ used for processing incoming
 SNMP message is present in the list.
 
 
@@ -448,12 +463,12 @@ SNMP message is present in the list.
 ++++++++++++++++++++++++++++
 
 Evaluates to True if incoming SNMP message originates from and arrived at
-one of the *snmp-peer-id* in the list.
+one of the `snmp-peer-id`_ in the list.
 
 *using-plugin-id-list*
 ++++++++++++++++++++++
 
-Invoke each of the *plugin-id* in the list in order and and pass incoming
+Invoke each of the `plugin-id`_ in the list in order and and pass incoming
 SNMP message from one to the other.
 
 Plugins may modify the message in any way and even block it from further
@@ -462,5 +477,27 @@ propagation in which case SNMP message will be dropped.
 *using-trunk-id-list*
 +++++++++++++++++++++
 
-Pass incoming (and possibly modified) SNMP message to each *trunk-id* in
-the list.
+Unique identifier matching a group of *matching-\** identifiers. Specifically,
+these are: `matching-snmp-context-id-list`_, `matching-snmp-content-id-list`_,
+`matching-snmp-credentials-id-list`_ and `matching-snmp-peer-id-list`_.
+
+Incoming (and possibly modified) SNMP message will be passed to to each
+`trunk-id`_ present in the list.
+
+Example:
+
+.. code-block:: bash
+
+    routing-map {
+      matching-snmp-context-id-list: any-context
+      matching-snmp-content-id-list: any-content
+
+      route-1 {
+        matching-snmp-credentials-id-list: config-1 config-2 config-121
+        matching-snmp-content-id-list: if-subtree-content
+        matching-snmp-peer-id-list: 100 111
+
+        using-plugin-id-list: logger rewrite
+        using-trunk-id-list: clienttrunk
+      }
+    }

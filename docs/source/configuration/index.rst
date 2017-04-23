@@ -63,6 +63,9 @@ Evaluating the above configuration for *test-option* would yield:
     READ .outermost-block.test-option -> test-value
     READ .outermost-block.more-specific-block.test-option -> test-value
 
+Configuration syntax
+--------------------
+
 Server and client parts of the system consume their own configuration file.
 Many options are applicable to both client and server, though some options
 are specific to either parts of the system.
@@ -72,12 +75,9 @@ global scope.
 
 .. toctree::
    :maxdepth: 2
-   :glob:
 
    server-configuration
    client-configuration
-
-
 
 Examples
 --------
