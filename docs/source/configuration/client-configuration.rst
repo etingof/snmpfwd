@@ -32,7 +32,8 @@ Global options
 *config-version*
 ++++++++++++++++
 
-Configuration file language version. Currently recognized version is *2*.
+Program name to consume this configuration file. Valid values are *snmpfwd-client*
+and *snmpfwd-server*.
 
 *program-name*
 ++++++++++++++

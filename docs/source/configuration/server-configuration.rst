@@ -47,8 +47,8 @@ Configuration file language version. Currently recognized version is *2*.
 *program-name*
 ++++++++++++++
 
-Program name to add to log file messages. May be useful when multiple instances
-of the system share the same log file.
+Program name to consume this configuration file. Valid values are *snmpfwd-client*
+and *snmpfwd-server*.
 
 SNMP agents options
 -------------------
