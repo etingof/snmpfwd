@@ -8,7 +8,10 @@ __pycache__
 MANIFEST
 dist/
 build/
-pyasn1.egg-info/
+snmpfwd.egg-info/
 
 # PyCharm stuff
 .idea/
+
+# virtualenv
+venv*
