@@ -54,7 +54,7 @@ try:
     from setuptools import setup
 
     params = {
-        'install_requires': ['pysnmp>=4.3.0'],
+        'install_requires': ['pysnmp>=4.3.0', 'pycryptodome'],
         'zip_safe': True
     }
 
@@ -68,7 +68,7 @@ except ImportError:
 
     params = {}
     if sys.version_info[:2] > (2, 4):
-        params['requires'] = ['pysnmp(>=4.3.0)']
+        params['requires'] = ['pysnmp(>=4.3.0)', 'pycryptodome']
 
 doclines = [x.strip() for x in (__doc__ or '').split('\n') if x]
 
@@ -95,6 +95,7 @@ params['data_files'] = [
 
 if 'py2exe' in sys.argv:
     import py2exe
+
     # fix executables
     params['console'] = params['scripts']
     del params['scripts']

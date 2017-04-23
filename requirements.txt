@@ -1,1 +1,2 @@
+pycryptodome
 pysnmp>=4.3.0

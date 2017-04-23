@@ -1,9 +1,10 @@
-Revision 0.0.3, released XX-04-2017
+Revision 0.0.3, released 23-04-2017
 -----------------------------------
 
 - Sphinx docs added
 - PEP8, code style and hardening
 - Unspecified trunk-crypto-key now indicates disabled trunk encryption.
+- Fix to error-indication usage to comply with newer pysnmp
 - Fix to __doc__ use in setup.py to make -O0 installation mode working.
 - Fix to PID file creation when running Python 3.
 - Copyright notes added to source files
