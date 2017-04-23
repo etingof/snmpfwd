@@ -1,3 +1,4 @@
 include *.txt *.md
+recursive-include docs *.rst *.py Makefile
 recursive-include conf *.conf
 recursive-include plugins *.py
