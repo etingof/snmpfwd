@@ -83,7 +83,7 @@ def prepareRequestData(msgId, req, secret):
 
 def prepareResponseData(msgId, rsp, secret):
     r = Response()
-    r['error-indication'] = rsp.get('error-indication', '')
+    r['error-indication'] = str(rsp.get('error-indication', ''))
     r['snmp-pdu'] = rsp['snmp-pdu'] and encoder.encode(rsp['snmp-pdu']) or ''
 
     msg = Message()
