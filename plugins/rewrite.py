@@ -46,7 +46,7 @@ if moduleOptions[0] == 'config':
             msg('rewrite: %s -> %s' % (k, v or '<nullify>'))
 
             rewriteList.append((re.compile(k), v))
-    except:
+    except Exception:
         raise SnmpfwdError('rewrite: config file load failure: %s' % sys.exc_info()[1])
 
 msg('rewrite: plugin initialization complete')

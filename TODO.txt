@@ -1,0 +1,3 @@
+
+* migrate to argparse
+* allow unset configuration options

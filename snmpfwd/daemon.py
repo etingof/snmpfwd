@@ -52,7 +52,7 @@ else:
             raise KeyboardInterrupt
         for s in signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT:
             signal.signal(s, signal_cb)
-             
+
         # write pidfile
         def atexit_cb():
             try:
@@ -68,7 +68,7 @@ else:
                 os.write(fd, ('%d\n' % os.getpid()).encode('utf-8'))
                 os.close(fd)
                 os.rename(nm, pidfile)
-        except:
+        except Exception:
             raise error.SnmpfwdError('Failed to create PID file %s: %s' % (pidfile, sys.exc_info()[1]))
 
         # redirect standard file descriptors
@@ -81,7 +81,7 @@ else:
         os.dup2(si.fileno(), sys.stdin.fileno())
         os.dup2(so.fileno(), sys.stdout.fileno())
         os.dup2(se.fileno(), sys.stderr.fileno())
-          
+
     def dropPrivileges(uname, gname):
         if os.getuid() != 0:
             if uname and uname != pwd.getpwnam(uname).pw_name or \

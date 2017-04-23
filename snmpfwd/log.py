@@ -25,7 +25,7 @@ class AbstractLogger(object):
 
 
 class SyslogLogger(AbstractLogger):
-    def init(self, *priv): 
+    def init(self, *priv):
         if len(priv) < 1:
             raise error.SnmpfwdError('Bad syslog params, need at least facility, also accept priority, host, port, socktype (tcp|udp)')
         if len(priv) < 2:
@@ -42,7 +42,7 @@ class SyslogLogger(AbstractLogger):
         try:
             handler = handlers.SysLogHandler(priv[2].startswith('/') and priv[2] or (priv[2], int(priv[3])), priv[0].lower(), len(priv) > 4 and priv[4] == 'tcp' and socket.SOCK_STREAM or socket.SOCK_DGRAM)
 
-        except:
+        except Exception:
             raise error.SnmpfwdError('Bad syslog option(s): %s' % sys.exc_info()[1])
         handler.setFormatter(logging.Formatter('%(asctime)s %(name)s: %(message)s'))
         self._logger.addHandler(handler)
@@ -90,7 +90,7 @@ class FileLogger(AbstractLogger):
 
         handler.setFormatter(logging.Formatter('%(asctime)s %(name)s: %(message)s'))
         self._logger.addHandler(handler)
- 
+
         self('Log file %s, rotation rules: %s' % (priv[0], maxsize and '> %sKB' % (maxsize/1024) or maxage and '%s%s' % (maxage[1], maxage[0]) or '<none>'))
 
 

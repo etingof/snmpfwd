@@ -87,6 +87,7 @@ def main():
             'process-user=', 'process-group=', 'pid-file=', 'logging-method=',
             'config-file='
         ])
+
     except Exception:
         sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
         sys.exit(-1)
@@ -152,6 +153,7 @@ def main():
 
     try:
         cfgTree = cparser.Config().load(cfgFile)
+
     except SnmpfwdError:
         sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
         sys.exit(-1)
@@ -219,6 +221,7 @@ def main():
                 try:
                     bindAddr = bindAddr.split(':', 1)
                     bindAddr = bindAddr[0], int(bindAddr[1])
+
                 except (ValueError, IndexError):
                     log.msg('bad snmp-bind-address specification %s at %s' % (bindAddr, '.'.join(peerEntryPath)))
                     exit(-1)
@@ -226,6 +229,7 @@ def main():
             try:
                 bindAddr = bindAddr.split(':', 1)
                 bindAddr = bindAddr[0], int(bindAddr[1])
+
             except (ValueError, IndexError):
                 log.msg('bad snmp-bind-address specification %s at %s' % (bindAddr, '.'.join(peerEntryPath)))
                 exit(-1)
@@ -524,7 +528,7 @@ def main():
         f = lambda h, p=port: (h, int(p))
         try:
             return f(*a.split(':'))
-        except:
+        except Exception:
             raise SnmpfwdError('improper IPv4 endpoint %s' % a)
 
     for trunkCfgPath in cfgTree.getPathsToAttr('trunk-id'):
@@ -554,14 +558,16 @@ def main():
 
     try:
         daemon.dropPrivileges(procUser, procGroup)
-    except:
+
+    except Exception:
         sys.stderr.write('ERROR: cant drop privileges: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
         sys.exit(-1)
 
     if not foregroundFlag:
         try:
             daemon.daemonize(pidFile)
-        except:
+
+        except Exception:
             sys.stderr.write('ERROR: cant daemonize process: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
 
@@ -578,12 +584,15 @@ def main():
     while True:
         try:
             transportDispatcher.runDispatcher()
+
         except KeyboardInterrupt:
             log.msg('shutting down process...')
             break
+
         except (PySnmpError, SnmpfwdError, socket.error):
             log.msg('error: %s' % sys.exc_info()[1])
             continue
+
         except Exception:
             exc_info = sys.exc_info()
             break
