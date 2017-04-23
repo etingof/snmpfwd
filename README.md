@@ -6,8 +6,8 @@ SNMP Proxy Forwarder
 [![Python Versions](https://img.shields.io/pypi/pyversions/snmpfwd.svg)](https://pypi.python.org/pypi/snmpfwd/)
 [![GitHub license](https://img.shields.io/badge/license-BSD-blue.svg)](https://raw.githubusercontent.com/etingof/snmpfwd/master/LICENSE.txt)
 
-This tool works as an application-level proxy with a built-in SNMP
-message router. SNMP forwarder design features split client/server operation
+The SNMP Proxy Forwarder tool works as an application-level proxy with a built-in
+SNMP message router. SNMP forwarder design features split client/server operation
 that promotes having one part of the system in DMZ while other part is 
 facing the Internet. Message routing can be programmed via a declarative
 mini-language.
@@ -30,7 +30,8 @@ Features
 Download
 --------
 
-SNMP proxy forwarder software is freely available for download from [PyPI](https://pypi.python.org/pypi/snmpfwd).
+SNMP proxy forwarder software is freely available for download from
+[PyPI](https://pypi.python.org/pypi/snmpfwd).
 
 Installation
 ------------
@@ -47,7 +48,10 @@ How to use SNMP proxy forwarder
 Once installed, configure both client and server part of the tool by tackling
 [client.conf](https://raw.githubusercontent.com/etingof/snmpfwd/master/conf/client.conf) and
 [server.conf](https://raw.githubusercontent.com/etingof/snmpfwd/master/conf/server.conf)
-configuration files. See comments and examples inside for more information.
+configuration files.
+
+Comprehensive configuration language reference could be found at
+the [project site](http://snmpfwd.sf.net).
 
 Getting help
 ------------

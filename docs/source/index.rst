@@ -79,4 +79,4 @@ If something does not work as expected,
 at GitHub or post your question
 `on Stack Overflow <http://stackoverflow.com/questions/ask>`_
 or try browsing snmpfwd-users
-`mailing list archives <https://sourceforge.net/p/snmpsim/mailman/snmpfwd-users/>`_.
+`mailing list archives <https://sourceforge.net/p/snmpfwd/mailman/snmpfwd-users/>`_.

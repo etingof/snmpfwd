@@ -3,7 +3,7 @@ Server configuration
 ====================
 
 Server part acts as the SNMP agent side of the SNMP proxy system.
-It is normally linked with one or more `clients <client-configuration>`_
+It is normally linked with one or more :doc:`clients <client-configuration>`
 via *trunks*.
 
 Basic configuration strategy for the server part is:
@@ -97,7 +97,7 @@ transport endpoint listening at address 127.0.0.1, UDP port 5555.
 *snmp-transport-options*
 ++++++++++++++++++++++++
 
-Enable specific networking options. Valid values:
+Enable advanced networking options. Valid values are:
 
 * *transparent-proxy* - enables SNMP request-response communication at any
   IP address, even if such IP interface does not exist at this system
@@ -106,9 +106,16 @@ Enable specific networking options. Valid values:
   a secondary IP interface and learns actual destination IP address
   used by the Manager regardless of the one we are bound to
 
+The *transparent-proxy* option effectively hides SNMP Proxy Forwarder from SNMP
+agents giving them an illusion that they communicate directly with SNMP managers.
+
+See also :doc:`client-side configuration <client-configuration>`.
+
 .. note::
 
-    Both options only work on Linux and require P
+    Additional network configuration is required on the network to make
+    SNMP request packets reaching the host where SNMP Proxy Forwarder
+    is running and accepting them by the host.
 
 *snmp-bind-address*
 +++++++++++++++++++
@@ -291,7 +298,13 @@ TCP port and listens at it for *client* connections.
 *trunk-crypto-key*
 ++++++++++++++++++
 
-Shared secret key used for trunk connection encryption.
+Shared secret key used for trunk connection encryption. Missing option disables
+trunk encryption.
+
+.. note::
+
+    The key must be the same at both client and server for trunking link
+    between them to establish.
 
 *trunk-id*
 ++++++++++
