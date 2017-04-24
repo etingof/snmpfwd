@@ -418,10 +418,8 @@ def main():
 
                     routingMap[k] = peerIdList
 
-
     def prettyVarBinds(pdu):
         return not pdu and '<none>' or ';'.join(['%s:%s' % (vb[0].prettyPrint(), vb[1].prettyPrint()) for vb in v2c.apiPDU.getVarBinds(pdu)])
-
 
     def __rspCbFun(snmpEngine, sendRequestHandle, errorIndication, rspPDU, cbCtx):
         trunkId, msgId, trunkReq = cbCtx
@@ -446,7 +444,6 @@ def main():
 
     origGetTargetAddr = lcd.getTargetAddr
 
-
     def getTargetAddr(snmpEngine, snmpTargetAddrName):
         r = list(origGetTargetAddr(snmpEngine, snmpTargetAddrName))
         if q:
@@ -456,7 +453,6 @@ def main():
         return r
 
     lcd.getTargetAddr = getTargetAddr
-
 
     def dataCbFun(trunkId, msgId, msg):
         k = [str(x) for x in (msg['snmp-engine-id'],
@@ -522,7 +518,6 @@ def main():
             )
 
     trunkingManager = TrunkingManager(dataCbFun)
-
 
     def getTrunkAddr(a, port=0):
         f = lambda h, p=port: (h, int(p))

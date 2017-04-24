@@ -159,7 +159,6 @@ def main():
 
     random.seed()
 
-
     def prettyVarBinds(pdu):
         return not pdu and '<none>' or ';'.join(['%s:%s' % (vb[0].prettyPrint(), vb[1].prettyPrint()) for vb in v2c.apiPDU.getVarBinds(pdu)])
 
@@ -168,7 +167,6 @@ def main():
     #
 
     gCurrentRequestContext = {}
-
 
     class CommandResponder(cmdrsp.CommandResponderBase):
         pduTypes = (rfc1905.SetRequestPDU.tagSet,
@@ -271,7 +269,6 @@ def main():
         rfc1905.GetBulkRequestPDU.tagSet: 'GETBULK',
         rfc1905.ResponsePDU.tagSet: 'RESPONSE'
     }
-
 
     def requestObserver(snmpEngine, execpoint, variables, cbCtx):
         cbCtx['snmp-credentials-id'] = macro.expandMacros(
@@ -594,12 +591,10 @@ def main():
 
                         log.msg('configuring trunk routing to %s (at %s), composite key: %s' % (','.join(trunkIdList), '.'.join(routeCfgPath), '/'.join(k)))
 
-
     def dataCbFun(trunkId, msgId, msg):
         log.msg('message ID %s received from trunk %s' % (msgId, trunkId))
 
     trunkingManager = TrunkingManager(dataCbFun)
-
 
     def getTrunkAddr(a, port=0):
         f = lambda h, p=port: (h, int(p))
