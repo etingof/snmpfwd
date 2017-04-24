@@ -68,7 +68,7 @@ class PluginManager(object):
                 break
 
         else:
-            raise error.SnmpfwdError('plugin module "%s" not found' % pluginModuleName)
+            raise error.SnmpfwdError('plugin module "%s" not found in search path(s): %s' % (pluginModuleName, ', '.join(self.__path)))
 
     def processCommandRequest(self, pluginId, snmpEngine, pdu, **context):
         if pluginId not in self.__plugins:
