@@ -13,7 +13,8 @@ import re
 import socket
 from pysnmp.error import PySnmpError
 from pysnmp.entity import engine, config
-from pysnmp.entity.rfc3413 import cmdrsp, context
+from pysnmp.entity.rfc3413 import cmdrsp, ntfrcv, context
+from pysnmp.proto.proxy import rfc2576
 from pysnmp.carrier.asynsock.dgram import udp
 try:
     from pysnmp.carrier.asynsock.dgram import udp6
@@ -24,7 +25,7 @@ try:
 except ImportError:
     unix = None
 from pysnmp.carrier.asynsock.dispatch import AsynsockDispatcher
-from pysnmp.proto import rfc1902, rfc1905
+from pysnmp.proto import rfc1157, rfc1902, rfc1905
 from pysnmp.proto.api import v2c
 from pyasn1 import debug as pyasn1_debug
 from pysnmp import debug as pysnmp_debug
@@ -162,11 +163,11 @@ def main():
     def prettyVarBinds(pdu):
         return not pdu and '<none>' or ';'.join(['%s:%s' % (vb[0].prettyPrint(), vb[1].prettyPrint()) for vb in v2c.apiPDU.getVarBinds(pdu)])
 
+    gCurrentRequestContext = {}
+
     #
     # SNMPv3 CommandResponder implementation
     #
-
-    gCurrentRequestContext = {}
 
     class CommandResponder(cmdrsp.CommandResponderBase):
         pduTypes = (rfc1905.SetRequestPDU.tagSet,
@@ -249,6 +250,32 @@ def main():
                 )
 
             self.releaseStateInformation(stateReference)
+
+    #
+    # SNMPv3 NotificationReceiver implementation
+    #
+
+    class NotificationReceiver(ntfrcv.NotificationReceiver):
+        pduTypes = (rfc1157.TrapPDU.tagSet,
+                    rfc1905.SNMPv2TrapPDU.tagSet)
+
+        def processPdu(self, snmpEngine, messageProcessingModel,
+                       securityModel, securityName, securityLevel,
+                       contextEngineId, contextName, pduVersion, PDU,
+                       maxSizeResponseScopedPDU, stateReference):
+
+            # Agent-side API complies with SMIv2
+            if messageProcessingModel == 0:
+                origPdu = PDU
+                PDU = rfc2576.v1ToV2(PDU)
+            else:
+                origPdu = None
+
+            trunkReq = gCurrentRequestContext['request']
+
+            logMsg = '(SNMP notification %s), matched keys: %s' % (', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(trunkReq['snmp-pdu']) or '%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq]), ', '.join(['%s=%s' % (k, gCurrentRequestContext[k]) for k in gCurrentRequestContext if k[-2:] == 'id']))
+
+
 
     credIdMap = {}
     peerIdMap = {}
@@ -380,6 +407,8 @@ def main():
             )
 
             CommandResponder(snmpEngine, snmpContext)
+
+            NotificationReceiver(snmpEngine, None)
 
             engineIdMap[engineId] = snmpEngine, snmpContext, snmpEngineMap
 
