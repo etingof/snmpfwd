@@ -131,22 +131,22 @@ def prepareDataElements(octets, secret):
     rsp = {}
 
     if msg['content-id'] == 0:     # request
-        for k in 'snmp-engine-id', \
-                 'snmp-transport-domain', \
-                 'snmp-peer-address', 'snmp-peer-port', \
-                 'snmp-bind-address', 'snmp-bind-port', \
-                 'snmp-security-model', 'snmp-security-level', \
-                 'snmp-security-name', \
-                 'snmp-context-engine-id', 'snmp-context-name':
+        for k in ('snmp-engine-id',
+                  'snmp-transport-domain',
+                  'snmp-peer-address', 'snmp-peer-port',
+                  'snmp-bind-address', 'snmp-bind-port',
+                  'snmp-security-model', 'snmp-security-level',
+                  'snmp-security-name',
+                  'snmp-context-engine-id', 'snmp-context-name'):
             rsp[k] = r[k]
 
-        rsp['snmp-pdu'], _ = decoder.decode(r['snmp-pdu'],
-                                            asn1Spec=rfc1905.PDUs())
+        rsp['snmp-pdu'], _ = decoder.decode(r['snmp-pdu'], asn1Spec=rfc1905.PDUs())
+
     elif msg['content-id'] == 1:   # response
         rsp['error-indication'] = r['error-indication']
-        if not r['error-indication']:
-            rsp['snmp-pdu'], _ = decoder.decode(r['snmp-pdu'],
-                                                asn1Spec=rfc1905.PDUs())
+        if not r['error-indication'] and r['snmp-pdu']:
+            rsp['snmp-pdu'], _ = decoder.decode(r['snmp-pdu'], asn1Spec=rfc1905.PDUs())
+
     elif msg['content-id'] == 2:   # announcement
         rsp['trunk-id'] = r['trunk-id']
         

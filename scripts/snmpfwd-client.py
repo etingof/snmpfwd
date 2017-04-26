@@ -14,7 +14,7 @@ import socket
 from pysnmp.error import PySnmpError
 from pysnmp.entity import engine, config
 from pysnmp.entity.rfc3413 import config as lcd
-from pysnmp.entity.rfc3413 import cmdgen, context
+from pysnmp.entity.rfc3413 import cmdgen, ntforg, context
 from pysnmp.carrier.asynsock.dgram import udp
 try:
     from pysnmp.carrier.asynsock.dgram import udp6
@@ -25,7 +25,7 @@ try:
 except ImportError:
     unix = None
 from pysnmp.carrier.asynsock.dispatch import AsynsockDispatcher
-from pysnmp.proto import rfc1902, rfc1905
+from pysnmp.proto import rfc1157, rfc1902, rfc1905, rfc3411
 from pysnmp.proto.api import v2c
 from pyasn1 import debug as pyasn1_debug
 from pysnmp import debug as pysnmp_debug
@@ -60,7 +60,9 @@ snmpPduTypesMap = {
   rfc1905.SetRequestPDU.tagSet: 'SET',
   rfc1905.GetNextRequestPDU.tagSet: 'GETNEXT',
   rfc1905.GetBulkRequestPDU.tagSet: 'GETBULK',
-  rfc1905.ResponsePDU.tagSet: 'RESPONSE'
+  rfc1905.ResponsePDU.tagSet: 'RESPONSE',
+  rfc1157.TrapPDU.tagSet: 'TRAPv1',
+  rfc1905.SNMPv2TrapPDU.tagSet: 'TRAPv2'
 }
 
 
@@ -169,10 +171,12 @@ def main():
     random.seed()
 
     #
-    # SNMPv3 CommandGenerator implementation
+    # SNMPv3 CommandGenerator & NotificationOriginator implementation
     #
 
     commandGenerator = cmdgen.CommandGenerator()
+
+    notificationOriginator = ntforg.NotificationOriginator()
 
     origCredIdList = []
     peerIdMap = {}
@@ -507,15 +511,45 @@ def main():
 
             log.msg('received trunk message #%s from trunk %s, sending SNMP message to peer ID %s, bind-address %s, peer-address %s (original SNMP info: %s)' % (msgId, trunkId, peerId, bindAddr[0] or '<default>', peerAddr[0] or '<default>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg])))
 
-            commandGenerator.sendPdu(
-                snmpEngine,
-                peerId,
-                macro.expandMacros(contextEngineId, msg),
-                macro.expandMacros(contextName, msg),
-                msg['snmp-pdu'],
-                __rspCbFun,
-                cbCtx
-            )
+            pdu = msg['snmp-pdu']
+
+            if pdu.tagSet in rfc3411.notificationClassPDUs:
+                if pdu.tagSet in rfc3411.unconfirmedClassPDUs:
+                    notificationOriginator.sendPdu(
+                        snmpEngine,
+                        peerId,
+                        macro.expandMacros(contextEngineId, msg),
+                        macro.expandMacros(contextName, msg),
+                        pdu
+                    )
+
+                    # respond to trunk right away
+                    __rspCbFun(snmpEngine, None, errorIndication, None, cbCtx)
+
+                else:
+                    notificationOriginator.sendPdu(
+                        snmpEngine,
+                        peerId,
+                        macro.expandMacros(contextEngineId, msg),
+                        macro.expandMacros(contextName, msg),
+                        pdu,
+                        __rspCbFun,
+                        cbCtx
+                    )
+
+            elif pdu.tagSet not in rfc3411.unconfirmedClassPDUs:
+                commandGenerator.sendPdu(
+                    snmpEngine,
+                    peerId,
+                    macro.expandMacros(contextEngineId, msg),
+                    macro.expandMacros(contextName, msg),
+                    pdu,
+                    __rspCbFun,
+                    cbCtx
+                )
+
+            else:
+                log.msg('ignoring unsupported PDU')
 
     trunkingManager = TrunkingManager(dataCbFun)
 

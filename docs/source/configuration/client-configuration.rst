@@ -380,7 +380,7 @@ name.
 ++++++++++++++++++++++++++++
 
 A regular expression matching SNMP messages by their PDU type. Recognized values are: *GET*,
-*SET*, *GETNEXT*, *GETBULK*.
+*SET*, *GETNEXT*, *GETBULK*, *TRAPv1*, *TRAPv2* (the latter is also applicable for SNMPv3).
 
 *orig-snmp-oid-prefix-pattern*
 ++++++++++++++++++++++++++++++
