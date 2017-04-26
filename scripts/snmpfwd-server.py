@@ -13,7 +13,8 @@ import re
 import socket
 from pysnmp.error import PySnmpError
 from pysnmp.entity import engine, config
-from pysnmp.entity.rfc3413 import cmdrsp, context
+from pysnmp.entity.rfc3413 import cmdrsp, ntfrcv, context
+from pysnmp.proto.proxy import rfc2576
 from pysnmp.carrier.asynsock.dgram import udp
 try:
     from pysnmp.carrier.asynsock.dgram import udp6
@@ -24,8 +25,8 @@ try:
 except ImportError:
     unix = None
 from pysnmp.carrier.asynsock.dispatch import AsynsockDispatcher
-from pysnmp.proto import rfc1902, rfc1905
-from pysnmp.proto.api import v2c
+from pysnmp.proto import rfc1157, rfc1902, rfc1905
+from pysnmp.proto.api import v1, v2c
 from pyasn1 import debug as pyasn1_debug
 from pysnmp import debug as pysnmp_debug
 from snmpfwd.error import SnmpfwdError
@@ -159,16 +160,14 @@ def main():
 
     random.seed()
 
-
     def prettyVarBinds(pdu):
         return not pdu and '<none>' or ';'.join(['%s:%s' % (vb[0].prettyPrint(), vb[1].prettyPrint()) for vb in v2c.apiPDU.getVarBinds(pdu)])
+
+    gCurrentRequestContext = {}
 
     #
     # SNMPv3 CommandResponder implementation
     #
-
-    gCurrentRequestContext = {}
-
 
     class CommandResponder(cmdrsp.CommandResponderBase):
         pduTypes = (rfc1905.SetRequestPDU.tagSet,
@@ -252,6 +251,111 @@ def main():
 
             self.releaseStateInformation(stateReference)
 
+    #
+    # SNMPv3 NotificationReceiver implementation
+    #
+
+    class NotificationReceiver(ntfrcv.NotificationReceiver):
+        pduTypes = (rfc1157.TrapPDU.tagSet,
+                    rfc1905.SNMPv2TrapPDU.tagSet)
+
+        def processPdu(self, snmpEngine, messageProcessingModel,
+                       securityModel, securityName, securityLevel,
+                       contextEngineId, contextName, pduVersion, PDU,
+                       maxSizeResponseScopedPDU, stateReference):
+
+            trunkReq = gCurrentRequestContext['request']
+
+            if messageProcessingModel == 0:
+                PDU = rfc2576.v1ToV2(PDU)
+
+                # TODO: why this is not automatic?
+                v2c.apiTrapPDU.setDefaults(PDU)
+
+            trunkReq['snmp-pdu'] = PDU
+
+            logMsg = '(SNMP notification %s), matched keys: %s' % (', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(trunkReq['snmp-pdu']) or '%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq]), ', '.join(['%s=%s' % (k, gCurrentRequestContext[k]) for k in gCurrentRequestContext if k[-2:] == 'id']))
+
+            usedPlugins = []
+
+            pluginIdList = gCurrentRequestContext['plugins-list']
+            snmpReqInfo = gCurrentRequestContext['request'].copy()
+
+            for pluginId in pluginIdList:
+                usedPlugins.append((pluginId, snmpReqInfo))
+
+                st, PDU = pluginManager.processNotificationRequest(
+                    pluginId, snmpEngine, PDU, **snmpReqInfo
+                )
+                if st == status.BREAK:
+                    break
+                elif st == status.DROP:
+                    log.msg('plugin %s muted request %s' % (pluginId, logMsg))
+                    return
+                elif st == status.RESPOND:
+                    log.msg('plugin %s [NOT SENDING] forced immediate response %s' % (pluginId, logMsg))
+                    # TODO: implement immediate response for confirmed-class PDU
+                    return
+
+            # pass query to trunk
+
+            trunkIdList = gCurrentRequestContext['trunk-id-list']
+            if trunkIdList is None:
+                log.msg('no route configured %s' % logMsg)
+                return
+
+            for trunkId in trunkIdList:
+                log.msg('received SNMP message (%s), sending through trunk %s' % (', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(trunkReq['snmp-pdu']) or '%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq]), trunkId))
+
+                # TODO: pass messageProcessingModel to respond
+                cbCtx = usedPlugins, trunkId, trunkReq, snmpEngine, stateReference
+
+                trunkingManager.sendReq(trunkId, trunkReq, self.__recvCb, cbCtx)
+
+        def __recvCb(self, trunkRsp, cbCtx):
+            pluginIdList, trunkId, trunkReq, snmpEngine, stateReference = cbCtx
+
+            if trunkRsp['error-indication']:
+                log.msg('received trunk message through trunk %s, remote end reported error-indication %s, NOT sending response to peer address %s:%s from %s:%s' % (trunkId, trunkRsp['error-indication'], trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port']))
+            else:
+                if 'snmp-pdu' not in trunkRsp:
+                    log.msg('received trunk message through trunk %s, unconfirmed SNMP message originally from peer address %s:%s towards %s:%s' % (trunkId, trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port']))
+                    return
+
+                PDU = trunkRsp['snmp-pdu']
+
+                for pluginId, snmpReqInfo in pluginIdList:
+                    st, PDU = pluginManager.processNotificationResponse(
+                        pluginId, snmpEngine, PDU, **snmpReqInfo
+                    )
+
+                    if st == status.BREAK:
+                        break
+                    elif st == status.DROP:
+                        log.msg('received trunk message through trunk %s, snmp-var-binds=%s, plugin %s muted response' % (trunkId, prettyVarBinds(PDU), pluginId))
+                        return
+
+                log.msg('received trunk message through trunk %s, sending SNMP response to peer address %s:%s from %s:%s, snmp-var-binds=%s' % (trunkId, trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port'], prettyVarBinds(PDU)))
+
+                # TODO: implement response part
+
+                # # Agent-side API complies with SMIv2
+                # if messageProcessingModel == 0:
+                #     PDU = rfc2576.v2ToV1(PDU, origPdu)
+                #
+                # statusInformation = {}
+                #
+                # # 3.4.3
+                # try:
+                #     snmpEngine.msgAndPduDsp.returnResponsePdu(
+                #         snmpEngine, messageProcessingModel, securityModel,
+                #         securityName, securityLevel, contextEngineId,
+                #         contextName, pduVersion, rspPDU, maxSizeResponseScopedPDU,
+                #         stateReference, statusInformation)
+                #
+                # except error.StatusInformation:
+                #         log.msg('processPdu: stateReference %s, statusInformation %s' % (stateReference, sys.exc_info()[1]))
+
     credIdMap = {}
     peerIdMap = {}
     contextIdList = []
@@ -269,9 +373,10 @@ def main():
         rfc1905.SetRequestPDU.tagSet: 'SET',
         rfc1905.GetNextRequestPDU.tagSet: 'GETNEXT',
         rfc1905.GetBulkRequestPDU.tagSet: 'GETBULK',
-        rfc1905.ResponsePDU.tagSet: 'RESPONSE'
+        rfc1905.ResponsePDU.tagSet: 'RESPONSE',
+        rfc1157.TrapPDU.tagSet: 'TRAPv1',
+        rfc1905.SNMPv2TrapPDU.tagSet: 'TRAPv2'
     }
-
 
     def requestObserver(snmpEngine, execpoint, variables, cbCtx):
         cbCtx['snmp-credentials-id'] = macro.expandMacros(
@@ -302,9 +407,15 @@ def main():
         else:
             cbCtx['peer-id'] = None
 
+        pdu = variables['pdu']
+        if pdu.tagSet in v1.TrapPDU.tagSet:
+            apiPDU = v1.apiTrapPDU
+        else:
+            apiPDU = v2c.apiPDU
+
         k = '#'.join(
             [snmpPduTypesMap.get(variables['pdu'].tagSet, '?'),
-             '|'.join([str(x[0]) for x in v2c.apiPDU.getVarBinds(variables['pdu'])])]
+             '|'.join([str(x[0]) for x in apiPDU.getVarBinds(variables['pdu'])])]
         )
 
         for x, y in contentIdList:
@@ -383,6 +494,8 @@ def main():
             )
 
             CommandResponder(snmpEngine, snmpContext)
+
+            NotificationReceiver(snmpEngine, None)
 
             engineIdMap[engineId] = snmpEngine, snmpContext, snmpEngineMap
 
@@ -594,12 +707,10 @@ def main():
 
                         log.msg('configuring trunk routing to %s (at %s), composite key: %s' % (','.join(trunkIdList), '.'.join(routeCfgPath), '/'.join(k)))
 
-
     def dataCbFun(trunkId, msgId, msg):
         log.msg('message ID %s received from trunk %s' % (msgId, trunkId))
 
     trunkingManager = TrunkingManager(dataCbFun)
-
 
     def getTrunkAddr(a, port=0):
         f = lambda h, p=port: (h, int(p))

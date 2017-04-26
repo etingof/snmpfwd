@@ -1,3 +1,7 @@
 
 * migrate to argparse
 * allow unset configuration options
+* implement INFORM forwarding support (may require pysnmp's NotificationReceiver rework)
+* add more configuration examples
+* add doc on configuring transparent proxy
+* add some drawings explaining network topology in different configurations

@@ -1,3 +1,8 @@
+Revision 0.1.0, released XX-04-2017
+-----------------------------------
+
+- SNMP TRAP PDU forwarding implemented
+
 Revision 0.0.3, released 23-04-2017
 -----------------------------------
 

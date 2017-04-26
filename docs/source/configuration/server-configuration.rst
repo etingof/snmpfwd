@@ -373,7 +373,8 @@ SNMP PDU contents matching
 +++++++++++++++++++++++
 
 A regular expression matching SNMPv3 messages by SNMP PDU type.
-Recognized PDU types are: *GET*, *SET*, *GETNEXT*, *GETBULK*.
+Recognized PDU types are: *GET*, *SET*, *GETNEXT*, *GETBULK*, *TRAPv1*,
+*TRAPv2* (the latter is also applicable for SNMPv3).
 
 *snmp-pdu-oid-prefix-pattern-list*
 ++++++++++++++++++++++++++++++++++

@@ -89,3 +89,23 @@ class PluginManager(object):
             return NEXT, pdu
 
         return self.__plugins[pluginId]['processCommandResponse'](pluginId, snmpEngine, pdu, **context)
+
+    def processNotificationRequest(self, pluginId, snmpEngine, pdu, **context):
+        if pluginId not in self.__plugins:
+            log.msg('WARNING: skipping non-existing plugin %s' % pluginId)
+            return NEXT, pdu
+
+        if 'processNotificationRequest' not in self.__plugins[pluginId]:
+            return NEXT, pdu
+
+        return self.__plugins[pluginId]['processNotificationRequest'](pluginId, snmpEngine, pdu, **context)
+
+    def processNotificationResponse(self, pluginId, snmpEngine, pdu, **context):
+        if pluginId not in self.__plugins:
+            log.msg('WARNING: skipping non-existing plugin %s' % pluginId)
+            return NEXT, pdu
+
+        if 'processNotificationResponse' not in self.__plugins[pluginId]:
+            return NEXT, pdu
+
+        return self.__plugins[pluginId]['processNotificationResponse'](pluginId, snmpEngine, pdu, **context)

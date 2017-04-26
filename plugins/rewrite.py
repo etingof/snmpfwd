@@ -5,6 +5,7 @@
 # License: https://github.com/etingof/snmpfwd/blob/master/LICENSE.txt
 #
 # SNMP Forwarder plugin module
+#
 import re
 import sys
 from snmpfwd.plugins import status
@@ -32,28 +33,31 @@ nullifyMap = {
 rewriteList = []
 
 moduleOptions = moduleOptions.split('=')
+
 if moduleOptions[0] == 'config':
     try:
-        for l in open(moduleOptions[1]).readlines():
-            l = l.strip()
-            if not l or l[0] == '#':
+        for line in open(moduleOptions[1]).readlines():
+            line = line.strip()
+            if not line or line[0] == '#':
                 continue
             try:
-                k, v = l.split(' ', 1)
+                k, v = line.split(' ', 1)
+
             except ValueError:
-                k, v = l, ''
+                k, v = line, ''
 
             msg('rewrite: %s -> %s' % (k, v or '<nullify>'))
 
             rewriteList.append((re.compile(k), v))
+
     except Exception:
         raise SnmpfwdError('rewrite: config file load failure: %s' % sys.exc_info()[1])
 
 msg('rewrite: plugin initialization complete')
 
-
 def processCommandResponse(pluginId, snmpEngine, pdu, **context):
     varBinds = []
+
     for oid, val in v2c.apiPDU.getVarBinds(pdu):
         for pat, newVal in rewriteList:
             if pat.match(str(oid)):
@@ -61,6 +65,9 @@ def processCommandResponse(pluginId, snmpEngine, pdu, **context):
                     newVal = nullifyMap.get(val.tagSet, newVal)
                 val = val.clone(newVal)
                 break
+
         varBinds.append((oid, val))
+
     v2c.apiPDU.setVarBinds(pdu, varBinds)
+
     return status.NEXT, pdu
