@@ -5,6 +5,7 @@
 # License: https://github.com/etingof/snmpfwd/blob/master/LICENSE.txt
 #
 # SNMP Forwarder plugin module
+#
 import logging
 from logging import handlers
 try:
@@ -12,6 +13,7 @@ try:
 except ImportError:
     from configparser import RawConfigParser, Error
 from snmpfwd.plugins import status
+from snmpfwd.error import SnmpfwdError
 from snmpfwd.log import msg
 from pysnmp.proto.api import v2c
 
@@ -27,6 +29,7 @@ parentheses = ('', '')
 logger = logging.getLogger('snmpfwd-logger')
 
 moduleOptions = moduleOptions.split('=')
+
 if moduleOptions[0] == 'config':
     config = RawConfigParser()
     config.read(moduleOptions[1])
@@ -74,19 +77,16 @@ if moduleOptions[0] == 'config':
 
 msg('logger: plugin initialization complete')
 
-
 def _makeExtra(pdu, context):
     extra = dict([(x[0].replace('-', '_'), x[1]) for x in context.items()])
     extra['snmp_var_binds'] = ' '.join(['%s %s%s%s' % (vb[0].prettyPrint(), parentheses[0], vb[1].prettyPrint(), parentheses[1]) for vb in v2c.apiPDU.getVarBinds(pdu)])
     extra['snmp_pdu_type'] = pduMap[pdu.tagSet]
     return extra
 
-
 def processCommandRequest(pluginId, snmpEngine, pdu, **context):
     if pdu.tagSet in pduMap:
         logger.info('', extra=_makeExtra(pdu, context))
     return status.NEXT, pdu
-
 
 def processCommandResponse(pluginId, snmpEngine, pdu, **context):
     if pdu.tagSet in pduMap:
