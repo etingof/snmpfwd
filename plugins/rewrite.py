@@ -4,7 +4,7 @@
 # Copyright (c) 2014-2017, Ilya Etingof <etingof@gmail.com>
 # License: https://github.com/etingof/snmpfwd/blob/master/LICENSE.txt
 #
-# SNMP Forwarder plugin module
+# SNMP Proxy Forwarder plugin module
 #
 import re
 import sys
@@ -54,6 +54,7 @@ if moduleOptions[0] == 'config':
         raise SnmpfwdError('rewrite: config file load failure: %s' % sys.exc_info()[1])
 
 msg('rewrite: plugin initialization complete')
+
 
 def processCommandResponse(pluginId, snmpEngine, pdu, **context):
     varBinds = []

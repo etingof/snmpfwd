@@ -4,7 +4,7 @@
 # Copyright (c) 2014-2017, Ilya Etingof <etingof@gmail.com>
 # License: https://github.com/etingof/snmpfwd/blob/master/LICENSE.txt
 #
-# SNMP Forwarder plugin module
+# SNMP Proxy Forwarder plugin module
 #
 import logging
 from logging import handlers
@@ -23,8 +23,8 @@ apiVersions = 0, 1
 # defaults
 pduMap = {}
 method = 'null'
-format = ''
-parentheses = ('', '')
+logFormat = ''
+leftParen, rightParen = '', ''
 
 logger = logging.getLogger('snmpfwd-logger')
 
@@ -43,11 +43,11 @@ if moduleOptions[0] == 'config':
                 config.get('file', 'timescale'),
                 int(config.get('file', 'interval')),
                 int(config.get('file', 'backupcount'))
-             )
+            )
         else:
-            raise SnmpfwdError('logger: unknown rotation method' % rotation)
+            raise SnmpfwdError('logger: unknown rotation method: %s' % rotation)
     else:
-        raise SnmpfwdError('logger: unknown logging method' % method)
+        raise SnmpfwdError('logger: unknown logging method: %s' % method)
 
     msg('logger: using %s logging method' % method)
 
@@ -56,7 +56,7 @@ if moduleOptions[0] == 'config':
     pdus = config.get('content', 'pdus')
     for pdu in pdus.split():
         try:
-            pduMap[getattr(v2c, pdu+'PDU').tagSet] = pdu
+            pduMap[getattr(v2c, pdu + 'PDU').tagSet] = pdu
         except AttributeError:
             raise SnmpfwdError('logger: unknown PDU %s' % pdu)
         else:
@@ -67,29 +67,32 @@ if moduleOptions[0] == 'config':
     )
 
     try:
-        parentheses = tuple(config.get('content', 'parentheses').split())
+        leftParen, rightParen = config.get('content', 'parentheses').split()
+
     except Error:
         pass
 
-    msg('logger: using var-bind value parentheses "%s" "%s"' % parentheses)
+    msg('logger: using var-bind value parentheses "%s" "%s"' % (leftParen, rightParen))
 
     logger.addHandler(handler)
 
 msg('logger: plugin initialization complete')
 
+
 def _makeExtra(pdu, context):
     extra = dict([(x[0].replace('-', '_'), x[1]) for x in context.items()])
-    extra['snmp_var_binds'] = ' '.join(['%s %s%s%s' % (vb[0].prettyPrint(), parentheses[0], vb[1].prettyPrint(), parentheses[1]) for vb in v2c.apiPDU.getVarBinds(pdu)])
+    extra['snmp_var_binds'] = ' '.join(['%s %s%s%s' % (vb[0].prettyPrint(), leftParen, vb[1].prettyPrint(), rightParen) for vb in v2c.apiPDU.getVarBinds(pdu)])
     extra['snmp_pdu_type'] = pduMap[pdu.tagSet]
     return extra
+
 
 def processCommandRequest(pluginId, snmpEngine, pdu, **context):
     if pdu.tagSet in pduMap:
         logger.info('', extra=_makeExtra(pdu, context))
     return status.NEXT, pdu
 
+
 def processCommandResponse(pluginId, snmpEngine, pdu, **context):
     if pdu.tagSet in pduMap:
         logger.info('', extra=_makeExtra(pdu, context))
     return status.NEXT, pdu
-
