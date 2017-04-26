@@ -24,9 +24,9 @@ Server is configured to:
 * forward all queries to snmpfwd client through an unencrypted trunk connection
   running in *client* mode
 
-.. literalinclude:: /../../conf/snmpv3-to-snmpv1/server.conf
+.. literalinclude:: /../../conf/command-forwarding-snmpv3-to-snmpv1/server.conf
 
-:download:`Download </../../conf/snmpv3-to-snmpv1/server.conf>` configuration file.
+:download:`Download </../../conf/command-forwarding-snmpv3-to-snmpv1/server.conf>` configuration file.
 
 Client configuration
 --------------------
@@ -38,6 +38,6 @@ Client is configured to:
 * place inbound PDUs into SNMP v1 messages and forward them to public
   SNMP agent running at *demo.snmplabs.com*
 
-.. literalinclude:: /../../conf/snmpv3-to-snmpv1/client.conf
+.. literalinclude:: /../../conf/command-forwarding-snmpv3-to-snmpv1/client.conf
 
-:download:`Download </../../conf/snmpv3-to-snmpv1/client.conf>` configuration file.
+:download:`Download </../../conf/command-forwarding-snmpv3-to-snmpv1/client.conf>` configuration file.
