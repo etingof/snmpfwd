@@ -2,6 +2,9 @@ Revision 0.1.0, released XX-04-2017
 -----------------------------------
 
 - SNMP TRAP PDU forwarding implemented
+- SNMP PDU OIDs filtering plugin implemented
+- Single SNMP request scope context is now served to the plugins (plugin
+  API version bumped)
 
 Revision 0.0.3, released 23-04-2017
 -----------------------------------

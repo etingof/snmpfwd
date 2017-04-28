@@ -14,7 +14,7 @@ from snmpfwd.log import msg
 from pysnmp.proto.api import v2c
 
 hostProgs = 'snmpfwd-server', 'snmpfwd-client'
-apiVersions = 0, 1
+apiVersions = 0, 2
 
 nullifyMap = {
     v2c.ObjectIdentifier.tagSet: '0.0',
@@ -41,7 +41,7 @@ if moduleOptions[0] == 'config':
             if not line or line[0] == '#':
                 continue
             try:
-                k, v = line.split(' ', 1)
+                k, v = line.split()
 
             except ValueError:
                 k, v = line, ''
@@ -56,7 +56,7 @@ if moduleOptions[0] == 'config':
 msg('rewrite: plugin initialization complete')
 
 
-def processCommandResponse(pluginId, snmpEngine, pdu, **context):
+def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     varBinds = []
 
     for oid, val in v2c.apiPDU.getVarBinds(pdu):
