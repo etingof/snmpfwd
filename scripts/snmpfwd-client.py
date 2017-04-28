@@ -223,16 +223,22 @@ def main():
                 bindAddr = '0.0.0.0', 0
             else:
                 try:
-                    bindAddr = bindAddr.split(':', 1)
-                    bindAddr = bindAddr[0], int(bindAddr[1])
+                    if ':' in bindAddr:
+                        bindAddr = bindAddr.split(':', 1)
+                        bindAddr = bindAddr[0], int(bindAddr[1])
+                    else:
+                        bindAddr = bindAddr, 0
 
                 except (ValueError, IndexError):
                     log.msg('bad snmp-bind-address specification %s at %s' % (bindAddr, '.'.join(peerEntryPath)))
                     exit(-1)
         else:
             try:
-                bindAddr = bindAddr.split(':', 1)
-                bindAddr = bindAddr[0], int(bindAddr[1])
+                if ':' in bindAddr:
+                    bindAddr = bindAddr.split(':', 1)
+                    bindAddr = bindAddr[0], int(bindAddr[1])
+                else:
+                    bindAddr = bindAddr, 0
 
             except (ValueError, IndexError):
                 log.msg('bad snmp-bind-address specification %s at %s' % (bindAddr, '.'.join(peerEntryPath)))
