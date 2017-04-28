@@ -26,7 +26,7 @@ Server is configured to:
 
 .. literalinclude:: /../../conf/command-forwarding-snmpv3-to-snmpv1/server.conf
 
-:download:`Download </../../conf/command-forwarding-snmpv3-to-snmpv1/server.conf>` configuration file.
+:download:`Download </../../conf/command-forwarding-snmpv3-to-snmpv1/server.conf>` server configuration file.
 
 Client configuration
 --------------------
@@ -40,4 +40,4 @@ Client is configured to:
 
 .. literalinclude:: /../../conf/command-forwarding-snmpv3-to-snmpv1/client.conf
 
-:download:`Download </../../conf/command-forwarding-snmpv3-to-snmpv1/client.conf>` configuration file.
+:download:`Download </../../conf/command-forwarding-snmpv3-to-snmpv1/client.conf>` client configuration file.
