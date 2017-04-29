@@ -80,13 +80,13 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
             reqVarBinds.append(varBind)
             rspVarBinds.append(None)
 
-    if not reqVarBinds:
+    if reqVarBinds:
+        reqCtx['setaside-oids'] = rspVarBinds
+        nextAction = status.NEXT
+    else:
         pdu = v2c.apiPDU.getResponse(pdu)
         reqVarBinds.extend(rspVarBinds)
         nextAction = status.RESPOND
-    else:
-        reqCtx['setaside-oids'] = rspVarBinds
-        nextAction = status.NEXT
 
     v2c.apiPDU.setVarBindList(pdu, reqVarBinds)
 
@@ -99,7 +99,7 @@ def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
 
     varBinds = v2c.VarBindList()
 
-    rspVarBinds = pdu[3]
+    rspVarBinds = v2c.apiPDU.getVarBindList(pdu)
     reqVarBinds = reqCtx.pop('setaside-oids')
 
     for idx, varBind in enumerate(reqVarBinds):
@@ -124,7 +124,7 @@ def processNotificationRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
 
     varBinds = v2c.VarBindList()
 
-    for varBind in pdu[3]:
+    for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
         oid = str(varBind[0])
         for pat, decision in oidsList:
             if pat.match(oid):
@@ -137,6 +137,6 @@ def processNotificationRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     if not varBinds:
         return status.DROP, pdu
 
-    pdu.getComponentByPosition(3, varBinds, verifyConstraints=False, matchTags=False, matchConstraints=False)
+    v2c.apiPDU.setVarBindList(pdu, varBinds)
 
     return status.NEXT, pdu
