@@ -6,7 +6,6 @@
 #
 # SNMP Proxy Forwarder plugin module
 #
-import re
 import sys
 from snmpfwd.plugins import status
 from snmpfwd.error import SnmpfwdError
@@ -16,7 +15,7 @@ from pysnmp.proto.api import v2c
 hostProgs = 'snmpfwd-server', 'snmpfwd-client'
 apiVersions = 0, 2
 
-PASS, BLOCK = 0, 1
+BLOCK, PASS = 0, 1
 
 PLUGIN_NAME = 'oidfilter'
 
@@ -33,24 +32,32 @@ if moduleOptions[0] == 'config':
     try:
         for line in open(moduleOptions[1]).readlines():
             line = line.strip()
-            if not line or line[0] == '#':
+
+            if not line or line.startswith('#'):
                 continue
+
             try:
-                k, v = line.split()
+                begin, end, decision = line.split()
 
             except ValueError:
-                k, v = line, PASS
+                raise SnmpfwdError('%s: bad configuration syntax: "%s"' % (PLUGIN_NAME, line))
 
-            else:
-                try:
-                    v = commands[v]
+            try:
+                begin = tuple(v2c.ObjectIdentifier(begin))
+                end = tuple(v2c.ObjectIdentifier(end))
 
-                except KeyError:
-                    raise SnmpfwdError('%s: unknown  configuration instruction: %s', (PLUGIN_NAME, v))
+            except Exception:
+                raise SnmpfwdError('%s: malformed OID %s/%s' % (PLUGIN_NAME, begin, end))
 
-            msg('%s: %s -> %s' % (PLUGIN_NAME, k, v))
+            try:
+                decision = commands[decision]
 
-            oidsList.append((re.compile(k), v))
+            except KeyError:
+                raise SnmpfwdError('%s: unknown  configuration instruction: %s' % (PLUGIN_NAME, decision))
+
+            msg('%s: %s .. %s -> %s' % (PLUGIN_NAME, v2c.ObjectIdentifier(begin), v2c.ObjectIdentifier(end), decision == PASS and 'PASS' or 'BLOCK'))
+
+            oidsList.append((begin, end, decision))
 
     except Exception:
         raise SnmpfwdError('%s: config file load failure: %s' % (PLUGIN_NAME, sys.exc_info()[1]))
@@ -66,9 +73,9 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     rspVarBinds = []
 
     for varBind in pdu[3]:
-        oid = str(varBind[0])
-        for pat, decision in oidsList:
-            if pat.match(oid):
+        oid = tuple(varBind[0])
+        for begin, end, decision in oidsList:
+            if begin <= oid <= end:
                 if decision == PASS:
                     reqVarBinds.append(varBind)
                     rspVarBinds.append(None)
@@ -102,7 +109,9 @@ def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     rspVarBinds = v2c.apiPDU.getVarBindList(pdu)
     reqVarBinds = reqCtx.pop('setaside-oids')
 
-    for idx, varBind in enumerate(reqVarBinds):
+    idx = 0
+
+    for varBind in reqVarBinds:
         if varBind:
             varBinds.append(varBind)
         else:
@@ -112,6 +121,8 @@ def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
             except IndexError:
                 msg('%s: missing response OID #%s' % (PLUGIN_NAME, idx))
                 return status.DROP, pdu
+            else:
+                idx += 1
 
     v2c.apiPDU.setVarBindList(pdu, varBinds)
 
@@ -125,9 +136,9 @@ def processNotificationRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     varBinds = v2c.VarBindList()
 
     for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
-        oid = str(varBind[0])
-        for pat, decision in oidsList:
-            if pat.match(oid):
+        oid = tuple(varBind[0])
+        for begin, end, decision in oidsList:
+            if begin <= oid <= end:
                 if decision == PASS:
                     varBinds.append(varBind)
                 break
