@@ -135,8 +135,8 @@ Listen for SNMP packets at this network address. Example:
 
 SNMP version to use. Valid values are:
 
-* *0* - SNMP v1
-* *1* - SNMP v2c
+* *1* - SNMP v1
+* *2* - SNMP v2c
 * *3* - SNMP v3
 
 *snmp-security-level*
