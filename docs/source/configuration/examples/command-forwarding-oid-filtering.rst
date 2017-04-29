@@ -30,7 +30,7 @@ Server configuration
 Server is configured to:
 
 * listen on UDP socket at localhost
-* respond to queries performed over SNMPv1
+* respond to queries performed over SNMPv2c
 * for GET/SET PDUs, take blocked OIDs out of request PDU (but remember them)
 * forward all queries to snmpfwd client through an unencrypted trunk connection
   running in *client* mode
@@ -55,7 +55,7 @@ Client is configured to:
 
 * listen on server-mode unencrypted trunk connection
 * process all incoming SNMP messages in the same way
-* place inbound PDUs into SNMP v1 messages and forward them to public
+* place inbound PDUs into SNMP v2c messages and forward them to public
   SNMP agent running at *demo.snmplabs.com*
 
 .. literalinclude:: /../../conf/command-forwarding-filtering/client.conf
