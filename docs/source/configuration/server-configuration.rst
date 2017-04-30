@@ -56,15 +56,33 @@ SNMP agents options
 *snmp-engine-id*
 ++++++++++++++++
 
-SNMP engine identifier to configure to SNMP engine ID instance within SNMP
-Proxy Forwarder (server or client). A single instance of server or client
-can have many independent SNMP engine instances running.
+SNMP engine identifier that creates a new, independent instance of SNMP engine.
+All other SNMP settings scoped within this *snmp-engine-id* apply to this
+SNMP engine instance.
+
+A single instance of SNMP Proxy Forwarder server or client can have many
+independent SNMP engine instances running concurrently.
 
 Example:
 
 .. code-block:: bash
 
-    snmp-engine-id: 0x0102030405070809
+    {
+        snmp-engine-id: 0x0102030405070809
+
+        ... other SNMP settings for this SNMP engine
+    }
+    {
+        snmp-engine-id: 0x090807060504030201
+
+        ... other SNMP settings for this SNMP engine
+    }
+
+.. note::
+
+    There is no correlation between *snmp-engine-id* configured
+    at server and client parts of SNMP Proxy Forwarder. They can be the same
+    or differ in any way.
 
 *snmp-transport-domain*
 +++++++++++++++++++++++
@@ -151,8 +169,11 @@ SNMPv3 security level to use. Valid values are
 *snmp-security-name*
 ++++++++++++++++++++
 
-Identifier for SNMP user configuration entry. In most cases can be set
-to the same value as `snmp-community-name`_ or `snmp-usm-user`_.
+Identifier that logically groups SNMP configuration settings together.
+
+.. note::
+
+    Must be unique within SNMP engine instance (e.g. `snmp-engine-id`_).
 
 *snmp-community-name*
 +++++++++++++++++++++
