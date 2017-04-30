@@ -37,7 +37,7 @@ Server is configured to:
 
 .. literalinclude:: /../../conf/trap-forwarding-snmpv2c/server.conf
 
-:download:`Download </../../conf/trap-forwarding-snmpv2c/server.conf>` configuration file.
+:download:`Download </../../conf/trap-forwarding-snmpv2c/server.conf>` server configuration file.
 
 Client configuration
 --------------------
@@ -50,4 +50,4 @@ Client is configured to:
 
 .. literalinclude:: /../../conf/trap-forwarding-snmpv2c/client.conf
 
-:download:`Download </../../conf/trap-forwarding-snmpv2c/client.conf>` configuration file.
+:download:`Download </../../conf/trap-forwarding-snmpv2c/client.conf>` client configuration file.

@@ -35,7 +35,7 @@ Configuration
 -------------
 
 The system is driven by configuration files. Depending on the desired system's
-configuraton, the complexity of configuration files can vary. We maintain a
+configuration, the complexity of configuration files can vary. We maintain a
 collection of use-cases and example configurations implementing them.
 
 .. toctree::

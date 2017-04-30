@@ -18,7 +18,7 @@ from snmpfwd.log import msg
 from pysnmp.proto.api import v2c
 
 hostProgs = 'snmpfwd-server', 'snmpfwd-client'
-apiVersions = 0, 1
+apiVersions = 0, 2
 
 # defaults
 pduMap = {}
@@ -86,13 +86,13 @@ def _makeExtra(pdu, context):
     return extra
 
 
-def processCommandRequest(pluginId, snmpEngine, pdu, **context):
+def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     if pdu.tagSet in pduMap:
-        logger.info('', extra=_makeExtra(pdu, context))
+        logger.info('', extra=_makeExtra(pdu, snmpReqInfo))
     return status.NEXT, pdu
 
 
-def processCommandResponse(pluginId, snmpEngine, pdu, **context):
+def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     if pdu.tagSet in pduMap:
-        logger.info('', extra=_makeExtra(pdu, context))
+        logger.info('', extra=_makeExtra(pdu, snmpReqInfo))
     return status.NEXT, pdu

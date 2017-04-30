@@ -38,7 +38,7 @@ from snmpfwd.trunking.manager import TrunkingManager
 # Settings
 PROGRAM_NAME = 'snmpfwd-server'
 CONFIG_VERSION = '2'
-PLUGIN_API_VERSION = 1
+PLUGIN_API_VERSION = 2
 CONFIG_FILE = '/usr/local/etc/snmpfwd/server.cfg'
 
 authProtocols = {
@@ -181,21 +181,25 @@ def main():
 
             logMsg = '(SNMP request %s), matched keys: %s' % (', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(trunkReq['snmp-pdu']) or '%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq]), ', '.join(['%s=%s' % (k, gCurrentRequestContext[k]) for k in gCurrentRequestContext if k[-2:] == 'id']))
 
-            usedPlugins = []
             pluginIdList = gCurrentRequestContext['plugins-list']
             snmpReqInfo = gCurrentRequestContext['request'].copy()
-            for pluginId in pluginIdList:
-                usedPlugins.append((pluginId, snmpReqInfo))
+            reqCtx = {}
+
+            for pluginNum, pluginId in enumerate(pluginIdList):
 
                 st, PDU = pluginManager.processCommandRequest(
-                    pluginId, snmpEngine, PDU, **snmpReqInfo
+                    pluginId, snmpEngine, PDU, snmpReqInfo, reqCtx
                 )
+
                 if st == status.BREAK:
+                    pluginIdList = pluginIdList[:pluginNum]
                     break
+
                 elif st == status.DROP:
                     log.msg('plugin %s muted request %s' % (pluginId, logMsg))
                     self.releaseStateInformation(stateReference)
                     return
+
                 elif st == status.RESPOND:
                     log.msg('plugin %s forced immediate response %s' % (pluginId, logMsg))
                     self.sendPdu(
@@ -218,20 +222,20 @@ def main():
             for trunkId in trunkIdList:
                 log.msg('received SNMP message (%s), sending through trunk %s' % (', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(trunkReq['snmp-pdu']) or '%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq]), trunkId))
 
-                cbCtx = usedPlugins, trunkId, trunkReq, snmpEngine, stateReference
+                cbCtx = pluginIdList, trunkId, trunkReq, snmpEngine, stateReference, snmpReqInfo, reqCtx
 
                 trunkingManager.sendReq(trunkId, trunkReq, self.__recvCb, cbCtx)
 
         def __recvCb(self, trunkRsp, cbCtx):
-            pluginIdList, trunkId, trunkReq, snmpEngine, stateReference = cbCtx
+            pluginIdList, trunkId, trunkReq, snmpEngine, stateReference, snmpReqInfo, reqCtx = cbCtx
 
             if trunkRsp['error-indication']:
                 log.msg('received trunk message through trunk %s, remote end reported error-indication %s, NOT sending response to peer address %s:%s from %s:%s' % (trunkId, trunkRsp['error-indication'], trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port']))
             else:
                 PDU = trunkRsp['snmp-pdu']
-                for pluginId, snmpReqInfo in pluginIdList:
+                for pluginId in pluginIdList:
                     st, PDU = pluginManager.processCommandResponse(
-                        pluginId, snmpEngine, PDU, **snmpReqInfo
+                        pluginId, snmpEngine, PDU, snmpReqInfo, reqCtx
                     )
 
                     if st == status.BREAK:
@@ -276,24 +280,26 @@ def main():
 
             logMsg = '(SNMP notification %s), matched keys: %s' % (', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(trunkReq['snmp-pdu']) or '%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq]), ', '.join(['%s=%s' % (k, gCurrentRequestContext[k]) for k in gCurrentRequestContext if k[-2:] == 'id']))
 
-            usedPlugins = []
-
             pluginIdList = gCurrentRequestContext['plugins-list']
             snmpReqInfo = gCurrentRequestContext['request'].copy()
+            reqCtx = {}
 
-            for pluginId in pluginIdList:
-                usedPlugins.append((pluginId, snmpReqInfo))
+            for pluginNum, pluginId in enumerate(pluginIdList):
 
                 st, PDU = pluginManager.processNotificationRequest(
-                    pluginId, snmpEngine, PDU, **snmpReqInfo
+                    pluginId, snmpEngine, PDU, snmpReqInfo, reqCtx
                 )
+
                 if st == status.BREAK:
+                    pluginIdList = pluginIdList[:pluginNum]
                     break
+
                 elif st == status.DROP:
                     log.msg('plugin %s muted request %s' % (pluginId, logMsg))
                     return
+
                 elif st == status.RESPOND:
-                    log.msg('plugin %s [NOT SENDING] forced immediate response %s' % (pluginId, logMsg))
+                    log.msg('plugin %s NOT forced immediate response %s' % (pluginId, logMsg))
                     # TODO: implement immediate response for confirmed-class PDU
                     return
 
@@ -308,12 +314,12 @@ def main():
                 log.msg('received SNMP message (%s), sending through trunk %s' % (', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(trunkReq['snmp-pdu']) or '%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq]), trunkId))
 
                 # TODO: pass messageProcessingModel to respond
-                cbCtx = usedPlugins, trunkId, trunkReq, snmpEngine, stateReference
+                cbCtx = pluginIdList, trunkId, trunkReq, snmpEngine, stateReference, snmpReqInfo, reqCtx
 
                 trunkingManager.sendReq(trunkId, trunkReq, self.__recvCb, cbCtx)
 
         def __recvCb(self, trunkRsp, cbCtx):
-            pluginIdList, trunkId, trunkReq, snmpEngine, stateReference = cbCtx
+            pluginIdList, trunkId, trunkReq, snmpEngine, stateReference, snmpReqInfo, reqCtx = cbCtx
 
             if trunkRsp['error-indication']:
                 log.msg('received trunk message through trunk %s, remote end reported error-indication %s, NOT sending response to peer address %s:%s from %s:%s' % (trunkId, trunkRsp['error-indication'], trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port']))
@@ -324,9 +330,9 @@ def main():
 
                 PDU = trunkRsp['snmp-pdu']
 
-                for pluginId, snmpReqInfo in pluginIdList:
+                for pluginId in pluginIdList:
                     st, PDU = pluginManager.processNotificationResponse(
-                        pluginId, snmpEngine, PDU, **snmpReqInfo
+                        pluginId, snmpEngine, PDU, snmpReqInfo, reqCtx
                     )
 
                     if st == status.BREAK:
