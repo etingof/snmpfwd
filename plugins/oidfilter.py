@@ -43,8 +43,8 @@ if moduleOptions[0] == 'config':
                 raise SnmpfwdError('%s: bad configuration syntax: "%s"' % (PLUGIN_NAME, line))
 
             try:
-                begin = tuple(v2c.ObjectIdentifier(begin))
-                end = tuple(v2c.ObjectIdentifier(end))
+                begin = v2c.ObjectIdentifier(begin)
+                end = v2c.ObjectIdentifier(end)
 
             except Exception:
                 raise SnmpfwdError('%s: malformed OID %s/%s' % (PLUGIN_NAME, begin, end))
@@ -55,7 +55,7 @@ if moduleOptions[0] == 'config':
             except KeyError:
                 raise SnmpfwdError('%s: unknown  configuration instruction: %s' % (PLUGIN_NAME, decision))
 
-            msg('%s: %s .. %s -> %s' % (PLUGIN_NAME, v2c.ObjectIdentifier(begin), v2c.ObjectIdentifier(end), decision == PASS and 'PASS' or 'BLOCK'))
+            msg('%s: %s .. %s -> %s' % (PLUGIN_NAME, begin, end, decision == PASS and 'PASS' or 'BLOCK'))
 
             oidsList.append((begin, end, decision))
 
@@ -64,65 +64,123 @@ if moduleOptions[0] == 'config':
 
 msg('%s: plugin initialization complete' % PLUGIN_NAME)
 
+noSuchObject = v2c.NoSuchObject('')
+endOfMibVew = v2c.EndOfMibView('')
 
 def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
-    if pdu.tagSet not in (v2c.GetRequestPDU.tagSet, v2c.SetRequestPDU.tagSet):
-        return status.NEXT, pdu
 
-    reqVarBinds = v2c.VarBindList()
-    rspVarBinds = []
+    if pdu.tagSet in (v2c.GetRequestPDU.tagSet, v2c.SetRequestPDU.tagSet):
+        reqVarBinds = v2c.VarBindList()
+        rspVarBinds = []
 
-    for varBind in pdu[3]:
-        oid = tuple(varBind[0])
-        for begin, end, decision in oidsList:
-            if begin <= oid <= end:
-                if decision == PASS:
-                    reqVarBinds.append(varBind)
-                    rspVarBinds.append(None)
-                elif decision == BLOCK:
-                    v2c.apiVarBind.setOIDVal(varBind, (varBind[0], v2c.NoSuchObject('')))
-                    rspVarBinds.append(varBind)
-                break
+        for varBind in pdu[3]:
+            oid, val = v2c.apiVarBind.getOIDVal(varBind)
+            for begin, end, decision in oidsList:
+                if begin <= oid <= end:
+                    if decision == BLOCK:
+                        val = None
+                    break
+            else:
+                val = None
+
+            if val is None:
+                v2c.apiVarBind.setOIDVal(varBind, (oid, noSuchObject))
+                rspVarBinds.append(varBind)
+            else:
+                reqVarBinds.append(varBind)
+                rspVarBinds.append(None)
+
+        if reqVarBinds:
+            reqCtx['setaside-oids'] = rspVarBinds
+            nextAction = status.NEXT
         else:
-            reqVarBinds.append(varBind)
-            rspVarBinds.append(None)
+            pdu = v2c.apiPDU.getResponse(pdu)
+            reqVarBinds.extend(rspVarBinds)
+            nextAction = status.RESPOND
 
-    if reqVarBinds:
-        reqCtx['setaside-oids'] = rspVarBinds
-        nextAction = status.NEXT
+        v2c.apiPDU.setVarBindList(pdu, reqVarBinds)
+
+        return nextAction, pdu
+
+    if pdu.tagSet == v2c.GetNextRequestPDU.tagSet:
+        reqVarBinds = v2c.VarBindList()
+        rspVarBinds = []
+
+        for varBind in pdu[3]:
+            oid, val = v2c.apiVarBind.getOIDVal(varBind)
+            for begin, end, decision in oidsList:
+                if oid < begin:
+                    # OID allowed, fast-forward to the start of this range
+                    if decision == PASS:
+                        oid = begin
+                        break
+                    # OID denied, fast-forward over this range
+                    elif decision == BLOCK:
+                        oid = end
+
+                # OID in range
+                elif begin <= oid <= end:
+                    # OID allowed, pass as-is
+                    if decision == PASS:
+                        break
+                    # OID denied, fast-forward over this range
+                    elif decision == BLOCK:
+                        oid = end
+            else:
+                # non-matching OIDs -- block
+                val = None
+
+            if val is None:
+                v2c.apiVarBind.setOIDVal(varBind, (oid, endOfMibVew))
+                rspVarBinds.append(varBind)
+            else:
+                v2c.apiVarBind.setOIDVal(varBind, (oid, val))
+                reqVarBinds.append(varBind)
+                rspVarBinds.append(None)
+
+        if reqVarBinds:
+            reqCtx['setaside-oids'] = rspVarBinds
+            nextAction = status.NEXT
+        else:
+            pdu = v2c.apiPDU.getResponse(pdu)
+            reqVarBinds.extend(rspVarBinds)
+            nextAction = status.RESPOND
+
+        v2c.apiPDU.setVarBindList(pdu, reqVarBinds)
+
+        return nextAction, pdu
+
     else:
-        pdu = v2c.apiPDU.getResponse(pdu)
-        reqVarBinds.extend(rspVarBinds)
-        nextAction = status.RESPOND
-
-    v2c.apiPDU.setVarBindList(pdu, reqVarBinds)
-
-    return nextAction, pdu
+        return status.NEXT, pdu
 
 
 def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     if pdu.tagSet != v2c.GetResponsePDU.tagSet:
         return status.NEXT, pdu
 
+    if 'setaside-oids' not in reqCtx:
+        return status.NEXT, pdu
+
     varBinds = v2c.VarBindList()
 
     rspVarBinds = v2c.apiPDU.getVarBindList(pdu)
-    reqVarBinds = reqCtx.pop('setaside-oids')
+    reqVarBinds = reqCtx['setaside-oids']
 
     idx = 0
 
     for varBind in reqVarBinds:
-        if varBind:
-            varBinds.append(varBind)
-        else:
+        if varBind is None:
             try:
                 varBinds.append(rspVarBinds[idx])
 
             except IndexError:
                 msg('%s: missing response OID #%s' % (PLUGIN_NAME, idx))
                 return status.DROP, pdu
+
             else:
                 idx += 1
+        else:
+            varBinds.append(varBind)
 
     v2c.apiPDU.setVarBindList(pdu, varBinds)
 
@@ -136,7 +194,7 @@ def processNotificationRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     varBinds = v2c.VarBindList()
 
     for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
-        oid = tuple(varBind[0])
+        oid = varBind[0]
         for begin, end, decision in oidsList:
             if begin <= oid <= end:
                 if decision == PASS:
