@@ -92,7 +92,7 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
 
         return nextAction, pdu
 
-    if pdu.tagSet == v2c.GetNextRequestPDU.tagSet:
+    elif pdu.tagSet == v2c.GetNextRequestPDU.tagSet:
 
         reqAclIndices = []
 
@@ -136,6 +136,10 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
         v2c.apiPDU.setVarBindList(pdu, reqVarBinds)
 
         return nextAction, pdu
+
+    elif pdu.tagSet == v2c.GetBulkRequestPDU.tagSet:
+        # TODO: GETBULK handling needs to be implemented
+        return status.DROP, pdu
 
     else:
         return status.NEXT, pdu
