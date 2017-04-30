@@ -19,11 +19,6 @@ BLOCK, PASS = 0, 1
 
 PLUGIN_NAME = 'oidfilter'
 
-commands = {
-    'pass': PASS,
-    'block': BLOCK
-}
-
 oidsList = []
 
 moduleOptions = moduleOptions.split('=')
@@ -37,28 +32,22 @@ if moduleOptions[0] == 'config':
                 continue
 
             try:
-                lead, begin, end, decision = line.split()
+                skip, begin, end = line.split()
 
             except ValueError:
                 raise SnmpfwdError('%s: bad configuration syntax: "%s"' % (PLUGIN_NAME, line))
 
             try:
-                lead = v2c.ObjectIdentifier(lead)
+                skip = v2c.ObjectIdentifier(skip)
                 begin = v2c.ObjectIdentifier(begin)
                 end = v2c.ObjectIdentifier(end)
 
             except Exception:
-                raise SnmpfwdError('%s: malformed OID %s/%s/%s' % (PLUGIN_NAME, lead, begin, end))
+                raise SnmpfwdError('%s: malformed OID %s/%s/%s' % (PLUGIN_NAME, skip, begin, end))
 
-            try:
-                decision = commands[decision]
+            msg('%s: skip to %s allow from %s to %s' % (PLUGIN_NAME, skip, begin, end))
 
-            except KeyError:
-                raise SnmpfwdError('%s: unknown  configuration instruction: %s' % (PLUGIN_NAME, decision))
-
-            msg('%s: [%s] %s .. %s -> %s' % (PLUGIN_NAME, lead, begin, end, decision == PASS and 'PASS' or 'BLOCK'))
-
-            oidsList.append((lead, begin, end, decision))
+            oidsList.append((skip, begin, end))
 
     except Exception:
         raise SnmpfwdError('%s: config file load failure: %s' % (PLUGIN_NAME, sys.exc_info()[1]))
@@ -68,6 +57,7 @@ msg('%s: plugin initialization complete' % PLUGIN_NAME)
 noSuchObject = v2c.NoSuchObject('')
 endOfMibVew = v2c.EndOfMibView('')
 
+
 def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
 
     reqVarBinds = v2c.VarBindList()
@@ -75,12 +65,10 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
 
     if pdu.tagSet in (v2c.GetRequestPDU.tagSet, v2c.SetRequestPDU.tagSet):
 
-        for varBind in pdu[3]:
+        for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
             oid, val = v2c.apiVarBind.getOIDVal(varBind)
-            for idx, (lead, begin, end, decision) in enumerate(oidsList):
+            for skip, begin, end in oidsList:
                 if begin <= oid <= end:
-                    if decision == BLOCK:
-                        val = None
                     break
             else:
                 val = None
@@ -108,28 +96,21 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
 
         reqAclIndices = []
 
-        for varBind in pdu[3]:
+        for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
             oid, val = v2c.apiVarBind.getOIDVal(varBind)
-            for idx, (lead, begin, end, decision) in enumerate(oidsList):
+            for idx, (skip, begin, end) in enumerate(oidsList):
+                # OID preceding range
                 if oid < begin:
                     # OID allowed, fast-forward to the start of this range
-                    if decision == PASS:
-                        oid = lead
-                        reqAclIndices.append(idx)
-                        break
-                    # OID denied, fast-forward over this range
-                    elif decision == BLOCK:
-                        oid = end
+                    oid = skip
+                    reqAclIndices.append(idx)
+                    break
 
                 # OID in range
                 elif begin <= oid <= end:
                     # OID allowed, pass as-is
-                    if decision == PASS:
-                        reqAclIndices.append(idx)
-                        break
-                    # OID denied, fast-forward over this range
-                    elif decision == BLOCK:
-                        oid = end
+                    reqAclIndices.append(idx)
+                    break
             else:
                 # non-matching OIDs -- block
                 val = None
@@ -192,7 +173,7 @@ def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
             if oidsListIndices:
                 oidsListIdx = oidsListIndices[idx]
 
-                lead, begin, end, decision = oidsList[oidsListIdx]
+                skip, begin, end = oidsList[oidsListIdx]
 
                 if not (begin <= varBind[0] <= end):
                     oidsListIdx += 1
@@ -200,8 +181,8 @@ def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
                     if len(oidsList) == oidsListIdx:
                         v2c.apiVarBind.setOIDVal(varBind, (end, endOfMibVew))
                     else:
-                        lead, begin, end, decision = oidsList[oidsListIdx]
-                        v2c.apiVarBind.setOIDVal(varBind, (lead, v2c.Null()))
+                        skip, begin, end = oidsList[oidsListIdx]
+                        v2c.apiVarBind.setOIDVal(varBind, (skip, v2c.Null()))
 
         varBinds.append(varBind)
 
