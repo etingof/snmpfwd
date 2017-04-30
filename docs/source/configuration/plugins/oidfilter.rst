@@ -79,6 +79,10 @@ PDU matching each OID against the OID range that matched the request OID.
 Then the plugin merges variables-bindings from response PDU with the variables-bindings set
 aside on PDU's way forward and sends the combined PDU in response.
 
+.. note::
+
+   As of the current *oidfilter* implementation, *GETBULK* PDU is not supported.
+
 Example configuration
 ---------------------
 
