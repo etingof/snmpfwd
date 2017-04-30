@@ -21,6 +21,8 @@ You could test this configuration by running:
     # this should succeed
     $ snmpget -v1 -c public 127.0.0.1:1161 sysLocation.0
 
+For more information please refer to the :doc:`oidfilter plugin documentation </configuration/plugins/oidfilter>`.
+
 .. toctree::
    :maxdepth: 2
 
@@ -31,10 +33,10 @@ Server is configured to:
 
 * listen on UDP socket at localhost
 * respond to queries performed over SNMPv2c
-* for GET/SET PDUs, take blocked OIDs out of request PDU (but remember them)
+* for GET/SET/GETNEXT PDUs, take blocked OIDs out of request PDU (but remember them)
 * forward all queries to snmpfwd client through an unencrypted trunk connection
   running in *client* mode
-* reconstruct original OIDs in response PDU using blocked OIDs from GET/SET
+* reconstruct original OIDs in response PDU using blocked OIDs from GET/GETNEXT/SET
   request PDU and allowed OIDs from response PDU
 
 .. literalinclude:: /../../conf/command-forwarding-filtering/server.conf
@@ -43,6 +45,9 @@ Server is configured to:
 
 Plugin configuration
 ++++++++++++++++++++
+
+The *oidfilter* plugin is configured to pass just a few specific OIDs and branches
+blocking the rest of the MIB tree that backend SNMP agent serve.
 
 .. literalinclude:: /../../conf/command-forwarding-filtering/plugins/oidfilter.conf
 
