@@ -386,6 +386,20 @@ def main():
     }
 
     def requestObserver(snmpEngine, execpoint, variables, cbCtx):
+        msg = {
+            'snmp-engine-id': snmpEngine.snmpEngineID,
+            'snmp-transport-domain': variables['transportDomain'],
+            'snmp-peer-address': variables['transportAddress'][0],
+            'snmp-peer-port': variables['transportAddress'][1],
+            'snmp-bind-address': variables['transportAddress'].getLocalAddress()[0],
+            'snmp-bind-port': variables['transportAddress'].getLocalAddress()[1],
+            'snmp-security-model': variables['securityModel'],
+            'snmp-security-level': variables['securityLevel'],
+            'snmp-security-name': variables['securityName'],
+            'snmp-context-engine-id': variables['contextEngineId'],
+            'snmp-context-name': variables['contextName']
+        }
+
         cbCtx['snmp-credentials-id'] = macro.expandMacros(
             credIdMap.get(
                 (str(snmpEngine.snmpEngineID),
@@ -394,13 +408,13 @@ def main():
                  variables['securityLevel'],
                  str(variables['securityName']))
             ),
-            variables
+            msg
         )
 
         k = '#'.join([str(x) for x in (variables['contextEngineId'], variables['contextName'])])
         for x, y in contextIdList:
             if y.match(k):
-                cbCtx['context-id'] = macro.expandMacros(x, variables)
+                cbCtx['context-id'] = macro.expandMacros(x, msg)
                 break
             else:
                 cbCtx['context-id'] = None
@@ -409,7 +423,7 @@ def main():
 
         for pat, peerId in peerIdMap.get(str(variables['transportDomain']), ()):
             if pat.match(addr):
-                cbCtx['peer-id'] = macro.expandMacros(peerId, variables)
+                cbCtx['peer-id'] = macro.expandMacros(peerId, msg)
                 break
         else:
             cbCtx['peer-id'] = None
@@ -427,7 +441,7 @@ def main():
 
         for x, y in contentIdList:
             if y.match(k):
-                cbCtx['content-id'] = macro.expandMacros(x, variables)
+                cbCtx['content-id'] = macro.expandMacros(x, msg)
                 break
             else:
                 cbCtx['content-id'] = None
@@ -444,19 +458,7 @@ def main():
              cbCtx['peer-id'],
              cbCtx['content-id'])
         )
-        cbCtx['request'] = {
-            'snmp-engine-id': snmpEngine.snmpEngineID,
-            'snmp-transport-domain': variables['transportDomain'],
-            'snmp-peer-address': variables['transportAddress'][0],
-            'snmp-peer-port': variables['transportAddress'][1],
-            'snmp-bind-address': variables['transportAddress'].getLocalAddress()[0],
-            'snmp-bind-port': variables['transportAddress'].getLocalAddress()[1],
-            'snmp-security-model': variables['securityModel'],
-            'snmp-security-level': variables['securityLevel'],
-            'snmp-security-name': variables['securityName'],
-            'snmp-context-engine-id': variables['contextEngineId'],
-            'snmp-context-name': variables['contextName']
-        }
+        cbCtx['request'] = msg
 
     pluginManager = PluginManager(
         macro.expandMacros(
