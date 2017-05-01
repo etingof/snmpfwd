@@ -78,6 +78,7 @@ global scope.
 
    server-configuration
    client-configuration
+   macro
 
 Plugins
 -------

@@ -231,6 +231,8 @@ Unique identifier of a collection of SNMP configuration options. Used to
 assign specific SNMP configuration to a particular SNMP entity. Can also be
 used to share the same SNMP configuration among multiple SNMP entities.
 
+This option can contain :ref:`SNMP macros <snmp-macros>`.
+
 Example:
 
 .. code-block:: bash
@@ -259,6 +261,8 @@ Plugin options
 
 Directory search path for plugin modules.
 
+This option can reference :ref:`config-dir <config-dir-macro>` macro.
+
 *plugin-module*
 +++++++++++++++
 
@@ -273,9 +277,12 @@ Plugin-specific configuration option to pass to plugin.
 +++++++++++
 
 Unique identifier of a plugin module (`plugin-module`_) and its
-options (`plugin-options`_). The *plugin-id* identifier is
-typically used to invoke plugin in the course of SNMP message
-processing.
+options (`plugin-options`_).
+
+This option can reference :ref:`config-dir <config-dir-macro>` macro.
+
+The *plugin-id* identifier is typically used to invoke plugin
+in the course of SNMP message processing.
 
 Example:
 
@@ -283,7 +290,7 @@ Example:
 
     rewrite-plugin {
       plugin-module: rewrite
-      plugin-options: config=/etc/snmpfwd/plugins/rewrite.conf
+      plugin-options: config=${config-dir}/plugins/rewrite.conf
 
       plugin-id: rewrite
     }
@@ -376,6 +383,8 @@ matching SNMP context options in inbound SNMP messages
 (e.g. `snmp-context-engine-id-pattern`_, `snmp-context-name-pattern`_) for
 message routing purposes.
 
+This option can contain :ref:`SNMP macros <snmp-macros>`.
+
 Example:
 
 .. code-block:: bash
@@ -409,6 +418,8 @@ Unique identifier of a collection of SNMP content matching options. Used for
 matching the contents of inbound SNMP messages (e.g.
 `snmp-pdu-type-pattern`_, `snmp-pdu-oid-prefix-pattern-list`_) for
 message routing purposes.
+
+This option can contain :ref:`SNMP macros <snmp-macros>`.
 
 Example:
 
@@ -452,6 +463,8 @@ Unique identifier matching pairs of source and destination SNMP transport
 endpoints. Most importantly, `snmp-bind-address-pattern-list`_ and
 `snmp-peer-address-pattern-list`_ as well as `snmp-transport-domain`_.
 The *snmp-peer-id* is typically used for message routing purposes.
+
+This option can contain :ref:`SNMP macros <snmp-macros>`.
 
 Example:
 

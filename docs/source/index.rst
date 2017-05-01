@@ -4,8 +4,9 @@ SNMP Proxy Forwarder
 
 The SNMP Proxy forwarder tool works as an application-level SNMP proxy
 logically split onto two parts: server and client. The server part
-acts as SNMP agent while the client part is SNMP manager. These
-parts maintain persistent, authenticated and encrypted connections with
+acts as `SNMP agent <https://tools.ietf.org/html/rfc3411#section-3.1.3.2>`_
+while the client part is `SNMP manager <https://tools.ietf.org/html/rfc3411#section-3.1.3.1>`_.
+These parts maintain persistent, authenticated and encrypted connections with
 each other for the purpose of passing SNMP messages back and forth.
 
 Server and client parts may reside at different networks thus improving

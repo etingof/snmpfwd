@@ -123,10 +123,12 @@ Enable specific networking options. Valid values:
 
 Originate SNMP packets from this transport address endpoint.
 
-The *${snmp-peer-address}* macro could be used as a value to make
-client sending SNMP query from the source address of the original
-SNMP manager that sends SNMP query (AKA spoofing). This option
-effectively hides SNMP Proxy Forwarder from SNMP agents giving
+This option can contain :ref:`SNMP macros <snmp-macros>`.
+
+The :ref:`snmp-peer-address <snmp-peer-address-macro>` macro could be
+used as a value to make client sending SNMP query from the source address
+of the original SNMP manager that sends SNMP query (AKA spoofing). This
+option effectively hides SNMP Proxy Forwarder from SNMP agents giving
 them an illusion that they communicate directly with SNMP managers.
 
 See `snmp-transport-options`_ for related options and
@@ -143,10 +145,13 @@ See `snmp-transport-options`_ for related options and
 
 Send SNMP packets to this network address.
 
-The *${snmp-bind-address}* macro could be used as a value to make
-client sending SNMP query to the destination address of the original
-SNMP query. This option effectively hides SNMP Proxy Forwarder
-from SNMP managers turning it into transparent SNMP proxy.
+This option can contain :ref:`SNMP macros <snmp-macros>`.
+
+The :ref:`snmp-bind-address <snmp-bind-address-macro>` macro could be
+used as a value to make client sending SNMP query to the destination
+address of the original SNMP query. This option effectively hides
+SNMP Proxy Forwarder from SNMP managers turning it into transparent
+SNMP proxy.
 
 See `snmp-transport-options`_ for related options.
 
@@ -240,15 +245,23 @@ SNMPv3 message encryption key.
 ++++++++++++++++++++++++
 
 SNMPv3 Context Engine ID to use when sending SNMP messages towards SNMP agents.
-The *${context-engine-id}* macro can be used as a value to instruct the client
-to use context engine ID value from the original request.
+
+This option can contain :ref:`SNMP macros <snmp-macros>`.
+
+The :ref:`snmp-context-engine-id <snmp-context-engine-id-macro>` macro can be
+used as a value to instruct the client to use context engine ID value from the
+original request.
 
 *snmp-context-name*
 +++++++++++++++++++
 
 SNMPv3 Context Engine ID to use when sending SNMP messages towards SNMP agents.
-The *${context-name}* macro can be used as a value to instruct the client
-to use context name value from the original request.
+
+This option can contain :ref:`SNMP macros <snmp-macros>`.
+
+The :ref:`snmp-context-name <snmp-context-name-macro>` macro can be used as
+a value to instruct the client to use context name value from the original
+request.
 
 *snmp-peer-id*
 ++++++++++++++
@@ -257,6 +270,8 @@ Unique identifier grouping together SNMP transport
 endpoints and snmp credentials. In other words it identifies which
 SNMP agent to talk to using which SNMP credentials via which
 network transport endpoints.
+
+This option can contain :ref:`SNMP macros <snmp-macros>`.
 
 Example:
 
@@ -315,6 +330,8 @@ trunk encryption.
 Unique identifier of a single trunk connection. Client trunks determine
 *trunk-id*, server-mode connections learn *trunk-id* from connecting
 clients.
+
+This option can contain :ref:`SNMP macros <snmp-macros>`.
 
 .. code-block:: bash
 
@@ -419,6 +436,8 @@ Example:
 
 Unique identifier grouping a collection of *orig-\** identifiers under a single ID.
 The *orig-snmp-peer-id* identifier is typically used in message routing tables.
+
+This option can contain :ref:`SNMP macros <snmp-macros>`.
 
 Example:
 

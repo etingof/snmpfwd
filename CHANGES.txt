@@ -1,4 +1,5 @@
-Revision 0.1.0, released XX-04-2017
+
+Revision 0.1.0, released XX-05-2017
 -----------------------------------
 
 - SNMP TRAP PDU forwarding implemented
@@ -6,6 +7,7 @@ Revision 0.1.0, released XX-04-2017
 - Single SNMP request scope context is now served to the plugins (plugin
   API version bumped)
 - The ${config-dir} macro support added to some configuration options
+- Sphinx documentation added
 
 Revision 0.0.3, released 23-04-2017
 -----------------------------------
