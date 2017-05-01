@@ -5,6 +5,7 @@
 # Copyright (c) 2014-2017, Ilya Etingof <etingof@gmail.com>
 # License: https://github.com/etingof/snmpfwd/blob/master/LICENSE.txt
 #
+import os
 import sys
 import getopt
 import traceback
@@ -458,7 +459,10 @@ def main():
         }
 
     pluginManager = PluginManager(
-        cfgTree.getAttrValue('plugin-modules-path-list', '', default=[], vector=True),
+        macro.expandMacros(
+            cfgTree.getAttrValue('plugin-modules-path-list', '', default=[], vector=True),
+            {'config-dir': os.path.dirname(cfgFile)}
+        ),
         progId=PROGRAM_NAME,
         apiVer=PLUGIN_API_VERSION
     )
@@ -466,11 +470,15 @@ def main():
     for pluginCfgPath in cfgTree.getPathsToAttr('plugin-id'):
         pluginId = cfgTree.getAttrValue('plugin-id', *pluginCfgPath)
         pluginMod = cfgTree.getAttrValue('plugin-module', *pluginCfgPath)
-        pluginOptions = cfgTree.getAttrValue('plugin-options', *pluginCfgPath, **dict(default=''))
+        pluginOptions = macro.expandMacros(
+            cfgTree.getAttrValue('plugin-options', *pluginCfgPath, **dict(default='')),
+            {'config-dir': os.path.dirname(cfgFile)}
+        )
 
         log.msg('configuring plugin ID %s (at %s) from module %s with options %s...' % (pluginId, '.'.join(pluginCfgPath), pluginMod, pluginOptions or '<none>'))
         try:
             pluginManager.loadPlugin(pluginId, pluginMod, pluginOptions)
+
         except SnmpfwdError:
             log.msg('ERROR: plugin %s not loaded: %s' % (pluginId, sys.exc_info()[1]))
             sys.exit(-1)

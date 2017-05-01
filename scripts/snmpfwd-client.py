@@ -467,8 +467,8 @@ def main():
     def dataCbFun(trunkId, msgId, msg):
         k = [str(x) for x in (msg['snmp-engine-id'],
                               msg['snmp-transport-domain'],
-                              msg['snmp-peer-address']+':'+str(msg['snmp-peer-port']),
-                              msg['snmp-bind-address']+':'+str(msg['snmp-bind-port']),
+                              msg['snmp-peer-address'] + ':' + str(msg['snmp-peer-port']),
+                              msg['snmp-bind-address'] + ':' + str(msg['snmp-bind-port']),
                               msg['snmp-security-model'],
                               msg['snmp-security-level'],
                               msg['snmp-security-name'],
