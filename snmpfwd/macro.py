@@ -6,10 +6,16 @@
 #
 
 
-def expandMacros(s, d):
-    for k in d:
-        if not s or '${' not in s:
-            return s
+def expandMacro(option, context):
+    for k in context:
         pat = '${%s}' % k
-        s = s.replace(pat, str(d[k]))
-    return s
+        if option and '${' in option:
+            option = option.replace(pat, str(context[k]))
+    return option
+
+
+def expandMacros(options, context):
+    options = list(options)
+    for idx, option in enumerate(options):
+        options[idx] = expandMacro(option, context)
+    return options

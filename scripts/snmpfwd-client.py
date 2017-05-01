@@ -480,14 +480,14 @@ def main():
 
         for x, y in origCredIdList:
             if y.match(k):
-                origPeerId = macro.expandMacros(x, msg)
+                origPeerId = macro.expandMacro(x, msg)
                 break
         else:
             origPeerId = None
 
         errorIndication = None
 
-        peerIdList = routingMap.get((origPeerId, macro.expandMacros(trunkId, msg)))
+        peerIdList = routingMap.get((origPeerId, macro.expandMacro(trunkId, msg)))
         if not peerIdList:
             log.msg('unroutable trunk message #%s from trunk %s, orig-peer-id %s (original SNMP info: %s)' % (msgId, trunkId, origPeerId or '<none>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg])))
             errorIndication = 'no route to SNMP peer configured'
@@ -499,19 +499,19 @@ def main():
             return
 
         for peerId in peerIdList:
-            peerId = macro.expandMacros(peerId, msg)
+            peerId = macro.expandMacro(peerId, msg)
 
             snmpEngine, contextEngineId, contextName, \
                 bindAddr, bindAddrMacro, \
                 peerAddr, peerAddrMacro = peerIdMap[peerId]
 
             if bindAddrMacro:
-                bindAddr = macro.expandMacros(bindAddrMacro, msg), 0
+                bindAddr = macro.expandMacro(bindAddrMacro, msg), 0
             if bindAddr:
                 q.append(bindAddr)
 
             if peerAddrMacro:
-                peerAddr = macro.expandMacros(peerAddrMacro, msg), 161
+                peerAddr = macro.expandMacro(peerAddrMacro, msg), 161
             if peerAddr:
                 q.append(peerAddr)
 
@@ -524,8 +524,8 @@ def main():
                     notificationOriginator.sendPdu(
                         snmpEngine,
                         peerId,
-                        macro.expandMacros(contextEngineId, msg),
-                        macro.expandMacros(contextName, msg),
+                        macro.expandMacro(contextEngineId, msg),
+                        macro.expandMacro(contextName, msg),
                         pdu
                     )
 
@@ -536,8 +536,8 @@ def main():
                     notificationOriginator.sendPdu(
                         snmpEngine,
                         peerId,
-                        macro.expandMacros(contextEngineId, msg),
-                        macro.expandMacros(contextName, msg),
+                        macro.expandMacro(contextEngineId, msg),
+                        macro.expandMacro(contextName, msg),
                         pdu,
                         __rspCbFun,
                         cbCtx
@@ -547,8 +547,8 @@ def main():
                 commandGenerator.sendPdu(
                     snmpEngine,
                     peerId,
-                    macro.expandMacros(contextEngineId, msg),
-                    macro.expandMacros(contextName, msg),
+                    macro.expandMacro(contextEngineId, msg),
+                    macro.expandMacro(contextName, msg),
                     pdu,
                     __rspCbFun,
                     cbCtx

@@ -400,7 +400,7 @@ def main():
             'snmp-context-name': variables['contextName']
         }
 
-        cbCtx['snmp-credentials-id'] = macro.expandMacros(
+        cbCtx['snmp-credentials-id'] = macro.expandMacro(
             credIdMap.get(
                 (str(snmpEngine.snmpEngineID),
                  variables['transportDomain'],
@@ -414,7 +414,7 @@ def main():
         k = '#'.join([str(x) for x in (variables['contextEngineId'], variables['contextName'])])
         for x, y in contextIdList:
             if y.match(k):
-                cbCtx['context-id'] = macro.expandMacros(x, msg)
+                cbCtx['context-id'] = macro.expandMacro(x, msg)
                 break
             else:
                 cbCtx['context-id'] = None
@@ -423,7 +423,7 @@ def main():
 
         for pat, peerId in peerIdMap.get(str(variables['transportDomain']), ()):
             if pat.match(addr):
-                cbCtx['peer-id'] = macro.expandMacros(peerId, msg)
+                cbCtx['peer-id'] = macro.expandMacro(peerId, msg)
                 break
         else:
             cbCtx['peer-id'] = None
@@ -441,7 +441,7 @@ def main():
 
         for x, y in contentIdList:
             if y.match(k):
-                cbCtx['content-id'] = macro.expandMacros(x, msg)
+                cbCtx['content-id'] = macro.expandMacro(x, msg)
                 break
             else:
                 cbCtx['content-id'] = None
@@ -472,7 +472,7 @@ def main():
     for pluginCfgPath in cfgTree.getPathsToAttr('plugin-id'):
         pluginId = cfgTree.getAttrValue('plugin-id', *pluginCfgPath)
         pluginMod = cfgTree.getAttrValue('plugin-module', *pluginCfgPath)
-        pluginOptions = macro.expandMacros(
+        pluginOptions = macro.expandMacro(
             cfgTree.getAttrValue('plugin-options', *pluginCfgPath, **dict(default='')),
             {'config-dir': os.path.dirname(cfgFile)}
         )
