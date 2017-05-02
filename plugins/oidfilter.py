@@ -25,7 +25,9 @@ moduleOptions = moduleOptions.split('=')
 
 if moduleOptions[0] == 'config':
     try:
-        for line in open(moduleOptions[1]).readlines():
+        configFile = moduleOptions[1]
+
+        for line in open(configFile).readlines():
             line = line.strip()
 
             if not line or line.startswith('#'):
@@ -45,9 +47,17 @@ if moduleOptions[0] == 'config':
             except Exception:
                 raise SnmpfwdError('%s: malformed OID %s/%s/%s' % (PLUGIN_NAME, skip, begin, end))
 
-            msg('%s: skip to %s allow from %s to %s' % (PLUGIN_NAME, skip, begin, end))
-
             oidsList.append((skip, begin, end))
+
+            oidsList.sort(key=lambda x: x[0])
+
+            skipOids = [x[0] for x in oidsList]
+
+            if len(set(skipOids)) != len(skipOids):
+                raise SnmpfwdError('%s: duplicate skip OIDs in %s: %s' % (PLUGIN_NAME, configFile, ', '.join(set([str(x) for x in skipOids if skipOids.count(x) > 1]))))
+
+        for skip, begin, end in oidsList:
+            msg('%s: skip to %s allow from %s to %s' % (PLUGIN_NAME, skip, begin, end))
 
     except Exception:
         raise SnmpfwdError('%s: config file load failure: %s' % (PLUGIN_NAME, sys.exc_info()[1]))
