@@ -6,3 +6,6 @@
 * add doc on configuring transparent proxy
 * add some drawings explaining network topology in different configurations
 * unify network endpoint string parser defaulting port part
+* implement GETBULK handling at the "oidfilter" plugin
+* implement PDU split at content map
+* implement server classification IDs forwarding to client

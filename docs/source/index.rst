@@ -47,30 +47,25 @@ collection of use-cases and example configurations implementing them.
 Installation
 ------------
 
-The easiest way to download and install SNMP forwarder is via Python `pip` tool:
+The easiest way to download and install SNMP Proxy Forwarder is via Python `pip` tool:
 
 .. code-block:: bash
 
    # pip install snmpfwd
 
-Alternatively, you could download source code from
+Alternatively, you can download the Python package from
 `GitHub repo <https://github.com/etingof/snmpfwd/releases>`_ and install is manually.
 
-Changes
--------
+The tool requires Python 2.4 to 2.7 or 3.1 onwards.
 
-.. toctree::
-   :maxdepth: 1
+Source code
+-----------
 
-   /changelog
+SNMP Proxy Forwarder is a free and open source tool. It is distributed under highly
+permissive :doc:`2-clause BSD license </license>`. You can fork or download source code from
+`GitHub <https://github.com/etingof/snmpfwd>`_.
 
-License
--------
-
-.. toctree::
-   :maxdepth: 2
-
-   /license
+Detailed list of new features and fixes could be read in the :doc:`changelog </changelog>`.
 
 Contact
 -------

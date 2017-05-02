@@ -22,8 +22,8 @@ settings
 2. Start of allowed OID range (inclusive)
 3. End of allowed OID range (inclusive)
 
-Each OID in SNMP PDU is tested to fall into *start* .. *end* OID ranges in the order
-of their presence in the configuration file. First march terminates the search.
+Each OID in SNMP PDU is tested to fall into *start* .. *end* OID ranges. Configuration
+lines are automatically ordered by the *skip* OID. First march terminates the search.
 The OID comparison is done by treating OIDs as a sequence of numbers:
 
 .. code-block:: python
@@ -64,8 +64,10 @@ matching each OID against configured OID ranges.
 
 * If request OID precedes the *start* OID in range, the request OID is overwritten by
   the *skip* OID, new request PDU is created and matched OID is put into it.
-* If request OID falls into OID range, new request PDU is created and matched OID
-  is put into it.
+* If request OID falls into OID range (excluding *end*), new request PDU is created and matched
+  OID is put into it.
+* If request OID equals *end*, the request OID is overwritten by the *skip* OID of the next OID range,
+  new request PDU is created and matched OID is put into it.
 * If no range is matched, such OID is set aside by the *oidproxy* and *EndOfMibView* SNMP error is
   prepared for the upcoming response. Backend SNMP agent will never get queries for that OID.
 
