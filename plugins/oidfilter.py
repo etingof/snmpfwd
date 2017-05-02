@@ -116,6 +116,10 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
                     reqAclIndices.append(idx)
                     break
 
+                # response will get out of range - skip to the next range
+                elif oid == end:
+                    continue
+
                 # OID in range
                 elif begin <= oid <= end:
                     # OID allowed, pass as-is
