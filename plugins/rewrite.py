@@ -51,14 +51,14 @@ if moduleOptions[0] == 'config':
                 continue
 
             try:
-                patt, repl = shlex.split(line)
+                oidPatt, valPatt, valRepl = shlex.split(line)
 
             except ValueError:
                 raise SnmpfwdError('%s: syntax error at %s:%d: %s' % (PLUGIN_NAME, configFile, lineNo + 1, sys.exc_info()[1]))
 
-            msg('%s: %s -> %s' % (PLUGIN_NAME, patt, repl or '<nullify>'))
+            msg('%s: %s -- %s -> %s' % (PLUGIN_NAME, oidPatt, valPatt, valRepl))
 
-            rewriteList.append((re.compile(patt), repl))
+            rewriteList.append((re.compile(oidPatt), re.compile(valPatt), valRepl))
 
     except Exception:
         raise SnmpfwdError('%s: config file load failure: %s' % (PLUGIN_NAME, sys.exc_info()[1]))
