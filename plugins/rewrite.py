@@ -8,14 +8,19 @@
 #
 import re
 import sys
+import shlex
 from snmpfwd.plugins import status
 from snmpfwd.error import SnmpfwdError
 from snmpfwd.log import msg
 from pysnmp.proto.api import v2c
 
 hostProgs = 'snmpfwd-server', 'snmpfwd-client'
+
 apiVersions = 0, 2
 
+PLUGIN_NAME = 'rewrite'
+
+# This map represents an "empty" value per SNMP type
 nullifyMap = {
     v2c.ObjectIdentifier.tagSet: '0.0',
     v2c.Integer.tagSet: 0,
@@ -35,36 +40,41 @@ rewriteList = []
 moduleOptions = moduleOptions.split('=')
 
 if moduleOptions[0] == 'config':
+
     try:
-        for line in open(moduleOptions[1]).readlines():
+        configFile = moduleOptions[1]
+
+        for lineNo, line in enumerate(open(configFile).readlines()):
             line = line.strip()
-            if not line or line[0] == '#':
+
+            if not line or line.startswith('#'):
                 continue
+
             try:
-                k, v = line.split()
+                patt, repl = shlex.split(line)
 
             except ValueError:
-                k, v = line, ''
+                raise SnmpfwdError('%s: syntax error at %s:%d: %s' % (PLUGIN_NAME, configFile, lineNo + 1, sys.exc_info()[1]))
 
-            msg('rewrite: %s -> %s' % (k, v or '<nullify>'))
+            msg('%s: %s -> %s' % (PLUGIN_NAME, patt, repl or '<nullify>'))
 
-            rewriteList.append((re.compile(k), v))
+            rewriteList.append((re.compile(patt), repl))
 
     except Exception:
-        raise SnmpfwdError('rewrite: config file load failure: %s' % sys.exc_info()[1])
+        raise SnmpfwdError('%s: config file load failure: %s' % (PLUGIN_NAME, sys.exc_info()[1]))
 
-msg('rewrite: plugin initialization complete')
+msg('%s: plugin initialization complete' % PLUGIN_NAME)
 
 
 def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     varBinds = []
 
     for oid, val in v2c.apiPDU.getVarBinds(pdu):
-        for pat, newVal in rewriteList:
-            if pat.match(str(oid)):
-                if not newVal:
-                    newVal = nullifyMap.get(val.tagSet, newVal)
-                val = val.clone(newVal)
+        for patt, repl in rewriteList:
+            if patt.match(str(oid)):
+                if not repl:
+                    repl = nullifyMap.get(val.tagSet, repl)
+                val = val.clone(repl)
                 break
 
         varBinds.append((oid, val))

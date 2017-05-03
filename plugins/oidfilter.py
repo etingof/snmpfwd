@@ -13,6 +13,7 @@ from snmpfwd.log import msg
 from pysnmp.proto.api import v2c
 
 hostProgs = 'snmpfwd-server', 'snmpfwd-client'
+
 apiVersions = 0, 2
 
 BLOCK, PASS = 0, 1
