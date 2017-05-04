@@ -23,18 +23,15 @@ Features
 * Fully configurable, multiple SNMP engines and multiple transports
 * Split client and server parts interconnected through encrypted TCP links
 * Configurable SNMP message routing
-* Extension modules supporting SNMP messages introspection and modification
+* Extension modules supporting SNMP PDU filtering and on-the-fly modification
 * Supports transparent proxy operation (Linux only)
 * Works on Linux, Windows and OS X
 
-Download
---------
+Download & Install
+------------------
 
 SNMP proxy forwarder software is freely available for download from
 [PyPI](https://pypi.python.org/pypi/snmpfwd).
-
-Installation
-------------
 
 Just run:
 
@@ -42,16 +39,17 @@ Just run:
 $ pip install snmpfwd
 ```
 
+Alternatively, you can get it from [GitHub](https://github.com/etingof/snmpfwd/releases).
+
 How to use SNMP proxy forwarder
 -------------------------------
 
-Once installed, configure both client and server part of the tool by tackling
-[client.conf](https://raw.githubusercontent.com/etingof/snmpfwd/master/conf/client.conf) and
-[server.conf](https://raw.githubusercontent.com/etingof/snmpfwd/master/conf/server.conf)
-configuration files.
+The system is driven by [configuration files](https://snmpfwd.sourceforge.io/configuration/index.html)
+written in a declarative mini-language.
 
-Comprehensive configuration language reference could be found at
-the [project site](http://snmpfwd.sf.net).
+We maintain [a collection](https://snmpfwd.sourceforge.io/configuration/index.html#examples)
+of configuration files suited to serve specific use-cases. So you could start
+from there. ;-)
 
 Getting help
 ------------
