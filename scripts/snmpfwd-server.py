@@ -35,12 +35,17 @@ from snmpfwd import log, daemon, cparser, macro
 from snmpfwd.plugins.manager import PluginManager
 from snmpfwd.plugins import status
 from snmpfwd.trunking.manager import TrunkingManager
+import snmpfwd
 
 # Settings
 PROGRAM_NAME = 'snmpfwd-server'
 CONFIG_VERSION = '2'
 PLUGIN_API_VERSION = 2
 CONFIG_FILE = '/usr/local/etc/snmpfwd/server.cfg'
+
+PACKAGE_ROOT = os.path.dirname(snmpfwd.__file__)
+DATA_DIR = os.path.join(PACKAGE_ROOT, 'data')
+PLUGIN_DIR = os.path.join(DATA_DIR, 'plugins')
 
 authProtocols = {
   'MD5': config.usmHMACMD5AuthProtocol,
@@ -462,8 +467,9 @@ def main():
 
     pluginManager = PluginManager(
         macro.expandMacros(
-            cfgTree.getAttrValue('plugin-modules-path-list', '', default=[], vector=True),
-            {'config-dir': os.path.dirname(cfgFile)}
+            cfgTree.getAttrValue('plugin-modules-path-list', '', default=[PLUGIN_DIR], vector=True),
+            {'config-dir': os.path.dirname(cfgFile),
+             'data-dir': DATA_DIR}
         ),
         progId=PROGRAM_NAME,
         apiVer=PLUGIN_API_VERSION

@@ -34,6 +34,7 @@ Topic :: System :: Monitoring
 Topic :: System :: Networking :: Monitoring
 """
 
+
 def howto_install_setuptools():
     print("""
    Error: You need setuptools Python package!
@@ -85,13 +86,9 @@ params.update(
      'classifiers': [x for x in classifiers.split('\n') if x],
      'scripts': ['scripts/snmpfwd-client.py', 'scripts/snmpfwd-server.py'],
      'packages': ['snmpfwd', 'snmpfwd.trunking', 'snmpfwd.plugins'],
+     'package_data': {'snmpfwd': ['data/plugins/*.py']},
      'license': "BSD"}
 )
-
-
-params['data_files'] = [
-    ( 'snmpfwd/' + 'plugins', glob.glob(os.path.join('plugins', '*.py')) )
-]
 
 if 'py2exe' in sys.argv:
     import py2exe
