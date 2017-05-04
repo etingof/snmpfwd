@@ -469,6 +469,7 @@ def main():
         macro.expandMacros(
             cfgTree.getAttrValue('plugin-modules-path-list', '', default=[PLUGIN_DIR], vector=True),
             {'config-dir': os.path.dirname(cfgFile),
+             'plugin-dir': PLUGIN_DIR,
              'data-dir': DATA_DIR}
         ),
         progId=PROGRAM_NAME,

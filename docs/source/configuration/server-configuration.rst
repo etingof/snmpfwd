@@ -259,9 +259,11 @@ Plugin options
 *plugin-modules-path-list*
 ++++++++++++++++++++++++++
 
-Directory search path for plugin modules.
+Directory search path for plugin modules. Default is to search
+in system :ref:`plugin directory <plugin-dir-macro>`.
 
-This option can reference :ref:`config-dir <config-dir-macro>` macro.
+This option can reference :ref:`plugin-dir <plugin-dir-macro>` and
+:ref:`config-dir <config-dir-macro>` macro.
 
 *plugin-module*
 +++++++++++++++

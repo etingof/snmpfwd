@@ -33,6 +33,20 @@ Example:
       plugin-id: rewrite
     }
 
+
+.. _plugin-dir-macro:
+
+*plugin-dir*
+++++++++++++
+
+Macro expanded into the system plugins directory.
+
+Example:
+
+.. code-block:: bash
+
+    plugin-modules-path-list: ${plugin-dir}
+
 .. _snmp-macros:
 
 SNMP macros
