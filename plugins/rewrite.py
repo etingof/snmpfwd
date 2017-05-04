@@ -51,14 +51,14 @@ if moduleOptions[0] == 'config':
                 continue
 
             try:
-                oidPatt, valPatt, valRepl = shlex.split(line)
+                oidPatt, valPatt, valRepl, replCount = shlex.split(line)
 
             except ValueError:
                 raise SnmpfwdError('%s: syntax error at %s:%d: %s' % (PLUGIN_NAME, configFile, lineNo + 1, sys.exc_info()[1]))
 
-            msg('%s: %s -- %s -> %s' % (PLUGIN_NAME, oidPatt, valPatt, valRepl))
+            msg('%s: for OIDs like "%s" and values matching "%s" rewrite value into "%s" (max %s times)' % (PLUGIN_NAME, oidPatt, valPatt, valRepl, replCount))
 
-            rewriteList.append((re.compile(oidPatt), re.compile(valPatt), valRepl))
+            rewriteList.append((re.compile(oidPatt), re.compile(valPatt), valRepl, int(replCount)))
 
     except Exception:
         raise SnmpfwdError('%s: config file load failure: %s' % (PLUGIN_NAME, sys.exc_info()[1]))
@@ -70,11 +70,12 @@ def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     varBinds = []
 
     for oid, val in v2c.apiPDU.getVarBinds(pdu):
-        for patt, repl in rewriteList:
-            if patt.match(str(oid)):
-                if not repl:
-                    repl = nullifyMap.get(val.tagSet, repl)
-                val = val.clone(repl)
+        for oidPatt, valPatt, valRepl, replCount in rewriteList:
+            if oidPatt.match(str(oid)):
+                newVal = valPatt.sub(valRepl, str(val), replCount)
+                if not newVal:
+                    newVal = nullifyMap.get(val.tagSet, v2c.Null())
+                val = val.clone(newVal)
                 break
 
         varBinds.append((oid, val))
