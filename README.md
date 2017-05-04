@@ -20,9 +20,10 @@ Features
 --------
 
 * SNMPv1/v2c/v3 operations with built-in protocol and transport translation capabilities
-* Fully configurable, multiple SNMP engines and multiple transports
+* Forwards SNMP commands and notifications
+* Maintains multiple independent SNMP engines and network transports
 * Split client and server parts interconnected through encrypted TCP links
-* Configurable SNMP message routing
+* Flexible SNMP PDU routing
 * Extension modules supporting SNMP PDU filtering and on-the-fly modification
 * Supports transparent proxy operation (Linux only)
 * Works on Linux, Windows and OS X
@@ -30,7 +31,7 @@ Features
 Download & Install
 ------------------
 
-SNMP proxy forwarder software is freely available for download from
+SNMP Proxy Forwarder software is freely available for download from
 [PyPI](https://pypi.python.org/pypi/snmpfwd).
 
 Just run:
@@ -44,17 +45,16 @@ Alternatively, you can get it from [GitHub](https://github.com/etingof/snmpfwd/r
 How to use SNMP proxy forwarder
 -------------------------------
 
-The system is driven by [configuration files](https://snmpfwd.sourceforge.io/configuration/index.html)
-written in a declarative mini-language.
-
-We maintain [a collection](https://snmpfwd.sourceforge.io/configuration/index.html#examples)
-of configuration files suited to serve specific use-cases. So you could start
-from there. ;-)
+First you need to configure the tool. It is largely driven by
+[configuration files](https://snmpfwd.sourceforge.io/configuration/index.html)
+written in a declarative mini-language. To help you started, we maintain
+[a collection](https://snmpfwd.sourceforge.io/configuration/index.html#examples)
+of configuration files designed to serve specific use-cases.
 
 Getting help
 ------------
 
-If something does not work as expected,
+If something does not work as expected or we are missing an interesting feature,
 [open an issue](https://github.com/etingof/snmpfwd/issues) at GitHub or
 post your question [on Stack Overflow](http://stackoverflow.com/questions/ask).
 
