@@ -18,7 +18,10 @@ from snmpfwd.log import msg
 from pysnmp.proto.api import v2c
 
 hostProgs = 'snmpfwd-server', 'snmpfwd-client'
+
 apiVersions = 0, 2
+
+PLUGIN_NAME = 'logger'
 
 # defaults
 pduMap = {}
@@ -31,11 +34,14 @@ logger = logging.getLogger('snmpfwd-logger')
 moduleOptions = moduleOptions.split('=')
 
 if moduleOptions[0] == 'config':
+    configFile = moduleOptions[1]
+
     config = RawConfigParser()
-    config.read(moduleOptions[1])
+    config.read(configFile)
 
     method = config.get('general', 'method')
     if method == 'file':
+
         rotation = config.get('file', 'rotation')
         if rotation == 'timed':
             handler = handlers.TimedRotatingFileHandler(
@@ -45,11 +51,11 @@ if moduleOptions[0] == 'config':
                 int(config.get('file', 'backupcount'))
             )
         else:
-            raise SnmpfwdError('logger: unknown rotation method: %s' % rotation)
+            raise SnmpfwdError('%s: unknown rotation method %s at %s' % (PLUGIN_NAME, rotation, configFile))
     else:
-        raise SnmpfwdError('logger: unknown logging method: %s' % method)
+        raise SnmpfwdError('%s: unknown logging method %s at %s' % (PLUGIN_NAME, method, configFile))
 
-    msg('logger: using %s logging method' % method)
+    msg('%s: using %s logging method' % (PLUGIN_NAME, method))
 
     logger.setLevel(logging.INFO)
 
@@ -57,42 +63,50 @@ if moduleOptions[0] == 'config':
     for pdu in pdus.split():
         try:
             pduMap[getattr(v2c, pdu + 'PDU').tagSet] = pdu
+
         except AttributeError:
-            raise SnmpfwdError('logger: unknown PDU %s' % pdu)
+            raise SnmpfwdError('%s: unknown PDU %s' % (PLUGIN_NAME, pdu))
+
         else:
-            msg('logger: PDU ACL includes %s' % pdu)
-        
-    handler.setFormatter(
-        logging.Formatter(config.get('content', 'format').replace('-', '_'))
-    )
+            msg('%s: PDU ACL includes %s' % (PLUGIN_NAME, pdu))
 
     try:
         leftParen, rightParen = config.get('content', 'parentheses').split()
 
-    except Error:
-        pass
+    except Exception:
+        msg('%s: malformed "parentheses" values at %s' % (PLUGIN_NAME, configFile))
 
-    msg('logger: using var-bind value parentheses "%s" "%s"' % (leftParen, rightParen))
+    msg('%s: using var-bind value parentheses "%s" "%s"' % (PLUGIN_NAME, leftParen, rightParen))
 
     logger.addHandler(handler)
 
-msg('logger: plugin initialization complete')
+msg('%s: plugin initialization complete' % PLUGIN_NAME)
 
 
-def _makeExtra(pdu, context):
+def _format(pdu, context):
     extra = dict([(x[0].replace('-', '_'), x[1]) for x in context.items()])
-    extra['snmp_var_binds'] = ' '.join(['%s %s%s%s' % (vb[0].prettyPrint(), leftParen, vb[1].prettyPrint(), rightParen) for vb in v2c.apiPDU.getVarBinds(pdu)])
+
+    extra['snmp_var_binds'] = ' '.join(
+        ['%s %s%s%s' % (vb[0].prettyPrint(),
+                        leftParen,
+                        vb[1].prettyPrint().replace(leftParen, leftParen + leftParen).replace(rightParen, rightParen + rightParen), rightParen)
+         for vb in v2c.apiPDU.getVarBinds(pdu)]
+    )
+
     extra['snmp_pdu_type'] = pduMap[pdu.tagSet]
+
     return extra
 
 
 def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     if pdu.tagSet in pduMap:
-        logger.info('', extra=_makeExtra(pdu, snmpReqInfo))
+        logger.info('', extra=_format(pdu, snmpReqInfo))
+
     return status.NEXT, pdu
 
 
 def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     if pdu.tagSet in pduMap:
-        logger.info('', extra=_makeExtra(pdu, snmpReqInfo))
+        logger.info('', extra=_format(pdu, snmpReqInfo))
+
     return status.NEXT, pdu
