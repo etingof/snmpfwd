@@ -9,7 +9,7 @@ more compact and dynamic.
 The syntax of a macro reference resembles `bash` variable syntax: dollar sign
 followed by macro name in braces e.g. *${name}*.
 
-.. _sysrem-macros:
+.. _system-macros:
 
 System macros
 -------------
