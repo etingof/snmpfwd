@@ -8,6 +8,7 @@
 #
 import logging
 from logging import handlers
+import time
 try:
     from ConfigParser import RawConfigParser, Error
 except ImportError:
@@ -76,37 +77,63 @@ if moduleOptions[0] == 'config':
     except Exception:
         msg('%s: malformed "parentheses" values at %s' % (PLUGIN_NAME, configFile))
 
-    msg('%s: using var-bind value parentheses "%s" "%s"' % (PLUGIN_NAME, leftParen, rightParen))
+    template = config.get('content', 'template')
+
+    msg('%s: using var-bind value parentheses %s %s' % (PLUGIN_NAME, leftParen, rightParen))
 
     logger.addHandler(handler)
+
+started = time.time()
 
 msg('%s: plugin initialization complete' % PLUGIN_NAME)
 
 
-def _format(pdu, context):
-    extra = dict([(x[0].replace('-', '_'), x[1]) for x in context.items()])
+def _format(template, pdu, context):
+    for key, value in context.items():
+        token = '${%s}' % key
+        if token in template:
+            template = template.replace(token, value)
 
-    extra['snmp_var_binds'] = ' '.join(
-        ['%s %s%s%s' % (vb[0].prettyPrint(),
-                        leftParen,
-                        vb[1].prettyPrint().replace(leftParen, leftParen + leftParen).replace(rightParen, rightParen + rightParen), rightParen)
-         for vb in v2c.apiPDU.getVarBinds(pdu)]
-    )
+    token = '${snmp-var-binds}'
+    if token in template:
+        varBinds = ['%s %s%s%s' % (vb[0].prettyPrint(),
+                                   leftParen,
+                                   vb[1].prettyPrint().replace(leftParen, leftParen + leftParen).replace(rightParen, rightParen + rightParen),
+                                   rightParen)
+                    for vb in v2c.apiPDU.getVarBinds(pdu)]
+        template = template.replace(token, ' '.join(varBinds))
 
-    extra['snmp_pdu_type'] = pduMap[pdu.tagSet]
+    token = '${snmp-pdu-type}'
+    if token in template:
+        template = template.replace(token, pduMap[pdu.tagSet])
 
-    return extra
+    token = '${asctime}'
+    if token in template:
+        template = template.replace(token, time.asctime())
+
+    token = '${isotime}'
+    if token in template:
+        template = template.replace(token, time.strftime('%Y-%m-%dT%H:%M:%s.%S', time.localtime()))
+
+    token = '${timestamp}'
+    if token in template:
+        template = template.replace(token, str(time.time()))
+
+    token = '${uptime}'
+    if token in template:
+        template = template.replace(token, str(time.time() - started))
+
+    return template
 
 
 def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     if pdu.tagSet in pduMap:
-        logger.info('', extra=_format(pdu, snmpReqInfo))
+        logger.info(_format(template, pdu, snmpReqInfo))
 
     return status.NEXT, pdu
 
+processCommandResponse = processCommandRequest
 
-def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
-    if pdu.tagSet in pduMap:
-        logger.info('', extra=_format(pdu, snmpReqInfo))
+processNotificationRequest = processCommandRequest
 
-    return status.NEXT, pdu
+processNotificationResponse = processCommandRequest

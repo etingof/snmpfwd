@@ -83,3 +83,5 @@ def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     v2c.apiPDU.setVarBinds(pdu, varBinds)
 
     return status.NEXT, pdu
+
+processNotificationRequest = processCommandResponse
