@@ -501,10 +501,10 @@ Example:
 .. code-block:: bash
 
     server-classification-group {
-      server-snmp-credentials-id-pattern: .*?customer-2017-.\*
-      server-snmp-context-id-pattern: .*
-      server-snmp-content-id-pattern: .*
-      server-snmp-peer-id-pattern: .*
+      server-snmp-credentials-id-pattern: .*?customer-2017-.\*?
+      server-snmp-context-id-pattern: .*?
+      server-snmp-content-id-pattern: .*?
+      server-snmp-peer-id-pattern: .*?
 
       server-classification-id: customers-2017
     }
