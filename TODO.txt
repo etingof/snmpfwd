@@ -9,3 +9,5 @@
 * implement GETBULK handling at the "oidfilter" plugin
 * implement PDU split at content map
 * implement server classification IDs forwarding to client
+* improve logging plugin to expand snmp-* options in log file path
+* cross-link options in configuration docs

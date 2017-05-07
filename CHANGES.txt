@@ -1,4 +1,10 @@
 
+Revision 0.2.0, released XX-05-2017
+-----------------------------------
+
+- Server message classifiers made available at the client side
+  for message routing purposes
+
 Revision 0.1.0, released 07-05-2017
 -----------------------------------
 

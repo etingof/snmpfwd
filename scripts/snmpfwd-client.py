@@ -179,6 +179,7 @@ def main():
     notificationOriginator = ntforg.NotificationOriginator()
 
     origCredIdList = []
+    srvClassIdList = []
     peerIdMap = {}
     routingMap = {}
     engineIdMap = {}
@@ -409,24 +410,46 @@ def main():
 
         origCredIdList.append((origCredId, re.compile(k)))
 
+    duplicates = {}
+
+    for srvClassCfgPath in cfgTree.getPathsToAttr('server-classification-id'):
+        srvClassId = cfgTree.getAttrValue('server-classification-id', *srvClassCfgPath)
+        if srvClassId in duplicates:
+            log.msg('duplicate server-classification-id=%s at %s and %s' % (srvClassId, '.'.join(srvClassCfgPath), '.'.join(duplicates[srvClassId])))
+            sys.exit(-1)
+
+        duplicates[srvClassId] = srvClassCfgPath
+
+        k = '#'.join(
+            (cfgTree.getAttrValue('server-snmp-credentials-id-pattern', *srvClassCfgPath),
+             cfgTree.getAttrValue('server-snmp-context-id-pattern', *srvClassCfgPath),
+             cfgTree.getAttrValue('server-snmp-content-id-pattern', *srvClassCfgPath),
+             cfgTree.getAttrValue('server-snmp-peer-id-pattern', *srvClassCfgPath))
+        )
+
+        log.msg('configuring server classification ID %s (at %s), composite key: %s' % (srvClassId, '.'.join(srvClassCfgPath), k))
+
+        srvClassIdList.append((srvClassId, re.compile(k)))
+
     del duplicates
 
     for routeCfgPath in cfgTree.getPathsToAttr('using-snmp-peer-id-list'):
         peerIdList = cfgTree.getAttrValue('using-snmp-peer-id-list', *routeCfgPath, **dict(vector=True))
         log.msg('configuring routing entry with peer IDs %s (at %s)...' % (','.join(peerIdList), '.'.join(routeCfgPath)))
         for credId in cfgTree.getAttrValue('matching-orig-snmp-peer-id-list', *routeCfgPath, **dict(vector=True)):
-            for trunkId in cfgTree.getAttrValue('matching-trunk-id-list', *routeCfgPath, **dict(vector=True)):
-                k = credId, trunkId
-                if k in routingMap:
-                    log.msg('duplicate credentials-id=%s and trunk-id %s at peer-id %s' % (credId, trunkId, ','.join(peerIdList)))
-                    sys.exit(-1)
-                else:
-                    for peerId in peerIdList:
-                        if peerId not in peerIdMap:
-                            log.msg('missing peer-id %s at %s' % (peerId, '.'.join(routeCfgPath)))
-                            sys.exit(-1)
+            for srvClassId in cfgTree.getAttrValue('matching-server-classification-id-list', *routeCfgPath, **dict(vector=True)):
+                for trunkId in cfgTree.getAttrValue('matching-trunk-id-list', *routeCfgPath, **dict(vector=True)):
+                    k = credId, srvClassId, trunkId
+                    if k in routingMap:
+                        log.msg('duplicate credentials-id=%s and trunk-id and server-classification-id %s at peer-id %s' % (credId, trunkId, ','.join(peerIdList)))
+                        sys.exit(-1)
+                    else:
+                        for peerId in peerIdList:
+                            if peerId not in peerIdMap:
+                                log.msg('missing peer-id %s at %s' % (peerId, '.'.join(routeCfgPath)))
+                                sys.exit(-1)
 
-                    routingMap[k] = peerIdList
+                        routingMap[k] = peerIdList
 
     def prettyVarBinds(pdu):
         return not pdu and '<none>' or ';'.join(['%s:%s' % (vb[0].prettyPrint(), vb[1].prettyPrint()) for vb in v2c.apiPDU.getVarBinds(pdu)])
@@ -485,11 +508,24 @@ def main():
         else:
             origPeerId = None
 
+        k = [str(x) for x in (msg['server-snmp-credentials-id'],
+                              msg['server-snmp-context-id'],
+                              msg['server-snmp-content-id'],
+                              msg['server-snmp-peer-id'])]
+        k = '#'.join(k)
+
+        for x, y in srvClassIdList:
+            if y.match(k):
+                srvClassId = macro.expandMacro(x, msg)
+                break
+        else:
+            srvClassId = None
+
         errorIndication = None
 
-        peerIdList = routingMap.get((origPeerId, macro.expandMacro(trunkId, msg)))
+        peerIdList = routingMap.get((origPeerId, srvClassId, macro.expandMacro(trunkId, msg)))
         if not peerIdList:
-            log.msg('unroutable trunk message #%s from trunk %s, orig-peer-id %s (original SNMP info: %s)' % (msgId, trunkId, origPeerId or '<none>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg])))
+            log.msg('unroutable trunk message #%s from trunk %s, srv-classification-id %s, orig-peer-id %s (original SNMP info: %s)' % (msgId, trunkId, srvClassId, origPeerId or '<none>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg])))
             errorIndication = 'no route to SNMP peer configured'
 
         cbCtx = trunkId, msgId, msg
@@ -515,7 +551,7 @@ def main():
             if peerAddr:
                 q.append(peerAddr)
 
-            log.msg('received trunk message #%s from trunk %s, sending SNMP message to peer ID %s, bind-address %s, peer-address %s (original SNMP info: %s)' % (msgId, trunkId, peerId, bindAddr[0] or '<default>', peerAddr[0] or '<default>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg])))
+            log.msg('received trunk message #%s from trunk %s, sending SNMP message to peer ID %s, bind-address %s, peer-address %s (original SNMP info: %s; original server classification: %s)' % (msgId, trunkId, peerId, bindAddr[0] or '<default>', peerAddr[0] or '<default>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg if x.startswith('snmp-')]), ' '.join(['%s=%s' % (x, msg[x].prettyPrint()) for x in msg if x.startswith('server-')])))
 
             pdu = msg['snmp-pdu']
 

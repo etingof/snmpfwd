@@ -11,10 +11,11 @@ from pysnmp.proto import rfc1905
 from snmpfwd.trunking import crypto
 from snmpfwd.error import SnmpfwdError
 
+PROTOCOL_VERSION = 1
 
 class Message(univ.Sequence):
     componentType = namedtype.NamedTypes(
-        namedtype.NamedType('version', univ.Integer(0)),
+        namedtype.NamedType('version', univ.Integer()),
         namedtype.NamedType('msg-id', univ.Integer()),
         namedtype.NamedType('content-id', univ.Integer(namedValues=namedval.NamedValues(('request', 0), ('response', 1), ('announcement', 2)))),
         namedtype.NamedType('payload', univ.OctetString())
@@ -34,7 +35,12 @@ class Request(univ.Sequence):
         namedtype.NamedType('snmp-security-name', univ.OctetString()),
         namedtype.NamedType('snmp-context-engine-id', univ.OctetString()),
         namedtype.NamedType('snmp-context-name', univ.OctetString()),
-        namedtype.NamedType('snmp-pdu', univ.OctetString())
+        namedtype.NamedType('snmp-pdu', univ.OctetString()),
+        # server classifiers
+        namedtype.NamedType('server-snmp-credentials-id', univ.OctetString('')),
+        namedtype.NamedType('server-snmp-context-id', univ.OctetString('')),
+        namedtype.NamedType('server-snmp-content-id', univ.OctetString('')),
+        namedtype.NamedType('server-snmp-peer-id', univ.OctetString('')),
     )
 
 
@@ -65,13 +71,15 @@ def prepareRequestData(msgId, req, secret):
               'snmp-bind-address', 'snmp-bind-port',
               'snmp-security-model', 'snmp-security-level',
               'snmp-security-name', 'snmp-context-engine-id',
-              'snmp-context-name'):
+              'snmp-context-name',
+              'server-snmp-credentials-id', 'server-snmp-context-id',
+              'server-snmp-content-id', 'server-snmp-peer-id'):
         r[k] = req[k]
 
     r['snmp-pdu'] = encoder.encode(req['snmp-pdu'])
 
     msg = Message()
-    msg['version'] = 0
+    msg['version'] = PROTOCOL_VERSION
     msg['msg-id'] = msgId
     msg['content-id'] = 'request'
     if secret:
@@ -87,7 +95,7 @@ def prepareResponseData(msgId, rsp, secret):
     r['snmp-pdu'] = rsp['snmp-pdu'] and encoder.encode(rsp['snmp-pdu']) or ''
 
     msg = Message()
-    msg['version'] = 0
+    msg['version'] = PROTOCOL_VERSION
     msg['msg-id'] = msgId
     msg['content-id'] = 'response'
     msg['payload'] = encoder.encode(r)
@@ -103,7 +111,7 @@ def prepareAnnouncementData(trunkId, secret):
     r['trunk-id'] = trunkId
 
     msg = Message()
-    msg['version'] = 0
+    msg['version'] = PROTOCOL_VERSION
     msg['msg-id'] = 0
     msg['content-id'] = 'announcement'
     msg['payload'] = encoder.encode(r)
@@ -120,8 +128,8 @@ def prepareDataElements(octets, secret):
     except SubstrateUnderrunError:
         return None, None, None, octets
 
-    if msg['version'] > 0:
-        raise SnmpfwdError('Unsupported protocol version: %s' % msg['version'])
+    if msg['version'] != PROTOCOL_VERSION:
+        raise SnmpfwdError('Unsupported protocol versions %s/%s' % (msg['version'], PROTOCOL_VERSION))
 
     r, _ = decoder.decode(
         secret and crypto.decrypt(secret, msg['payload'].asOctets()) or msg['payload'].asOctets(),
@@ -137,7 +145,9 @@ def prepareDataElements(octets, secret):
                   'snmp-bind-address', 'snmp-bind-port',
                   'snmp-security-model', 'snmp-security-level',
                   'snmp-security-name',
-                  'snmp-context-engine-id', 'snmp-context-name'):
+                  'snmp-context-engine-id', 'snmp-context-name',
+                  'server-snmp-credentials-id', 'server-snmp-context-id',
+                  'server-snmp-content-id', 'server-snmp-peer-id'):
             rsp[k] = r[k]
 
         rsp['snmp-pdu'], _ = decoder.decode(r['snmp-pdu'], asn1Spec=rfc1905.PDUs())
