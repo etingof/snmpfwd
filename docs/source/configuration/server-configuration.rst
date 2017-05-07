@@ -156,6 +156,14 @@ Listen for SNMP packets at this network address. Example:
         snmp-credentials-id: agent-10
     }
 
+
+.. note::
+
+    If you want response SNMP messages to have source address of the SNMP request
+    destination address (as opposed to primary network interface address when
+    *snmp-bind-address* is set to *0.0.0.0*), make sure to enable the
+    `snmp-transport-options`_ = *virtual-interface* option.
+
 .. _snmp-security-model-server-option:
 
 *snmp-security-model*
@@ -495,6 +503,12 @@ of SNMP message.
 
 List of regular expressions matching destination transport endpoints
 of SNMP message.
+
+.. note::
+
+    If you want to receive SNMP messages at secondary network interfaces
+    and be able to match them, make sure you enable the
+    `snmp-transport-options`_ = *virtual-interface*.
 
 .. _snmp-peer-id-server-option:
 

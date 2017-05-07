@@ -384,6 +384,13 @@ address.
 A regular expression matching SNMP messages by their original destination network
 address.
 
+.. note::
+
+    If you want to receive SNMP messages at server's secondary network
+    interfaces and be able to match them here, make sure you enable the
+    *snmp-transport-options* = *virtual-interface* in
+    :doc:`server configuration <server-configuration>`
+
 *orig-snmp-security-model-pattern*
 ++++++++++++++++++++++++++++++++++
 
