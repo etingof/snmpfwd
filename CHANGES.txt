@@ -1,10 +1,14 @@
 
+Revision 0.2.0, released XX-05-2017
+-----------------------------------
+
+- Server message classifiers made available at the client side
+  for message routing purposes
+
 Revision 0.1.0, released 07-05-2017
 -----------------------------------
 
 - SNMP TRAP PDU forwarding implemented
-- Server message classifiers made available at the client side
-  for message routing purposes
 - SNMP PDU OIDs filtering plugin implemented
 - The "rewrite" plugin reworked to match OIDs and regexp values
 - The "logger" plugin refactored to understand more macros; macro names used
