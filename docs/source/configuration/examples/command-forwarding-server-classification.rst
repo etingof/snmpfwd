@@ -23,9 +23,9 @@ Server is configured to:
 * forward all queries to snmpfwd client through an unencrypted trunk connection
   running in *client* mode
 
-.. literalinclude:: /../../conf/command-forwarder-server-classification/server.conf
+.. literalinclude:: /../../conf/command-forwarding-server-classification/server.conf
 
-:download:`Download </../../conf/command-forwarder-server-classification/server.conf>` server configuration file.
+:download:`Download </../../conf/command-forwarding-server-classification/server.conf>` server configuration file.
 
 Client configuration
 --------------------
@@ -39,6 +39,6 @@ Client is configured to:
   on :ref:`server-classification-id <server-classification-id-option>`
   option.
 
-.. literalinclude:: /../../conf/command-forwarder-server-classification/client.conf
+.. literalinclude:: /../../conf/command-forwarding-server-classification/client.conf
 
-:download:`Download </../../conf/command-forwarder-server-classification/client.conf>` client configuration file.
+:download:`Download </../../conf/command-forwarding-server-classification/client.conf>` client configuration file.

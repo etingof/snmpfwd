@@ -420,8 +420,8 @@ Example:
 .. code-block:: bash
 
     context-group {
-      snmp-context-engine-id-pattern: .*
-      snmp-context-name-pattern: .*
+      snmp-context-engine-id-pattern: .*?
+      snmp-context-name-pattern: .*?
 
       snmp-context-id: any-context
     }
@@ -435,6 +435,14 @@ SNMP PDU contents matching
 A regular expression matching SNMPv3 messages by SNMP PDU type.
 Recognized PDU types are: *GET*, *SET*, *GETNEXT*, *GETBULK*, *TRAPv1*,
 *TRAPv2* (the latter is also applicable for SNMPv3).
+
+
+.. code-block:: bash
+
+    content-group {
+      snmp-pdu-type-pattern: (GET|GETNEXT)
+      snmp-content-id: get-content
+    }
 
 *snmp-pdu-oid-prefix-pattern-list*
 ++++++++++++++++++++++++++++++++++
@@ -464,7 +472,7 @@ Example:
       }
 
       oid-subtree-group {
-        snmp-pdu-oid-prefix-pattern-list: 1\.3\.6\.1\.2\.1\.2\..*
+        snmp-pdu-oid-prefix-pattern-list: 1\.3\.6\.1\.2\.1\.2\..*?
         snmp-content-id: oid-subtree-content
       }
 
@@ -506,8 +514,8 @@ Example:
 
     peers-group {
       snmp-transport-domain: 1.3.6.1.6.1.1.100
-      snmp-peer-address-pattern-list: 10\.113\..*
-      snmp-bind-address-pattern-list: 127\.0\.0\.[2-3]:[0-9]*
+      snmp-peer-address-pattern-list: 10\.113\..*?
+      snmp-bind-address-pattern-list: 127\.0\.0\.[2-3]:[0-9]+?
 
       snmp-peer-id: 101
     }
