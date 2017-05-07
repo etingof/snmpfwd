@@ -453,6 +453,62 @@ Example:
       orig-snmp-peer-id: snmpv1-manager-at-localhost
     }
 
+.. _matching-server-classification-chapter:
+
+Matching server classification
+------------------------------
+
+Server part communicates to the client the outcome of server's own
+message classification. Client configuration may leverage this information
+for client-side message routing purposes.
+
+*server-snmp-credentials-id-pattern*
+++++++++++++++++++++++++++++++++++++
+
+A regular expression matching server-side :ref:`snmp-credentials-id <snmp-credentials-id-server-option>` value
+chosen for processing the SNMP request.
+
+*server-snmp-context-id-pattern*
+++++++++++++++++++++++++++++++++
+
+A regular expression matching server-side :ref:`snmp-context-id <snmp-context-id-server-option>` value
+chosen for processing the SNMP request.
+
+*server-snmp-content-id-pattern*
+++++++++++++++++++++++++++++++++
+
+A regular expression matching server-side :ref:`snmp-content-id <snmp-content-id-server-option>` value
+chosen for processing the SNMP request.
+
+*server-snmp-peer-id-pattern*
++++++++++++++++++++++++++++++
+
+A regular expression matching server-side :ref:`snmp-peer-id <snmp-peer-id-server-option>` value
+chosen for processing the SNMP request.
+
+.. _server-classification-id-option:
+
+*server-classification-id*
+++++++++++++++++++++++++++
+
+Unique identifier grouping a collection of *server-\** identifiers under a single ID.
+The *server-classification-id* identifier is typically used in message routing tables.
+
+This option can contain :ref:`SNMP macros <snmp-macros>`.
+
+Example:
+
+.. code-block:: bash
+
+    server-classification-group {
+      server-snmp-credentials-id-pattern: .*?customer-2017-.\*
+      server-snmp-context-id-pattern: .*
+      server-snmp-content-id-pattern: .*
+      server-snmp-peer-id-pattern: .*
+
+      server-classification-id: customers-2017
+    }
+
 Message routing
 ---------------
 
@@ -474,12 +530,18 @@ in the list.
 Evaluates to True if original SNMP request message properties match
 any of `orig-snmp-peer-id`_'s in the list.
 
+*matching-server-classification-id-list*
+++++++++++++++++++++++++++++++++++++++++
+
+Evaluates to True if server SNMP request message classifiers match
+any of `server-classification-id`_'s in the list.
+
 *using-snmp-peer-id-list*
 +++++++++++++++++++++++++
 
 Unique identifier matching a group of *matching-\** identifiers. Specifically,
-these are: `matching-trunk-id-list`_, `matching-orig-snmp-peer-id-list`_
-and `using-snmp-peer-id-list`_.
+these are: `matching-trunk-id-list`_, `matching-orig-snmp-peer-id-list`_ and
+`matching-server-classification-id-list`_.
 
 SNMP request message will be passed to to each `snmp-peer-id`_'a present
 in the list.
@@ -492,6 +554,8 @@ Example:
       route-1 {
         matching-trunk-id-list: frontend-server-trunk
         matching-orig-snmp-peer-id-list: manager-123
+        matching-server-classification-id-list: any-classification
+
         using-snmp-peer-id-list: backend-agent-A
       }
     }

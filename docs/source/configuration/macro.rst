@@ -133,6 +133,48 @@ to the SNMP engine instance serving this request.
 from incoming SNMP request. Should match the *snmp-context-name* configured
 to the SNMP engine instance serving this request.
 
+.. _server-macros:
+
+Server classification macros
+----------------------------
+
+Before passing SNMP message over to the client part, server classifies incoming
+SNMP message for its own routing purposes. The outcome of server-side classification
+is available at the client part, so that it could be used for client-side message routing
+purposes as well.
+
+.. _server-snmp-credentials-id-macro:
+
+*server-snmp-credentials-id*
+++++++++++++++++++++++++++++
+
+The :ref:`snmp-credentials-id <snmp-credentials-id-server-option>` value being used for processing
+the SNMP request.
+
+.. _server-snmp-context-id-macro:
+
+*server-snmp-context-id*
+++++++++++++++++++++++++
+
+The :ref:`snmp-context-id <snmp-context-id-server-option>` value being used for processing
+the SNMP request.
+
+.. _server-snmp-content-id-macro:
+
+*server-snmp-content-id*
+++++++++++++++++++++++++
+
+The :ref:`snmp-content-id <snmp-content-id-server-option>` value being used for processing
+the SNMP request.
+
+.. _server-snmp-peer-id-macro:
+
+*server-snmp-peer-id*
++++++++++++++++++++++
+
+The :ref:`snmp-peer-id <snmp-peer-id-server-option>` value being used for processing
+the SNMP request.
+
 Examples
 --------
 

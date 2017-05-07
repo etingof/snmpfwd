@@ -53,6 +53,8 @@ and *snmpfwd-server*.
 SNMP agents options
 -------------------
 
+.. _snmp-engine-id-server-option:
+
 *snmp-engine-id*
 ++++++++++++++++
 
@@ -84,6 +86,8 @@ Example:
     at server and client parts of SNMP Proxy Forwarder. They can be the same
     or differ in any way.
 
+.. _snmp-transport-domain-server-option:
+
 *snmp-transport-domain*
 +++++++++++++++++++++++
 
@@ -112,6 +116,8 @@ Example:
 Where *1.3.6.1.6.1.1* identifies UDP-over-IPv4 transport and *123* identifies
 transport endpoint listening at address 127.0.0.1, UDP port 5555.
 
+.. _snmp-transport-options-server-option:
+
 *snmp-transport-options*
 ++++++++++++++++++++++++
 
@@ -135,6 +141,8 @@ See also :doc:`client-side configuration <client-configuration>`.
     SNMP request packets reaching the host where SNMP Proxy Forwarder
     is running and accepting them by the host.
 
+.. _snmp-bind-address-server-option:
+
 *snmp-bind-address*
 +++++++++++++++++++
 
@@ -148,6 +156,8 @@ Listen for SNMP packets at this network address. Example:
         snmp-credentials-id: agent-10
     }
 
+.. _snmp-security-model-server-option:
+
 *snmp-security-model*
 +++++++++++++++++++++
 
@@ -156,6 +166,8 @@ SNMP version to use. Valid values are:
 * *1* - SNMP v1
 * *2* - SNMP v2c
 * *3* - SNMP v3
+
+.. _snmp-security-level-server-option:
 
 *snmp-security-level*
 +++++++++++++++++++++
@@ -166,6 +178,8 @@ SNMPv3 security level to use. Valid values are
 * *2* - do message authentication, do not do encryption
 * *3* - do both authentication and encryption
 
+.. _snmp-security-name-server-option:
+
 *snmp-security-name*
 ++++++++++++++++++++
 
@@ -175,15 +189,21 @@ Identifier that logically groups SNMP configuration settings together.
 
     Must be unique within SNMP engine instance (e.g. `snmp-engine-id`_).
 
+.. _snmp-community-name-server-option:
+
 *snmp-community-name*
 +++++++++++++++++++++
 
 SNMP community string for SNMP v1/v2c.
 
+.. _snmp-usm-user-server-option:
+
 *snmp-usm-user*
 +++++++++++++++
 
 SNMPv3 USM username.
+
+.. _snmp-usm-auth-protocol-server-option:
 
 *snmp-usm-auth-protocol*
 ++++++++++++++++++++++++
@@ -194,6 +214,8 @@ SNMPv3 message authentication protocol to use. Valid values are:
 * *1.3.6.1.6.3.10.1.1.2* - the HMAC-MD5-96 Digest Authentication Protocol (:RFC:`3414#section-6`)
 * *1.3.6.1.6.3.10.1.1.3* - the HMAC-SHA-96 Digest Authentication Protocol (:RFC:`3414#section-7`)
 
+.. _snmp-usm-auth-key-server-option:
+
 *snmp-usm-auth-key*
 +++++++++++++++++++
 
@@ -202,6 +224,8 @@ SNMPv3 message authentication key.
 .. note::
 
     Must be 8 or more characters.
+
+.. _snmp-usm-priv-protocol-server-option:
 
 *snmp-usm-priv-protocol*
 ++++++++++++++++++++++++
@@ -215,6 +239,8 @@ SNMPv3 message encryption protocol to use. Valid values are:
 * *1.3.6.1.4.1.9.12.6.1.1* - CFB128-AES-192 Symmetric Encryption Protocol (`draft-blumenthal-aes-usm-04 <https://tools.ietf.org/html/draft-blumenthal-aes-usm-04#section-3>`_) with Reeder key localization
 * *1.3.6.1.4.1.9.12.6.1.2* - CFB128-AES-256 Symmetric Encryption Protocol (`draft-blumenthal-aes-usm-04 <https://tools.ietf.org/html/draft-blumenthal-aes-usm-04#section-3>`_) with Reeder key localization
 
+.. _snmp-usm-priv-key-server-option:
+
 *snmp-usm-priv-key*
 +++++++++++++++++++
 
@@ -223,6 +249,8 @@ SNMPv3 message encryption key.
 .. note::
 
     Must be 8 or more characters.
+
+.. _snmp-credentials-id-server-option:
 
 *snmp-credentials-id*
 +++++++++++++++++++++
@@ -375,6 +403,8 @@ A regular expression matching SNMPv3 messages by SNMP context engine ID.
 
 A regular expression matching SNMPv3 messages by SNMP context name.
 
+.. _snmp-context-id-server-option:
+
 *snmp-context-id*
 +++++++++++++++++
 
@@ -410,6 +440,8 @@ Recognized PDU types are: *GET*, *SET*, *GETNEXT*, *GETBULK*, *TRAPv1*,
 ++++++++++++++++++++++++++++++++++
 
 List of regular expressions matching OIDs in SNMP PDU var-binds.
+
+.. _snmp-content-id-server-option:
 
 *snmp-content-id*
 +++++++++++++++++
@@ -455,6 +487,8 @@ of SNMP message.
 
 List of regular expressions matching destination transport endpoints
 of SNMP message.
+
+.. _snmp-peer-id-server-option:
 
 *snmp-peer-id*
 ++++++++++++++

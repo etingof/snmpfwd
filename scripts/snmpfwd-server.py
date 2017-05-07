@@ -180,6 +180,9 @@ def main():
                                 PDU, acInfo):
             trunkReq = gCurrentRequestContext['request']
 
+            for classifier in ('snmp-credentials-id', 'snmp-context-id', 'snmp-content-id', 'snmp-peer-id'):
+                trunkReq['server-' + classifier] = gCurrentRequestContext[classifier]
+
             logMsg = '(SNMP request %s), matched keys: %s' % (', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(trunkReq['snmp-pdu']) or '%s=%s' % (x, isinstance(trunkReq[x], int) and trunkReq[x] or rfc1902.OctetString(trunkReq[x]).prettyPrint()) for x in trunkReq]), ', '.join(['%s=%s' % (k, gCurrentRequestContext[k]) for k in gCurrentRequestContext if k[-2:] == 'id']))
 
             pluginIdList = gCurrentRequestContext['plugins-list']
@@ -270,6 +273,9 @@ def main():
                        maxSizeResponseScopedPDU, stateReference):
 
             trunkReq = gCurrentRequestContext['request']
+
+            for classifier in ('snmp-credentials-id', 'snmp-context-id', 'snmp-content-id', 'snmp-peer-id'):
+                trunkReq['server-' + classifier] = gCurrentRequestContext[classifier]
 
             if messageProcessingModel == 0:
                 PDU = rfc2576.v1ToV2(PDU)
@@ -414,19 +420,19 @@ def main():
         k = '#'.join([str(x) for x in (variables['contextEngineId'], variables['contextName'])])
         for x, y in contextIdList:
             if y.match(k):
-                cbCtx['context-id'] = macro.expandMacro(x, msg)
+                cbCtx['snmp-context-id'] = macro.expandMacro(x, msg)
                 break
             else:
-                cbCtx['context-id'] = None
+                cbCtx['snmp-context-id'] = None
 
         addr = '%s:%s#%s:%s' % (variables['transportAddress'][0], variables['transportAddress'][1], variables['transportAddress'].getLocalAddress()[0], variables['transportAddress'].getLocalAddress()[1])
 
         for pat, peerId in peerIdMap.get(str(variables['transportDomain']), ()):
             if pat.match(addr):
-                cbCtx['peer-id'] = macro.expandMacro(peerId, msg)
+                cbCtx['snmp-peer-id'] = macro.expandMacro(peerId, msg)
                 break
         else:
-            cbCtx['peer-id'] = None
+            cbCtx['snmp-peer-id'] = None
 
         pdu = variables['pdu']
         if pdu.tagSet in v1.TrapPDU.tagSet:
@@ -441,22 +447,22 @@ def main():
 
         for x, y in contentIdList:
             if y.match(k):
-                cbCtx['content-id'] = macro.expandMacro(x, msg)
+                cbCtx['snmp-content-id'] = macro.expandMacro(x, msg)
                 break
             else:
-                cbCtx['content-id'] = None
+                cbCtx['snmp-content-id'] = None
 
         cbCtx['plugins-list'] = pluginIdMap.get(
             (cbCtx['snmp-credentials-id'],
-             cbCtx['context-id'],
-             cbCtx['peer-id'],
-             cbCtx['content-id']), []
+             cbCtx['snmp-context-id'],
+             cbCtx['snmp-peer-id'],
+             cbCtx['snmp-content-id']), []
         )
         cbCtx['trunk-id-list'] = trunkIdMap.get(
             (cbCtx['snmp-credentials-id'],
-             cbCtx['context-id'],
-             cbCtx['peer-id'],
-             cbCtx['content-id'])
+             cbCtx['snmp-context-id'],
+             cbCtx['snmp-peer-id'],
+             cbCtx['snmp-content-id'])
         )
         cbCtx['request'] = msg
 
