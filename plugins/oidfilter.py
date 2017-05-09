@@ -52,26 +52,27 @@ if moduleOptions[0] == 'config':
 
             oidsList.append((skip, begin, end))
 
-            oidsList.sort(key=lambda x: x[0])
+        oidsList.sort(key=lambda x: x[0])
 
-            endOids = [x[2] for x in oidsList]
-
-            if len(set(endOids)) != len(endOids):
-                raise SnmpfwdError('%s: duplicate end OIDs in %s: %s' % (PLUGIN_NAME, configFile, ', '.join(set([str(x) for x in endOids if endOids.count(x) > 1]))))
+        endOids = [x[2] for x in oidsList]
 
         idx = 0
         while idx < len(oidsList):
             skip, begin, end = oidsList[idx]
             if skip >= begin:
-                raise SnmpfwdError('%s: skip OID %s >= begin OID %s' % (PLUGIN_NAME, skip, begin))
+                raise SnmpfwdError('%s: skip OID %s >= begin OID %s at %s' % (PLUGIN_NAME, skip, begin, configFile))
             if end < begin:
-                raise SnmpfwdError('%s: end OID %s < begin OID %s' % (PLUGIN_NAME, end, begin))
+                raise SnmpfwdError('%s: end OID %s < begin OID %s at %s' % (PLUGIN_NAME, end, begin, configFile))
             if idx:
                 prev_skip, prev_begin, prev_end = oidsList[idx - 1]
                 if skip <= prev_skip:
-                    raise SnmpfwdError('%s: skip OID %s not increasing' % (PLUGIN_NAME, skip))
+                    raise SnmpfwdError('%s: skip OID %s not increasing at %s' % (PLUGIN_NAME, skip, configFile))
+                if begin <= prev_begin:
+                    raise SnmpfwdError('%s: begin OID %s not increasing at %s' % (PLUGIN_NAME, begin, configFile))
+                if end <= prev_end:
+                    raise SnmpfwdError('%s: end OID %s not increasing at %s' % (PLUGIN_NAME, end, configFile))
                 if begin < prev_end:
-                    raise SnmpfwdError('%s: non-adjacent end OID %s followed by begin OID %s' % (PLUGIN_NAME, prev_end, begin))
+                    raise SnmpfwdError('%s: non-adjacent end OID %s followed by begin OID %s at %s' % (PLUGIN_NAME, prev_end, begin, configFile))
 
             idx += 1
 
