@@ -59,8 +59,23 @@ if moduleOptions[0] == 'config':
             if len(set(endOids)) != len(endOids):
                 raise SnmpfwdError('%s: duplicate end OIDs in %s: %s' % (PLUGIN_NAME, configFile, ', '.join(set([str(x) for x in endOids if endOids.count(x) > 1]))))
 
-        for skip, begin, end in oidsList:
-            msg('%s: skip to %s allow from %s to %s' % (PLUGIN_NAME, skip, begin, end))
+        idx = 0
+        while idx < len(oidsList):
+            skip, begin, end = oidsList[idx]
+            if skip >= begin:
+                raise SnmpfwdError('%s: skip OID %s >= begin OID %s' % (PLUGIN_NAME, skip, begin))
+            if end < begin:
+                raise SnmpfwdError('%s: end OID %s < begin OID %s' % (PLUGIN_NAME, end, begin))
+            if idx:
+                prev_skip, prev_begin, prev_end = oidsList[idx - 1]
+                if skip <= prev_skip:
+                    raise SnmpfwdError('%s: skip OID %s not increasing' % (PLUGIN_NAME, skip))
+                if begin < prev_end:
+                    raise SnmpfwdError('%s: non-adjacent end OID %s followed by begin OID %s' % (PLUGIN_NAME, prev_end, begin))
+
+            idx += 1
+
+            msg('%s: #%d skip to %s allow from %s to %s' % (PLUGIN_NAME, idx, skip, begin, end))
 
     except Exception:
         raise SnmpfwdError('%s: config file load failure: %s' % (PLUGIN_NAME, sys.exc_info()[1]))
