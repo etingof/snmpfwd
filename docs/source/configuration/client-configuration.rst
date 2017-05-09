@@ -103,6 +103,8 @@ Example:
 Where *1.3.6.1.6.1.1* identifies UDP-over-IPv4 transport and *123* identifies
 transport endpoint listening at address 127.0.0.1, UDP port 5555.
 
+.. _snmp-transport-options-client-option:
+
 *snmp-transport-options*
 ++++++++++++++++++++++++
 
