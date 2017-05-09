@@ -7,7 +7,8 @@ Revision 0.2.0, released XX-05-2017
 - Examples and docs on transparent proxy mode and running at
   secondary interfaces added
 - Performance of the "oidfilter" plugin improved on large
-  access lists
+  access lists by introducing dichotomy search and operating
+  on built-in "tuple" type
 - Enforced "oidfilter" configuration consistency by adding
   a bunch of load-time checks
 

@@ -54,8 +54,6 @@ if moduleOptions[0] == 'config':
 
         oidsList.sort(key=lambda x: x[0])
 
-        endOids = [x[2] for x in oidsList]
-
         idx = 0
         while idx < len(oidsList):
             skip, begin, end = oidsList[idx]
@@ -78,6 +76,12 @@ if moduleOptions[0] == 'config':
 
             msg('%s: #%d skip to %s allow from %s to %s' % (PLUGIN_NAME, idx, skip, begin, end))
 
+        # cast to built-in tuple type for better comparison performance down the road
+        oidsList = [(tuple(skip), tuple(begin), tuple(end)) for skip, begin, end in oidsList]
+
+        # we use this for pivoting dichotomy search
+        endOids = [x[2] for x in oidsList]
+
     except Exception:
         raise SnmpfwdError('%s: config file load failure: %s' % (PLUGIN_NAME, sys.exc_info()[1]))
 
@@ -96,6 +100,7 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
 
         for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
             oid, val = v2c.apiVarBind.getOIDVal(varBind)
+            oid = tuple(oid)
             idx = bisect.bisect_left(endOids, oid)
             while idx < len(endOids):
                 skip, begin, end = oidsList[idx]
@@ -133,6 +138,7 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
 
         for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
             oid, val = v2c.apiVarBind.getOIDVal(varBind)
+            oid = tuple(oid)
             idx = bisect.bisect_left(endOids, oid)
             while idx < len(endOids):
                 skip, begin, end = oidsList[idx]
@@ -251,6 +257,7 @@ def processNotificationRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
 
     for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
         oid, val = varBind
+        oid = tuple(oid)
         idx = bisect.bisect_left(endOids, oid)
         while idx < len(endOids):
             skip, begin, end = oidsList[idx]
