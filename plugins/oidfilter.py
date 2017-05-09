@@ -7,6 +7,7 @@
 # SNMP Proxy Forwarder plugin module
 #
 import sys
+import bisect
 from snmpfwd.plugins import status
 from snmpfwd.error import SnmpfwdError
 from snmpfwd.log import msg
@@ -21,6 +22,7 @@ BLOCK, PASS = 0, 1
 PLUGIN_NAME = 'oidfilter'
 
 oidsList = []
+endOids = []
 
 moduleOptions = moduleOptions.split('=')
 
@@ -52,10 +54,10 @@ if moduleOptions[0] == 'config':
 
             oidsList.sort(key=lambda x: x[0])
 
-            skipOids = [x[0] for x in oidsList]
+            endOids = [x[2] for x in oidsList]
 
-            if len(set(skipOids)) != len(skipOids):
-                raise SnmpfwdError('%s: duplicate skip OIDs in %s: %s' % (PLUGIN_NAME, configFile, ', '.join(set([str(x) for x in skipOids if skipOids.count(x) > 1]))))
+            if len(set(endOids)) != len(endOids):
+                raise SnmpfwdError('%s: duplicate end OIDs in %s: %s' % (PLUGIN_NAME, configFile, ', '.join(set([str(x) for x in endOids if endOids.count(x) > 1]))))
 
         for skip, begin, end in oidsList:
             msg('%s: skip to %s allow from %s to %s' % (PLUGIN_NAME, skip, begin, end))
@@ -78,9 +80,15 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
 
         for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
             oid, val = v2c.apiVarBind.getOIDVal(varBind)
-            for skip, begin, end in oidsList:
+            idx = bisect.bisect_left(endOids, oid)
+            while idx < len(endOids):
+                skip, begin, end = oidsList[idx]
                 if begin <= oid <= end:
                     break
+                elif oid > end:
+                    val = None
+                    break
+                idx += 1
             else:
                 val = None
 
@@ -109,7 +117,10 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
 
         for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
             oid, val = v2c.apiVarBind.getOIDVal(varBind)
-            for idx, (skip, begin, end) in enumerate(oidsList):
+            idx = bisect.bisect_left(endOids, oid)
+            while idx < len(endOids):
+                skip, begin, end = oidsList[idx]
+
                 # OID preceding range
                 if oid < begin:
                     # OID allowed, fast-forward to the start of this range
@@ -119,6 +130,7 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
 
                 # response will get out of range - skip to the next range
                 elif oid == end:
+                    idx += 1
                     continue
 
                 # OID in range
@@ -126,6 +138,9 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
                     # OID allowed, pass as-is
                     reqAclIndices.append(idx)
                     break
+
+                else:
+                    idx += 1
             else:
                 # non-matching OIDs -- block
                 val = None
@@ -219,13 +234,20 @@ def processNotificationRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     varBinds = v2c.VarBindList()
 
     for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
-        oid = varBind[0]
-        for begin, end, decision in oidsList:
+        oid, val = varBind
+        idx = bisect.bisect_left(endOids, oid)
+        while idx < len(endOids):
+            skip, begin, end = oidsList[idx]
             if begin <= oid <= end:
-                if decision == PASS:
-                    varBinds.append(varBind)
                 break
+            elif oid > end:
+                val = None
+                break
+            idx += 1
         else:
+            val = None
+
+        if val is not None:
             varBinds.append(varBind)
 
     if not varBinds:
