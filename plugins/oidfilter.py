@@ -7,6 +7,7 @@
 # SNMP Proxy Forwarder plugin module
 #
 import sys
+import bisect
 from snmpfwd.plugins import status
 from snmpfwd.error import SnmpfwdError
 from snmpfwd.log import msg
@@ -21,6 +22,7 @@ BLOCK, PASS = 0, 1
 PLUGIN_NAME = 'oidfilter'
 
 oidsList = []
+endOids = []
 
 moduleOptions = moduleOptions.split('=')
 
@@ -50,15 +52,35 @@ if moduleOptions[0] == 'config':
 
             oidsList.append((skip, begin, end))
 
-            oidsList.sort(key=lambda x: x[0])
+        oidsList.sort(key=lambda x: x[0])
 
-            skipOids = [x[0] for x in oidsList]
+        idx = 0
+        while idx < len(oidsList):
+            skip, begin, end = oidsList[idx]
+            if skip >= begin:
+                raise SnmpfwdError('%s: skip OID %s >= begin OID %s at %s' % (PLUGIN_NAME, skip, begin, configFile))
+            if end < begin:
+                raise SnmpfwdError('%s: end OID %s < begin OID %s at %s' % (PLUGIN_NAME, end, begin, configFile))
+            if idx:
+                prev_skip, prev_begin, prev_end = oidsList[idx - 1]
+                if skip <= prev_skip:
+                    raise SnmpfwdError('%s: skip OID %s not increasing at %s' % (PLUGIN_NAME, skip, configFile))
+                if begin <= prev_begin:
+                    raise SnmpfwdError('%s: begin OID %s not increasing at %s' % (PLUGIN_NAME, begin, configFile))
+                if end <= prev_end:
+                    raise SnmpfwdError('%s: end OID %s not increasing at %s' % (PLUGIN_NAME, end, configFile))
+                if begin < prev_end:
+                    raise SnmpfwdError('%s: non-adjacent end OID %s followed by begin OID %s at %s' % (PLUGIN_NAME, prev_end, begin, configFile))
 
-            if len(set(skipOids)) != len(skipOids):
-                raise SnmpfwdError('%s: duplicate skip OIDs in %s: %s' % (PLUGIN_NAME, configFile, ', '.join(set([str(x) for x in skipOids if skipOids.count(x) > 1]))))
+            idx += 1
 
-        for skip, begin, end in oidsList:
-            msg('%s: skip to %s allow from %s to %s' % (PLUGIN_NAME, skip, begin, end))
+            msg('%s: #%d skip to %s allow from %s to %s' % (PLUGIN_NAME, idx, skip, begin, end))
+
+        # cast to built-in tuple type for better comparison performance down the road
+        oidsList = [(tuple(skip), tuple(begin), tuple(end)) for skip, begin, end in oidsList]
+
+        # we use this for pivoting dichotomy search
+        endOids = [x[2] for x in oidsList]
 
     except Exception:
         raise SnmpfwdError('%s: config file load failure: %s' % (PLUGIN_NAME, sys.exc_info()[1]))
@@ -78,9 +100,16 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
 
         for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
             oid, val = v2c.apiVarBind.getOIDVal(varBind)
-            for skip, begin, end in oidsList:
+            oid = tuple(oid)
+            idx = bisect.bisect_left(endOids, oid)
+            while idx < len(endOids):
+                skip, begin, end = oidsList[idx]
                 if begin <= oid <= end:
                     break
+                elif oid > end:
+                    val = None
+                    break
+                idx += 1
             else:
                 val = None
 
@@ -109,7 +138,11 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
 
         for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
             oid, val = v2c.apiVarBind.getOIDVal(varBind)
-            for idx, (skip, begin, end) in enumerate(oidsList):
+            oid = tuple(oid)
+            idx = bisect.bisect_left(endOids, oid)
+            while idx < len(endOids):
+                skip, begin, end = oidsList[idx]
+
                 # OID preceding range
                 if oid < begin:
                     # OID allowed, fast-forward to the start of this range
@@ -119,6 +152,7 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
 
                 # response will get out of range - skip to the next range
                 elif oid == end:
+                    idx += 1
                     continue
 
                 # OID in range
@@ -126,6 +160,9 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
                     # OID allowed, pass as-is
                     reqAclIndices.append(idx)
                     break
+
+                else:
+                    idx += 1
             else:
                 # non-matching OIDs -- block
                 val = None
@@ -219,13 +256,21 @@ def processNotificationRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     varBinds = v2c.VarBindList()
 
     for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
-        oid = varBind[0]
-        for begin, end, decision in oidsList:
+        oid, val = varBind
+        oid = tuple(oid)
+        idx = bisect.bisect_left(endOids, oid)
+        while idx < len(endOids):
+            skip, begin, end = oidsList[idx]
             if begin <= oid <= end:
-                if decision == PASS:
-                    varBinds.append(varBind)
                 break
+            elif oid > end:
+                val = None
+                break
+            idx += 1
         else:
+            val = None
+
+        if val is not None:
             varBinds.append(varBind)
 
     if not varBinds:

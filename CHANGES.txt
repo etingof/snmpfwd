@@ -4,6 +4,13 @@ Revision 0.2.0, released XX-05-2017
 
 - Server message classifiers made available at the client side
   for message routing purposes
+- Examples and docs on transparent proxy mode and running at
+  secondary interfaces added
+- Performance of the "oidfilter" plugin improved on large
+  access lists by introducing dichotomy search and operating
+  on built-in "tuple" type
+- Enforced "oidfilter" configuration consistency by adding
+  a bunch of load-time checks
 
 Revision 0.1.0, released 07-05-2017
 -----------------------------------
