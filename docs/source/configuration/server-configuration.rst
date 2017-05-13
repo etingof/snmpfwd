@@ -341,6 +341,9 @@ Example:
 Trunking options
 ----------------
 
+Trunk is a persistent TCP connection between SNMP Proxy Forwarder parts
+maintained for the purpose of relaying SNMP messages.
+
 *trunk-bind-address*
 ++++++++++++++++++++
 
@@ -351,6 +354,20 @@ Local network endpoint address to bind trunk connection to.
 
 Remote network endpoint address to connect to when establishing trunk connection.
 
+*trunk-ping-period*
++++++++++++++++++++
+
+Enables trunk keep alive communication every *N* seconds. Trunk is terminated
+and re-established if trunking peer fails to acknowledge the keep alive message
+within the *N* seconds time period.
+
+The value of *0* disables trunk keep alive messaging.
+
+.. note::
+
+    Each side of the trunk can monitor trunk connection independently of
+    its peer guided by its own *trunk-ping-period* option.
+
 *trunk-connection-mode*
 +++++++++++++++++++++++
 
@@ -358,6 +375,10 @@ Trunk connection mode: *client* or *server*. Determines the originator
 of the trunk connection. When in *client* mode, actively tries to establish
 and maintain running connection with a peer. When in *server* mode, opens
 TCP port and listens at it for *client* connections.
+
+.. note::
+
+    There is no correlation between SNMP entity and trunk connection roles.
 
 *trunk-crypto-key*
 ++++++++++++++++++

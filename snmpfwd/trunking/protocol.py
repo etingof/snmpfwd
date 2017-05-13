@@ -13,11 +13,18 @@ from snmpfwd.error import SnmpfwdError
 
 PROTOCOL_VERSION = 1
 
+MSG_TYPE_REQUEST = 0
+MSG_TYPE_RESPONSE = 1
+MSG_TYPE_ANNOUNCEMENT = 2
+MSG_TYPE_PING = 3
+MSG_TYPE_PONG = 4
+
+
 class Message(univ.Sequence):
     componentType = namedtype.NamedTypes(
         namedtype.NamedType('version', univ.Integer()),
         namedtype.NamedType('msg-id', univ.Integer()),
-        namedtype.NamedType('content-id', univ.Integer(namedValues=namedval.NamedValues(('request', 0), ('response', 1), ('announcement', 2)))),
+        namedtype.NamedType('content-id', univ.Integer(namedValues=namedval.NamedValues(('request', MSG_TYPE_REQUEST), ('response', MSG_TYPE_RESPONSE), ('announcement', MSG_TYPE_ANNOUNCEMENT), ('ping', MSG_TYPE_PING), ('pong', MSG_TYPE_PONG)))),
         namedtype.NamedType('payload', univ.OctetString())
     )
 
@@ -56,10 +63,25 @@ class Announcement(univ.Sequence):
         namedtype.NamedType('trunk-id', univ.OctetString())
     )
 
+
+class Ping(univ.Sequence):
+    componentType = namedtype.NamedTypes(
+        namedtype.NamedType('serial', univ.Integer())
+    )
+
+
+class Pong(univ.Sequence):
+    componentType = namedtype.NamedTypes(
+        namedtype.NamedType('serial', univ.Integer())
+    )
+
+
 pduMap = {
-    0: Request(),
-    1: Response(),
-    2: Announcement()
+    MSG_TYPE_REQUEST: Request(),
+    MSG_TYPE_RESPONSE: Response(),
+    MSG_TYPE_ANNOUNCEMENT: Announcement(),
+    MSG_TYPE_PING: Ping(),
+    MSG_TYPE_PONG: Pong(),
 }
 
 
@@ -122,9 +144,41 @@ def prepareAnnouncementData(trunkId, secret):
     return encoder.encode(msg)
 
 
+def _preparePingPongData(reqType, msgId, serial, secret):
+    msg = Message()
+    msg['version'] = PROTOCOL_VERSION
+    msg['msg-id'] = msgId
+    msg['content-id'] = reqType
+
+    if msg['content-id'] == MSG_TYPE_PING:
+        r = Ping()
+    elif msg['content-id'] == MSG_TYPE_PONG:
+        r = Pong()
+    else:
+        raise SnmpfwdError('not a ping-pong message')
+
+    r['serial'] = serial
+
+    msg['payload'] = encoder.encode(r)
+    if secret:
+        msg['payload'] = crypto.encrypt(secret, encoder.encode(r))
+    else:
+        msg['payload'] = encoder.encode(r)
+    return encoder.encode(msg)
+
+
+def preparePingData(msgId, serial, secret):
+    return _preparePingPongData(MSG_TYPE_PING, msgId, serial, secret)
+
+
+def preparePongData(msgId, serial, secret):
+    return _preparePingPongData(MSG_TYPE_PONG, msgId, serial, secret)
+
+
 def prepareDataElements(octets, secret):
     try:
         msg, octets = decoder.decode(octets, asn1Spec=Message())
+
     except SubstrateUnderrunError:
         return None, None, None, octets
 
@@ -138,7 +192,7 @@ def prepareDataElements(octets, secret):
 
     rsp = {}
 
-    if msg['content-id'] == 0:     # request
+    if msg['content-id'] == MSG_TYPE_REQUEST:
         for k in ('snmp-engine-id',
                   'snmp-transport-domain',
                   'snmp-peer-address', 'snmp-peer-port',
@@ -152,14 +206,20 @@ def prepareDataElements(octets, secret):
 
         rsp['snmp-pdu'], _ = decoder.decode(r['snmp-pdu'], asn1Spec=rfc1905.PDUs())
 
-    elif msg['content-id'] == 1:   # response
+    elif msg['content-id'] == MSG_TYPE_RESPONSE:
         rsp['error-indication'] = r['error-indication']
         if not r['error-indication'] and r['snmp-pdu']:
             rsp['snmp-pdu'], _ = decoder.decode(r['snmp-pdu'], asn1Spec=rfc1905.PDUs())
 
-    elif msg['content-id'] == 2:   # announcement
+    elif msg['content-id'] == MSG_TYPE_ANNOUNCEMENT:
         rsp['trunk-id'] = r['trunk-id']
-        
+
+    elif msg['content-id'] == MSG_TYPE_PING:
+        rsp['serial'] = r['serial']
+
+    elif msg['content-id'] == MSG_TYPE_PONG:
+        rsp['serial'] = r['serial']
+
     if 'snmp-pdu' in rsp:
         rsp['snmp-pdu'] = rsp['snmp-pdu'].getComponent()
 

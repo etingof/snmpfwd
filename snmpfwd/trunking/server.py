@@ -14,11 +14,12 @@ from pyasn1.compat.octets import null
 
 
 class TrunkingSuperServer(asyncore.dispatcher):
-    def __init__(self, localEndpoint, secret, dataCbFun, ctlCbFun):
+    def __init__(self, localEndpoint, secret, dataCbFun, ctlCbFun, ctlCbCtx):
         self.__localEndpoint = localEndpoint
         self.__secret = secret
         self.__dataCbFun = dataCbFun
         self.__ctlCbFun = ctlCbFun
+        self.__ctlCbCtx = ctlCbCtx
         asyncore.dispatcher.__init__(self)
 
         try: 
@@ -57,7 +58,7 @@ class TrunkingSuperServer(asyncore.dispatcher):
 
         TrunkingServer(sock,
                        self.__localEndpoint, remoteEndpoint, self.__secret,
-                       self.__dataCbFun, self.__ctlCbFun)
+                       self.__dataCbFun, self.__ctlCbFun, self.__ctlCbCtx)
         
     def handle_error(self, *info):
         exc_info = sys.exc_info()
@@ -70,12 +71,13 @@ class TrunkingSuperServer(asyncore.dispatcher):
 
 class TrunkingServer(asyncore.dispatcher_with_send):
     def __init__(self, sock, localEndpoint, remoteEndpoint, secret,
-                 dataCbFun, ctlCbFun):
+                 dataCbFun, ctlCbFun, ctlCbCtx):
         self.__localEndpoint = localEndpoint
         self.__remoteEndpoint = remoteEndpoint
         self.__secret = secret
         self.__dataCbFun = dataCbFun
         self.__ctlCbFun = ctlCbFun
+        self.__ctlCbCtx = ctlCbCtx
         self.__pendingReqs = {}
         self.__pendingCounter = 0
         self.__input = null
@@ -110,7 +112,15 @@ class TrunkingServer(asyncore.dispatcher_with_send):
 
     def sendRsp(self, msgId, rsp):
         self.send(protocol.prepareResponseData(msgId, rsp, self.__secret))
-        
+
+    def sendPing(self, serial, cbFun, cbCtx):
+        msgId = next.getId()
+        self.send(protocol.preparePingData(msgId, serial, self.__secret))
+        self.__pendingReqs[msgId] = cbFun, cbCtx
+
+    def __ackPingCbFun(self, msgId, req):
+        self.send(protocol.preparePongData(msgId, req['serial'], self.__secret))
+
     # asyncore API
 
     def handle_read(self):
@@ -132,20 +142,26 @@ class TrunkingServer(asyncore.dispatcher_with_send):
 
             self.__pendingCounter = 0
 
-            if contentId == 0:   # request
+            if contentId == protocol.MSG_TYPE_REQUEST:
                 self.__dataCbFun(self, msgId, msg)
-            elif contentId == 1:  # response
+            elif contentId == protocol.MSG_TYPE_RESPONSE:
                 if msgId in self.__pendingReqs:
                     cbFun, cbCtx = self.__pendingReqs.pop(msgId)
                     cbFun(msg, cbCtx)
-            elif contentId == 2:  # announcement
-                self.__ctlCbFun(self, msg)
+            elif contentId == protocol.MSG_TYPE_PING:
+                    self.__ackPingCbFun(msgId, msg)
+            elif contentId == protocol.MSG_TYPE_PONG:
+                if msgId in self.__pendingReqs:
+                    cbFun, cbCtx = self.__pendingReqs.pop(msgId)
+                    cbFun(msg, cbCtx)
+            elif contentId == protocol.MSG_TYPE_ANNOUNCEMENT:
+                self.__ctlCbFun(self, msg, self.__ctlCbCtx)
             else:
                 log.msg('unknown message content-id %s from %s ignored' % (contentId, self))
                 
     def handle_close(self):
         log.msg('%s: connection closed' % (self,))
-        self.__ctlCbFun(self)
+        self.__ctlCbFun(self, {}, self.__ctlCbCtx)
         self.close()
         
     def handle_error(self, *info):

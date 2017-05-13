@@ -316,10 +316,28 @@ class Config(object):
         while scope:
             obj = self.traverse([self.objects], scope)
             if obj and attr in obj:
+                expect = kwargs.get('expect')
+
                 if 'vector' in kwargs:
-                    return obj[attr]
+                    if expect:
+                        try:
+                            return [expect(x) for x in obj[attr]]
+                        except Exception:
+                            raise error.SnmpfwdError('%s value casting error at scope "%s" attribute "%s"' % (self, '.'.join(nodes), attr))
+                    else:
+                        return obj[attr]
                 else:
-                    return obj[attr] and obj[attr][0] or ''
+                    if obj[attr]:
+                        if expect:
+                            try:
+                                return expect(obj[attr][0])
+                            except Exception:
+                                raise error.SnmpfwdError('%s value casting error at scope "%s" attribute "%s"' % (self, '.'.join(nodes), attr))
+                        else:
+                            return obj[attr][0]
+                    else:
+                        return ''
+
             scope = scope[:-1]
 
         if 'default' in kwargs:

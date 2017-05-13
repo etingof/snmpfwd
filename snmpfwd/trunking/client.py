@@ -55,6 +55,14 @@ class TrunkingClient(asyncore.dispatcher_with_send):
             trunkId, self.__secret
         )
 
+    def sendPing(self, serial, cbFun, cbCtx):
+        msgId = next.getId()
+        self.send(protocol.preparePingData(msgId, serial, self.__secret))
+        self.__pendingReqs[msgId] = cbFun, cbCtx
+
+    def __ackPingCbFun(self, msgId, req):
+        self.send(protocol.preparePongData(msgId, req['serial'], self.__secret))
+
     def __str__(self):
         return '%s at %s, peer %s' % (self.__class__.__name__, ':'.join([str(x) for x in self.__localEndpoint]), ':'.join([str(x) for x in self.__remoteEndpoint]))
 
@@ -97,9 +105,15 @@ class TrunkingClient(asyncore.dispatcher_with_send):
 
             self.__pendingCounter = 0
 
-            if contentId == 0:    # request
+            if contentId == protocol.MSG_TYPE_REQUEST:
                 self.__dataCbFun(self, msgId, msg)
-            elif contentId == 1:  # response
+            elif contentId == protocol.MSG_TYPE_RESPONSE:
+                if msgId in self.__pendingReqs:
+                    cbFun, cbCtx = self.__pendingReqs.pop(msgId)
+                    cbFun(msg, cbCtx)
+            elif contentId == protocol.MSG_TYPE_PING:
+                    self.__ackPingCbFun(msgId, msg)
+            elif contentId == protocol.MSG_TYPE_PONG:
                 if msgId in self.__pendingReqs:
                     cbFun, cbCtx = self.__pendingReqs.pop(msgId)
                     cbFun(msg, cbCtx)

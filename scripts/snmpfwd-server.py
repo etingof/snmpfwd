@@ -753,16 +753,21 @@ def main():
                 trunkId,
                 getTrunkAddr(cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath)),
                 getTrunkAddr(cfgTree.getAttrValue('trunk-peer-address', *trunkCfgPath), 30201),
+                cfgTree.getAttrValue('trunk-ping-period', *trunkCfgPath, default=0, expect=int),
                 secret
             )
             log.msg('new trunking client from %s to %s' % (cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath), cfgTree.getAttrValue('trunk-peer-address', *trunkCfgPath)))
         if connectionMode == 'server':
             trunkingManager.addServer(
                 getTrunkAddr(cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath), 30201),
+                cfgTree.getAttrValue('trunk-ping-period', *trunkCfgPath, default=0, expect=int),
                 secret
             )
             log.msg('new trunking server at %s' % (cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath)))
 
+    transportDispatcher.registerTimerCbFun(
+        trunkingManager.setupTrunks, random.randrange(1, 5)
+    )
     transportDispatcher.registerTimerCbFun(
         trunkingManager.monitorTrunks, random.randrange(1, 5)
     )
