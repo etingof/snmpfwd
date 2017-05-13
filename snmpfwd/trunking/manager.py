@@ -15,6 +15,10 @@ class TrunkingManager(object):
         self.__runningServersConnMap = {}
         self.__runningClientsTrunkMap = {}
         self.__runningClientsConnMap = {}
+        self.__pingPeriods = {}
+        self.__upcomingPings = {}
+        self.__unconfirmedPings = {}
+        self.__serial = 0
         self.__dataCbFun = dataCbFun
 
     def sendReq(self, trunkId, req, cbFun, cbCtx):
@@ -37,13 +41,14 @@ class TrunkingManager(object):
 
         return trunk.sendRsp(msgId, rsp)
 
-    def monitorTrunks(self, timeNow):
+    def setupTrunks(self, timeNow):
         for trunkId in self.__clients:
             if trunkId in self.__runningClientsTrunkMap and \
                     not self.__runningClientsTrunkMap[trunkId].isUp:
                 self.__runningClientsTrunkMap[trunkId].close()
                 del self.__runningClientsConnMap[self.__runningClientsTrunkMap[trunkId]]
                 del self.__runningClientsTrunkMap[trunkId]
+
             if trunkId not in self.__runningClientsTrunkMap:
                 self.__runningClientsTrunkMap[trunkId] = client.TrunkingClient(
                     *self.__clients[trunkId]
@@ -51,10 +56,53 @@ class TrunkingManager(object):
                 self.__runningClientsConnMap[self.__runningClientsTrunkMap[trunkId]] = trunkId
                 self.__runningClientsTrunkMap[trunkId].sendAnnouncement(trunkId)
 
-    def addClient(self, trunkId, localEndpoint, remoteEndpoint, secret):
+    def __monitorTrunksCbFun(self, msg, cbCtx):
+        trunkId, expectedSerial = cbCtx
+        if msg['serial'] == expectedSerial:
+            if trunkId in self.__unconfirmedPings:
+                del self.__unconfirmedPings[trunkId]
+
+    def __monitorTrunks(self, timeNow, runningConnections, runningConnectionsMap):
+        for trunkId in tuple(runningConnections):
+            pingPeriod = self.__pingPeriods[trunkId]
+            if not pingPeriod:
+                continue
+
+            nextPingAt = self.__upcomingPings.get(trunkId, timeNow)
+
+            if nextPingAt > timeNow:
+                continue
+
+            self.__upcomingPings[trunkId] = timeNow + pingPeriod
+
+            connection = runningConnections[trunkId]
+
+            if trunkId in self.__unconfirmedPings:
+                log.msg('closing unresponsive trunk %s %s' % (trunkId, connection))
+                connection.close()
+                del runningConnectionsMap[connection]
+                del runningConnections[trunkId]
+                del self.__unconfirmedPings[trunkId]
+                continue
+
+            connection.sendPing(self.__serial, self.__monitorTrunksCbFun, (trunkId, self.__serial))
+            self.__unconfirmedPings[trunkId] = True
+
+        self.__serial += 1
+
+    def monitorTrunks(self, timeNow):
+        self.__monitorTrunks(
+            timeNow, self.__runningClientsTrunkMap, self.__runningClientsConnMap
+        )
+        self.__monitorTrunks(
+            timeNow, self.__runningServersTrunkMap, self.__runningServersConnMap
+        )
+
+    def addClient(self, trunkId, localEndpoint, remoteEndpoint, pingPeriod, secret):
         if trunkId in self.__clients or trunkId in self.__runningServersTrunkMap:
             raise error.SnmpfwdError('Trunk %s already registered' % trunkId)
         self.__clients[trunkId] = localEndpoint, remoteEndpoint, secret, self.__proxyDataCbFun
+        self.__pingPeriods[trunkId] = pingPeriod
 
     def __proxyDataCbFun(self, connection, msgId, msg):
         if connection in self.__runningServersConnMap:
@@ -67,9 +115,10 @@ class TrunkingManager(object):
 
         self.__dataCbFun(trunkId, msgId, msg)
         
-    def __ctlCbFun(self, connection, msg=None):
+    def __ctlCbFun(self, connection, msg, cbCtx):
         if msg:
             trunkId = str(msg['trunk-id'])
+            pingPeriod = cbCtx
             if trunkId in self.__runningServersTrunkMap or \
                     trunkId in self.__runningClientsTrunkMap:
                 log.msg('duplicate trunk %s during negotiation with %s' % (trunkId, connection))
@@ -79,6 +128,7 @@ class TrunkingManager(object):
             log.msg('registering connection %s as trunk %s' % (connection, trunkId))        
             self.__runningServersTrunkMap[trunkId] = connection
             self.__runningServersConnMap[connection] = trunkId
+            self.__pingPeriods[trunkId] = pingPeriod
 
         else:
             if connection in self.__runningServersConnMap:
@@ -91,7 +141,7 @@ class TrunkingManager(object):
             del self.__runningServersTrunkMap[trunkId]
             del self.__runningServersConnMap[connection]
 
-    def addServer(self, localEndpoint, secret):
+    def addServer(self, localEndpoint, pingPeriod, secret):
         server.TrunkingSuperServer(
-            localEndpoint, secret, self.__proxyDataCbFun, self.__ctlCbFun
+            localEndpoint, secret, self.__proxyDataCbFun, self.__ctlCbFun, pingPeriod
         )
