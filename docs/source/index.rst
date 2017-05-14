@@ -2,12 +2,32 @@
 SNMP Proxy Forwarder
 ====================
 
-The SNMP Proxy forwarder tool works as an application-level SNMP proxy
-logically split onto two parts: server and client. The server part
+The SNMP Proxy Forwarder tool is a standards-compliant, flexible,
+multiprotocol SNMP proxy implementation.
+
+Key features:
+
+* Complete SNMPv1/v2c/v3 support with built-in protocol and transport
+  translation capabilities
+* Forwards SNMP commands and notifications
+* Maintains multiple independent SNMP engines and network transports
+* Split client and server parts
+* Configurable SNMP PDU routing policy
+* Extension modules supporting SNMP PDU filtering and on-the-fly modification
+* Supports transparent proxy operation (Linux only)
+* Works on Linux, Windows and OS X
+
+Architecture
+------------
+
+The otherwise monolithic SNMP proxy is split onto two parts: server and client.
+For SNMP commands, server part
 acts as `SNMP agent <https://tools.ietf.org/html/rfc3411#section-3.1.3.2>`_
 while the client part is `SNMP manager <https://tools.ietf.org/html/rfc3411#section-3.1.3.1>`_.
-These parts maintain persistent, authenticated and encrypted connections with
-each other for the purpose of passing SNMP messages back and forth.
+For SNMP notifications server and client roles are reversed.
+The server and client parts maintain persistent, authenticated and encrypted
+connections with each other for the purpose of passing SNMP messages back
+and forth.
 
 Server and client parts may reside at different networks thus improving
 security and network isolation.
@@ -25,12 +45,12 @@ chose SNMP agent to forward SNMP message to depending on the original
 destination address at which server part received SNMP message in the
 first place.
 
-Besides SNMP message routing, server part can modify SNMP messages
-before passing them on to clients. Changes may apply to both incoming
-and outgoing SNMP messages. The logic powering SNMP message modification
+Besides SNMP message routing, both server and client parts can modify
+SNMP PDU messages before passing them on. Changes may apply to both incoming
+and outgoing SNMP PDU messages. The logic powering SNMP message modification
 can be expressed in form of isolated `Python <http://www.python.org>`_
-snippets called *plugins*. Users can implement their own plugins and let
-server part of SNMP proxy forwarder calling them.
+snippets called :ref:`plugins <plugins>`. Users can implement their own
+plugins and let SNMP Proxy Forwarder calling them.
 
 Configuration
 -------------
