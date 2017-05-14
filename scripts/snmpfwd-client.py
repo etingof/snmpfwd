@@ -461,7 +461,7 @@ def main():
 
         srvClassIdList.append((srvClassId, re.compile(k)))
 
-    duplicates = {}
+    del duplicates
 
     for pluginCfgPath in cfgTree.getPathsToAttr('using-plugin-id-list'):
         pluginIdList = cfgTree.getAttrValue('using-plugin-id-list', *pluginCfgPath, **dict(vector=True))
@@ -482,8 +482,6 @@ def main():
                                 sys.exit(-1)
 
                         pluginIdMap[k] = pluginIdList
-
-    del duplicates
 
     for routeCfgPath in cfgTree.getPathsToAttr('using-snmp-peer-id-list'):
         peerIdList = cfgTree.getAttrValue('using-snmp-peer-id-list', *routeCfgPath, **dict(vector=True))
