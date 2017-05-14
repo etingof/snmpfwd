@@ -289,8 +289,19 @@ Example:
       snmp-credentials-id: snmpv3-agent-at-localhost
     }
 
+.. _plugin-options-server:
+
 Plugin options
 --------------
+
+The plugin options instantiate a :ref:`plugin <plugins>` file with
+specific configuration options and assign an identifier to it. You
+can have many differently configured instances of the same plugin
+module in the system.
+
+.. note::
+
+    Client-side plugins are also :ref:`available <plugin-options-client>`.
 
 *plugin-modules-path-list*
 ++++++++++++++++++++++++++
@@ -593,8 +604,8 @@ one of the `snmp-peer-id`_ in the list.
 *using-plugin-id-list*
 ++++++++++++++++++++++
 
-Invoke each of the `plugin-id`_ in the list in order and and pass incoming
-SNMP message from one to the other.
+Invoke each of the `plugin-id`_ in the list in order passing request and response
+SNMP PDUs from one :ref:`plugin <plugins>` to the other.
 
 Plugins may modify the message in any way and even block it from further
 propagation in which case SNMP message will be dropped.
@@ -606,7 +617,7 @@ Unique identifier matching a group of *matching-\** identifiers. Specifically,
 these are: `matching-snmp-context-id-list`_, `matching-snmp-content-id-list`_,
 `matching-snmp-credentials-id-list`_ and `matching-snmp-peer-id-list`_.
 
-Incoming (and possibly modified) SNMP message will be passed to to each
+Incoming (and possibly modified) SNMP message will be forwarded to each
 `trunk-id`_ present in the list.
 
 Example:

@@ -46,8 +46,9 @@ Server is configured to:
 Plugin configuration
 ++++++++++++++++++++
 
-The *oidfilter* plugin is configured to pass just a few specific OIDs and branches
-blocking the rest of the MIB tree that backend SNMP agent serve.
+The *oidfilter* plugin is configured at the server side to pass just a
+few specific OIDs and branches blocking the rest of the MIB tree that
+backend SNMP agent serve.
 
 .. literalinclude:: /../../conf/command-forwarding-filtering/plugins/oidfilter.conf
 

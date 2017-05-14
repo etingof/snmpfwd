@@ -92,7 +92,7 @@ def _format(template, pdu, context):
     for key, value in context.items():
         token = '${%s}' % key
         if token in template:
-            template = template.replace(token, value)
+            template = template.replace(token, str(value))
 
     token = '${snmp-var-binds}'
     if token in template:

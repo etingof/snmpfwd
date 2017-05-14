@@ -43,8 +43,8 @@ Server is configured to:
 Plugin configuration
 ++++++++++++++++++++
 
-The *rewrite* plugin is configured to add a note into sysDescr.0 and nullify all values
-in the "system" branch.
+The *rewrite* plugin is configured at the server part to add a note into
+sysDescr.0 and nullify all values in the "system" branch.
 
 .. literalinclude:: /../../conf/command-forwarding-rewriting-response/plugins/rewrite.conf
 

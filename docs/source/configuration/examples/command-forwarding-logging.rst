@@ -20,25 +20,24 @@ Server is configured to:
 * respond to queries performed over SNMPv2c
 * forward all queries to snmpfwd client through an unencrypted trunk connection
   running in *client* mode
-* run command request PDUs through the *logger* plugin
 
-.. literalinclude:: /../../conf/command-forwarding-rewriting-response/server.conf
+.. literalinclude:: /../../conf/command-forwarding-logging/server.conf
 
-:download:`Download </../../conf/command-forwarding-with-logging/server.conf>` server configuration file.
+:download:`Download </../../conf/command-forwarding-logging/server.conf>` server configuration file.
 
 Plugin configuration
 ++++++++++++++++++++
 
-The *logger* plugin is configured to:
+The *logger* plugin is configured at the client side to:
 
-* write key facts about passing SNMP response PDU into a local file
+* write key facts about passing SNMP GET request and RESPONSE PDUs into a local file
 * double-quote var-bindings values
 * autorotate log file daily
 * keep no more than 30 log files
 
-.. literalinclude:: /../../conf/command-forwarding-with-logging/plugins/logger.conf
+.. literalinclude:: /../../conf/command-forwarding-logging/plugins/logger.conf
 
-:download:`Download </../../conf/command-forwarding-with-logging/plugins/logger.conf>` plugin configuration file.
+:download:`Download </../../conf/command-forwarding-logging/plugins/logger.conf>` plugin configuration file.
 
 Client configuration
 --------------------
@@ -47,9 +46,10 @@ Client is configured to:
 
 * listen on server-mode unencrypted trunk connection
 * process all incoming SNMP messages in the same way
+* run command request (and response) PDUs through the *logger* plugin
 * place inbound PDUs into SNMP v2c messages and forward them to public
   SNMP agent running at *demo.snmplabs.com*
 
-.. literalinclude:: /../../conf/command-forwarding-with-logging/client.conf
+.. literalinclude:: /../../conf/command-forwarding-logging/client.conf
 
-:download:`Download </../../conf/command-forwarding-with-logging/client.conf>` client configuration file.
+:download:`Download </../../conf/command-forwarding-logging/client.conf>` client configuration file.
