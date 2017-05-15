@@ -5,6 +5,7 @@
 # Copyright (c) 2014-2017, Ilya Etingof <etingof@gmail.com>
 # License: https://github.com/etingof/snmpfwd/blob/master/LICENSE.txt
 #
+import os
 import sys
 import getopt
 import traceback
@@ -32,12 +33,15 @@ from pysnmp import debug as pysnmp_debug
 from snmpfwd import macro
 from snmpfwd.error import SnmpfwdError
 from snmpfwd import log, daemon, cparser
+from snmpfwd.plugins.manager import PluginManager
+from snmpfwd.plugins import status
 from snmpfwd.trunking.manager import TrunkingManager
 
 # Settings
 PROGRAM_NAME = 'snmpfwd-client'
 CONFIG_FILE = '/usr/local/etc/snmpfwd/client.cfg'
 CONFIG_VERSION = '2'
+PLUGIN_API_VERSION = 2
 
 authProtocols = {
   'MD5': config.usmHMACMD5AuthProtocol,
@@ -181,12 +185,38 @@ def main():
     origCredIdList = []
     srvClassIdList = []
     peerIdMap = {}
+    pluginIdMap = {}
     routingMap = {}
     engineIdMap = {}
 
     transportDispatcher = AsynsockDispatcher()
     transportDispatcher.registerRoutingCbFun(lambda td, t, d: td)
     transportDispatcher.setSocketMap()  # use global asyncore socket map
+
+    pluginManager = PluginManager(
+        macro.expandMacros(
+            cfgTree.getAttrValue('plugin-modules-path-list', '', default=[], vector=True),
+            {'config-dir': os.path.dirname(cfgFile)}
+        ),
+        progId=PROGRAM_NAME,
+        apiVer=PLUGIN_API_VERSION
+    )
+
+    for pluginCfgPath in cfgTree.getPathsToAttr('plugin-id'):
+        pluginId = cfgTree.getAttrValue('plugin-id', *pluginCfgPath)
+        pluginMod = cfgTree.getAttrValue('plugin-module', *pluginCfgPath)
+        pluginOptions = macro.expandMacro(
+            cfgTree.getAttrValue('plugin-options', *pluginCfgPath, **dict(default='')),
+            {'config-dir': os.path.dirname(cfgFile)}
+        )
+
+        log.msg('configuring plugin ID %s (at %s) from module %s with options %s...' % (pluginId, '.'.join(pluginCfgPath), pluginMod, pluginOptions or '<none>'))
+        try:
+            pluginManager.loadPlugin(pluginId, pluginMod, pluginOptions)
+
+        except SnmpfwdError:
+            log.msg('ERROR: plugin %s not loaded: %s' % (pluginId, sys.exc_info()[1]))
+            sys.exit(-1)
 
     for peerEntryPath in cfgTree.getPathsToAttr('snmp-peer-id'):
         peerId = cfgTree.getAttrValue('snmp-peer-id', *peerEntryPath)
@@ -433,6 +463,26 @@ def main():
 
     del duplicates
 
+    for pluginCfgPath in cfgTree.getPathsToAttr('using-plugin-id-list'):
+        pluginIdList = cfgTree.getAttrValue('using-plugin-id-list', *pluginCfgPath, **dict(vector=True))
+        log.msg('configuring plugin ID(s) %s (at %s)...' % (','.join(pluginIdList), '.'.join(pluginCfgPath)))
+        for credId in cfgTree.getAttrValue('matching-orig-snmp-peer-id-list', *pluginCfgPath, **dict(vector=True)):
+            for srvClassId in cfgTree.getAttrValue('matching-server-classification-id-list', *pluginCfgPath, **dict(vector=True)):
+                for trunkId in cfgTree.getAttrValue('matching-trunk-id-list', *pluginCfgPath, **dict(vector=True)):
+                    k = credId, srvClassId, trunkId
+                    if k in pluginIdMap:
+                        log.msg('duplicate snmp-credentials-id=%s and server-classification-id=%s and trunk-id=%s at plugin-id %s' % (credId, srvClassId, trunkId, ','.join(pluginIdList)))
+                        sys.exit(-1)
+                    else:
+                        log.msg('configuring plugin(s) %s (at %s), composite key: %s' % (','.join(pluginIdList), '.'.join(pluginCfgPath), '/'.join(k)))
+
+                        for pluginId in pluginIdList:
+                            if not pluginManager.hasPlugin(pluginId):
+                                log.msg('ERROR: undefined plugin ID %s referenced at %s' % (pluginId, '.'.join(pluginCfgPath)))
+                                sys.exit(-1)
+
+                        pluginIdMap[k] = pluginIdList
+
     for routeCfgPath in cfgTree.getPathsToAttr('using-snmp-peer-id-list'):
         peerIdList = cfgTree.getAttrValue('using-snmp-peer-id-list', *routeCfgPath, **dict(vector=True))
         log.msg('configuring routing entry with peer IDs %s (at %s)...' % (','.join(peerIdList), '.'.join(routeCfgPath)))
@@ -441,7 +491,7 @@ def main():
                 for trunkId in cfgTree.getAttrValue('matching-trunk-id-list', *routeCfgPath, **dict(vector=True)):
                     k = credId, srvClassId, trunkId
                     if k in routingMap:
-                        log.msg('duplicate credentials-id=%s and trunk-id and server-classification-id %s at peer-id %s' % (credId, trunkId, ','.join(peerIdList)))
+                        log.msg('duplicate snmp-credentials-id=%s and server-classification-id=%s and trunk-id=%s at snmp-peer-id %s' % (credId, srvClassId, trunkId, ','.join(peerIdList)))
                         sys.exit(-1)
                     else:
                         for peerId in peerIdList:
@@ -455,13 +505,39 @@ def main():
         return not pdu and '<none>' or ';'.join(['%s:%s' % (vb[0].prettyPrint(), vb[1].prettyPrint()) for vb in v2c.apiPDU.getVarBinds(pdu)])
 
     def __rspCbFun(snmpEngine, sendRequestHandle, errorIndication, rspPDU, cbCtx):
-        trunkId, msgId, trunkReq = cbCtx
+        trunkId, msgId, trunkReq, pluginIdList, snmpReqInfo, reqCtx = cbCtx
 
         trunkRsp = {}
 
         if errorIndication:
             log.msg('SNMP error returned for message ID %s received from trunk %s: %s' % (msgId, trunkId, errorIndication))
             trunkRsp['error-indication'] = errorIndication
+
+        reqPdu = trunkReq['snmp-pdu']
+
+        if rspPDU:
+            for pluginId in pluginIdList:
+                if reqPdu.tagSet in rfc3411.notificationClassPDUs:
+                    st, rspPDU = pluginManager.processNotificationResponse(
+                        pluginId, snmpEngine, rspPDU, snmpReqInfo, reqCtx
+                    )
+
+                elif reqPdu.tagSet not in rfc3411.unconfirmedClassPDUs:
+                    st, rspPDU = pluginManager.processCommandResponse(
+                        pluginId, snmpEngine, rspPDU, snmpReqInfo, reqCtx
+                    )
+                else:
+                    log.msg('ignoring unsupported PDU')
+                    break
+
+                if st == status.BREAK:
+                    break
+
+                elif st == status.DROP:
+                    log.msg('received SNMP %s message, snmp-var-binds=%s, plugin %s muted response' % (errorIndication and 'error' or 'response', prettyVarBinds(rspPDU), pluginId))
+                    trunkRsp['snmp-pdu'] = None
+                    trunkingManager.sendRsp(trunkId, msgId, trunkRsp)
+                    return
 
         trunkRsp['snmp-pdu'] = rspPDU
 
@@ -523,23 +599,31 @@ def main():
 
         errorIndication = None
 
+        pluginIdList = pluginIdMap.get((origPeerId, srvClassId, macro.expandMacro(trunkId, msg)))
+
         peerIdList = routingMap.get((origPeerId, srvClassId, macro.expandMacro(trunkId, msg)))
         if not peerIdList:
             log.msg('unroutable trunk message #%s from trunk %s, srv-classification-id %s, orig-peer-id %s (original SNMP info: %s)' % (msgId, trunkId, srvClassId, origPeerId or '<none>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg])))
             errorIndication = 'no route to SNMP peer configured'
 
-        cbCtx = trunkId, msgId, msg
+        cbCtx = trunkId, msgId, msg, (), {}, {}
 
         if errorIndication:
             __rspCbFun(None, None, errorIndication, None, cbCtx)
             return
 
+        log.msg('received trunk message #%s from trunk %s' % (msgId, trunkId))
+
         for peerId in peerIdList:
             peerId = macro.expandMacro(peerId, msg)
 
-            snmpEngine, contextEngineId, contextName, \
-                bindAddr, bindAddrMacro, \
-                peerAddr, peerAddrMacro = peerIdMap[peerId]
+            (snmpEngine,
+             contextEngineId,
+             contextName,
+             bindAddr,
+             bindAddrMacro,
+             peerAddr,
+             peerAddrMacro) = peerIdMap[peerId]
 
             if bindAddrMacro:
                 bindAddr = macro.expandMacro(bindAddrMacro, msg), 0
@@ -551,9 +635,47 @@ def main():
             if peerAddr:
                 q.append(peerAddr)
 
-            log.msg('received trunk message #%s from trunk %s, sending SNMP message to peer ID %s, bind-address %s, peer-address %s (original SNMP info: %s; original server classification: %s)' % (msgId, trunkId, peerId, bindAddr[0] or '<default>', peerAddr[0] or '<default>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg if x.startswith('snmp-')]), ' '.join(['%s=%s' % (x, msg[x].prettyPrint()) for x in msg if x.startswith('server-')])))
+            logMsg = 'SNMP message to peer ID %s, bind-address %s, peer-address %s (original SNMP info: %s; original server classification: %s)' % (peerId, bindAddr[0] or '<default>', peerAddr[0] or '<default>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg if x.startswith('snmp-')]), ' '.join(['%s=%s' % (x, msg[x].prettyPrint()) for x in msg if x.startswith('server-')]))
+
+            log.msg('sending %s' % logMsg)
 
             pdu = msg['snmp-pdu']
+
+            if pluginIdList:
+                snmpReqInfo = msg.copy()
+                reqCtx = {}
+
+                cbCtx = trunkId, msgId, msg, pluginIdList, snmpReqInfo, reqCtx
+
+                for pluginNum, pluginId in enumerate(pluginIdList):
+
+                    if pdu.tagSet in rfc3411.notificationClassPDUs:
+                        st, pdu = pluginManager.processNotificationRequest(
+                            pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx
+                        )
+
+                    elif pdu.tagSet not in rfc3411.unconfirmedClassPDUs:
+                        st, pdu = pluginManager.processCommandRequest(
+                            pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx
+                        )
+
+                    else:
+                        log.msg('ignoring unsupported PDU')
+                        break
+
+                    if st == status.BREAK:
+                        cbCtx = trunkId, msgId, msg, pluginIdList[:pluginNum], snmpReqInfo, reqCtx
+                        break
+
+                    elif st == status.DROP:
+                        log.msg('plugin %s muted request %s' % (pluginId, logMsg))
+                        __rspCbFun(snmpEngine, None, None, None, cbCtx)
+                        break
+
+                    elif st == status.RESPOND:
+                        log.msg('plugin %s forced immediate response to %s' % (pluginId, logMsg))
+                        __rspCbFun(snmpEngine, None, None, pdu, cbCtx)
+                        break
 
             if pdu.tagSet in rfc3411.notificationClassPDUs:
                 if pdu.tagSet in rfc3411.unconfirmedClassPDUs:

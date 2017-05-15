@@ -294,6 +294,66 @@ Example:
       snmp-peer-id: 101
     }
 
+.. _plugin-options-client:
+
+Plugin options
+--------------
+
+The plugin options instantiate a :ref:`plugin <plugins>` file with
+specific configuration options and assign an identifier to it. You
+can have many differently configured instances of the same plugin
+module in the system.
+
+.. note::
+
+    Server-side plugins are also :ref:`available <plugin-options-server>`.
+
+*plugin-modules-path-list*
+++++++++++++++++++++++++++
+
+Directory search path for plugin modules.
+
+This option can reference :ref:`config-dir <config-dir-macro>` macro.
+
+*plugin-module*
++++++++++++++++
+
+Plugin module file name to load and run (without .py).
+
+*plugin-options*
+++++++++++++++++
+
+Plugin-specific configuration option to pass to plugin.
+
+*plugin-id*
++++++++++++
+
+Unique identifier of a plugin module (`plugin-module`_) and its
+options (`plugin-options`_).
+
+This option can reference :ref:`config-dir <config-dir-macro>` macro.
+
+The *plugin-id* identifier is typically used to invoke plugin
+in the course of SNMP message processing.
+
+Example:
+
+.. code-block:: bash
+
+    rewrite-plugin {
+      plugin-module: rewrite
+      plugin-options: config=${config-dir}/plugins/rewrite.conf
+
+      plugin-id: rewrite
+    }
+
+    logging-plugin {
+      plugin-module: logger
+      plugin-options: config=/etc/snmpfwd/plugins/logger.conf
+
+      plugin-id: logger
+    }
+
 Trunking options
 ----------------
 
@@ -566,6 +626,15 @@ any of `orig-snmp-peer-id`_'s in the list.
 Evaluates to True if server SNMP request message classifiers match
 any of `server-classification-id`_'s in the list.
 
+*using-plugin-id-list*
+++++++++++++++++++++++
+
+Invoke each of the `plugin-id`_ in the list in order passing request and response
+SNMP PDUs from one :ref:`plugin <plugins>` to the other.
+
+Plugins may modify the message in any way and even block it from further
+propagation in which case SNMP message will be dropped.
+
 *using-snmp-peer-id-list*
 +++++++++++++++++++++++++
 
@@ -573,7 +642,7 @@ Unique identifier matching a group of *matching-\** identifiers. Specifically,
 these are: `matching-trunk-id-list`_, `matching-orig-snmp-peer-id-list`_ and
 `matching-server-classification-id-list`_.
 
-SNMP request message will be passed to to each `snmp-peer-id`_'a present
+SNMP request message will be sent to each `snmp-peer-id`_ present
 in the list.
 
 Example:
@@ -586,6 +655,7 @@ Example:
         matching-orig-snmp-peer-id-list: manager-123
         matching-server-classification-id-list: any-classification
 
+        using-plugin-id-list: oidfilter
         using-snmp-peer-id-list: backend-agent-A
       }
     }

@@ -80,8 +80,25 @@ global scope.
    client-configuration
    macro
 
+.. _plugins:
+
 Plugins
 -------
+
+Both :ref:`client <plugin-options-client>` and
+:ref:`server <plugin-options-server>` parts of SNMP Proxy Forwarder
+can be configured to pass PDUs through a chain of plugin modules.
+A plugin module can modify or replace passing PDU or take any other
+action of its choice.
+
+Each plugin module is a Python code snippet executing within the
+context of a single SNMP query and exposing a few entry points for
+the server or client parts of SNMP Proxy Forwarder to invoke it at
+the key points of SNMP PDU processing.
+
+You can run the same or different plugin modules at both client
+and server. The choice of plugin runner probably depends on the
+system architecture, load distribution and security considerations.
 
 .. toctree::
    :maxdepth: 2
