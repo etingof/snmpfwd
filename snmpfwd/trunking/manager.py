@@ -78,7 +78,7 @@ class TrunkingManager(object):
             connection = runningConnections[trunkId]
 
             if trunkId in self.__unconfirmedPings:
-                log.msg('closing unresponsive trunk %s %s' % (trunkId, connection))
+                log.error('closing unresponsive trunk %s %s' % (trunkId, connection))
                 connection.close()
                 del runningConnectionsMap[connection]
                 del runningConnections[trunkId]
@@ -110,7 +110,7 @@ class TrunkingManager(object):
         elif connection in self.__runningClientsConnMap:
             trunkId = self.__runningClientsConnMap[connection]
         else:
-            log.msg('data message from unknown connection %s ignored' % connection)
+            log.error('data message from unknown connection %s ignored' % connection)
             return
 
         self.__dataCbFun(trunkId, msgId, msg)
@@ -121,11 +121,11 @@ class TrunkingManager(object):
             pingPeriod = cbCtx
             if trunkId in self.__runningServersTrunkMap or \
                     trunkId in self.__runningClientsTrunkMap:
-                log.msg('duplicate trunk %s during negotiation with %s' % (trunkId, connection))
+                log.error('duplicate trunk %s during negotiation with %s' % (trunkId, connection))
                 connection.close()
                 return
 
-            log.msg('registering connection %s as trunk %s' % (connection, trunkId))        
+            log.info('registering connection %s as trunk %s' % (connection, trunkId))
             self.__runningServersTrunkMap[trunkId] = connection
             self.__runningServersConnMap[connection] = trunkId
             self.__pingPeriods[trunkId] = pingPeriod
@@ -134,10 +134,10 @@ class TrunkingManager(object):
             if connection in self.__runningServersConnMap:
                 trunkId = self.__runningServersConnMap[connection]
             else:
-                log.msg('control message from unknown connection %s ignored' % connection)
+                log.error('control message from unknown connection %s ignored' % connection)
                 return
                 
-            log.msg('unregistering connection %s (trunk %s)' % (self.__runningServersTrunkMap[trunkId], trunkId))
+            log.info('unregistering connection %s (trunk %s)' % (self.__runningServersTrunkMap[trunkId], trunkId))
             del self.__runningServersTrunkMap[trunkId]
             del self.__runningServersConnMap[connection]
 

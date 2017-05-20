@@ -8,7 +8,11 @@ import sys
 import logging
 import socket
 from logging import handlers
-from snmpfwd import error
+from snmpfwd.error import SnmpfwdError
+
+LOG_DEBUG = 0
+LOG_INFO = 1
+LOG_ERROR = 2
 
 
 class AbstractLogger(object):
@@ -27,7 +31,7 @@ class AbstractLogger(object):
 class SyslogLogger(AbstractLogger):
     def init(self, *priv):
         if len(priv) < 1:
-            raise error.SnmpfwdError('Bad syslog params, need at least facility, also accept priority, host, port, socktype (tcp|udp)')
+            raise SnmpfwdError('Bad syslog params, need at least facility, also accept priority, host, port, socktype (tcp|udp)')
         if len(priv) < 2:
             priv = [priv[0], 'debug']
         if len(priv) < 3:
@@ -43,7 +47,7 @@ class SyslogLogger(AbstractLogger):
             handler = handlers.SysLogHandler(priv[2].startswith('/') and priv[2] or (priv[2], int(priv[3])), priv[0].lower(), len(priv) > 4 and priv[4] == 'tcp' and socket.SOCK_STREAM or socket.SOCK_DGRAM)
 
         except Exception:
-            raise error.SnmpfwdError('Bad syslog option(s): %s' % sys.exc_info()[1])
+            raise SnmpfwdError('Bad syslog option(s): %s' % sys.exc_info()[1])
         handler.setFormatter(logging.Formatter('%(asctime)s %(name)s: %(message)s'))
         self._logger.addHandler(handler)
 
@@ -51,7 +55,7 @@ class SyslogLogger(AbstractLogger):
 class FileLogger(AbstractLogger):
     def init(self, *priv):
         if not priv:
-            raise error.SnmpfwdError('Bad log file params, need filename')
+            raise SnmpfwdError('Bad log file params, need filename')
         if sys.platform[:3] == 'win':
             # fix possibly corrupted absolute windows path
             if len(priv[0]) == 1 and priv[0].isalpha() and len(priv) > 1:
@@ -71,7 +75,7 @@ class FileLogger(AbstractLogger):
             elif priv[1][-1] in ('d', 'D'):
                 maxage = ('D', int(priv[1][:-1]))
             else:
-                raise error.SnmpfwdError(
+                raise SnmpfwdError(
                     'Unknown log rotation criteria %s, use <NNN>K,M,G for size or <NNN>H,D for time limits' % priv[1]
                 )
 
@@ -84,7 +88,7 @@ class FileLogger(AbstractLogger):
                 handler = handlers.WatchedFileHandler(priv[0])
 
         except AttributeError:
-            raise error.SnmpfwdError(
+            raise SnmpfwdError(
                 'Bad log rotation criteria: %s' % sys.exc_info()[1]
             )
 
@@ -102,7 +106,7 @@ class StreamLogger(AbstractLogger):
             handler = logging.StreamHandler(self.stream)
 
         except AttributeError:
-            raise error.SnmpfwdError(
+            raise SnmpfwdError(
                 'Stream logger failure: %s' % sys.exc_info()[1]
             )
 
@@ -126,7 +130,7 @@ class NullLogger(AbstractLogger):
     def __call__(self, s):
         pass
 
-gMap = {
+methodsMap = {
     'syslog': SyslogLogger,
     'file': FileLogger,
     'stdout': StdoutLogger,
@@ -134,13 +138,48 @@ gMap = {
     'null': NullLogger
 }
 
+levelsMap = {
+    'debug': LOG_DEBUG,
+    'info': LOG_INFO,
+    'error': LOG_ERROR,
+}
+
 msg = lambda x: None
+
+logLevel = LOG_INFO
+
+
+def error(message):
+    if logLevel <= LOG_ERROR:
+      msg('ERROR: ' + message)
+
+
+def info(message):
+    if logLevel <= LOG_INFO:
+        msg(message)
+
+
+def debug(message):
+    if logLevel <= LOG_DEBUG:
+        msg(message)
+
+
+def setLevel(level):
+    global logLevel
+
+    try:
+        logLevel = levelsMap[level]
+
+    except KeyError:
+        raise SnmpfwdError('Unknown log level "%s", known levels are: %s' % (level, ', '.join(levelsMap)))
 
 
 def setLogger(progId, *priv, **options):
     global msg
-    if priv[0] in gMap:
+
+    try:
         if not isinstance(msg, AbstractLogger) or options.get('force'):
-            msg = gMap[priv[0]](progId, *priv[1:])
-    else:
-        raise error.SnmpfwdError('Unknown logging method "%s", known methods are: %s' % (priv[0], ', '.join(gMap.keys())))
+            msg = methodsMap[priv[0]](progId, *priv[1:])
+
+    except KeyError:
+        raise SnmpfwdError('Unknown logging method "%s", known methods are: %s' % (priv[0], ', '.join(methodsMap.keys())))

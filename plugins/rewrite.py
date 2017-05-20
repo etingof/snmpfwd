@@ -11,7 +11,7 @@ import sys
 import shlex
 from snmpfwd.plugins import status
 from snmpfwd.error import SnmpfwdError
-from snmpfwd.log import msg
+from snmpfwd.log import debug, info, error
 from pysnmp.proto.api import v2c
 
 hostProgs = 'snmpfwd-server', 'snmpfwd-client'
@@ -56,14 +56,14 @@ if moduleOptions[0] == 'config':
             except ValueError:
                 raise SnmpfwdError('%s: syntax error at %s:%d: %s' % (PLUGIN_NAME, configFile, lineNo + 1, sys.exc_info()[1]))
 
-            msg('%s: for OIDs like "%s" and values matching "%s" rewrite value into "%s" (max %s times)' % (PLUGIN_NAME, oidPatt, valPatt, valRepl, replCount))
+            debug('%s: for OIDs like "%s" and values matching "%s" rewrite value into "%s" (max %s times)' % (PLUGIN_NAME, oidPatt, valPatt, valRepl, replCount))
 
             rewriteList.append((re.compile(oidPatt), re.compile(valPatt), valRepl, int(replCount)))
 
     except Exception:
         raise SnmpfwdError('%s: config file load failure: %s' % (PLUGIN_NAME, sys.exc_info()[1]))
 
-msg('%s: plugin initialization complete' % PLUGIN_NAME)
+info('%s: plugin initialization complete' % PLUGIN_NAME)
 
 
 def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
