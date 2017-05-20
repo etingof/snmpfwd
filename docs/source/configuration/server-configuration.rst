@@ -10,45 +10,53 @@ Basic configuration strategy for the server part is:
 
 * Configure SNMP credentials and SNMP Agent(s) listening for SNMP
   Managers to communicate with. Each Agent is identified by
-  `snmp-credentials-id`_.
+  `snmp-credentials-id-server-option`_.
 
 * Configure SNMP contexts. Each SNMP context is identified by
-  `snmp-context-id`_ option.
+  `snmp-context-id-server-option`_ option.
 
 * Configure individual SNMP Managers or groups of Managers. Each Manager
-  or group is identified by the `snmp-peer-id`_ option.
+  or group is identified by the `snmp-peer-id-server-option`_ option.
 
 * Configure server<->client communication link(s) called "trunks". Both
   Forwarder client and server could initiate and/or receive trunking
-  connections. Each trunk is identified by a `trunk-id`_ which is used
-  for message routing. Trunk initiator is responsible for `trunk-id`_
+  connections. Each trunk is identified by a `trunk-id-server-option`_ which is used
+  for message routing. Trunk initiator is responsible for `trunk-id-server-option`_
   definition.
 
 * Optionally configure plugins. These are small Python code snippets
   capable to access/modify/block passing SNMP message. You should
   configure each module you intend to use (giving search path, module
-  file name, options) and assign it `plugin-id`_. Then you could list
+  file name, options) and assign it `plugin-id-server-option`_. Then you could list
   these IDs in the routing section.
 
-* Configure message routing in form of `matching-snmp-credentials-id-list`_,
-  `matching-snmp-peer-id-list`_, `matching-snmp-content-id-list`_ and
-  `matching-snmp-context-id-list`_ options mapped to the contents of
-  `using-trunk-id-list`_. The latter identifies Manager part(s) of
+* Configure message routing in form of `matching-snmp-credentials-id-list-server-option`_,
+  `matching-snmp-peer-id-list-server-option`_, `matching-snmp-content-id-list-server-option`_ and
+  `matching-snmp-context-id-list-server-option`_ options mapped to the contents of
+  `using-trunk-id-list-server-option`_. The latter identifies Manager part(s) of
   SNMP Forwarder to pass received SNMP message over.
+
+.. _global-options-server-chapter:
 
 Global options
 --------------
+
+.. _config-version-server-option:
 
 *config-version*
 ++++++++++++++++
 
 Configuration file language version. Currently recognized version is *2*.
 
+.. _program-name-server-option:
+
 *program-name*
 ++++++++++++++
 
 Program name to consume this configuration file. Valid values are *snmpfwd-client*
 and *snmpfwd-server*.
+
+.. _snmp-agents-options-server-chapter:
 
 SNMP agents options
 -------------------
@@ -162,7 +170,7 @@ Listen for SNMP packets at this network address. Example:
     If you want response SNMP messages to have source address of the SNMP request
     destination address (as opposed to primary network interface address when
     *snmp-bind-address* is set to *0.0.0.0*), make sure to enable the
-    `snmp-transport-options`_ = *virtual-interface* option.
+    `snmp-transport-options-server-option`_ = *virtual-interface* option.
 
 .. _snmp-security-model-server-option:
 
@@ -289,7 +297,7 @@ Example:
       snmp-credentials-id: snmpv3-agent-at-localhost
     }
 
-.. _plugin-options-server:
+.. _plugin-options-server-chapter:
 
 Plugin options
 --------------
@@ -303,6 +311,8 @@ module in the system.
 
     Client-side plugins are also :ref:`available <plugin-options-client>`.
 
+.. _plugin-modules-path-list-server-option:
+
 *plugin-modules-path-list*
 ++++++++++++++++++++++++++
 
@@ -310,21 +320,27 @@ Directory search path for plugin modules.
 
 This option can reference :ref:`config-dir <config-dir-macro>` macro.
 
+.. _plugin-module-server-option:
+
 *plugin-module*
 +++++++++++++++
 
 Plugin module file name to load and run (without .py).
+
+.. _plugin-options-server-option:
 
 *plugin-options*
 ++++++++++++++++
 
 Plugin-specific configuration option to pass to plugin.
 
+.. _plugin-id-server-option:
+
 *plugin-id*
 +++++++++++
 
-Unique identifier of a plugin module (`plugin-module`_) and its
-options (`plugin-options`_).
+Unique identifier of a plugin module (`plugin-module-server-option`_) and its
+options (`plugin-options-server-option`_).
 
 This option can reference :ref:`config-dir <config-dir-macro>` macro.
 
@@ -349,21 +365,30 @@ Example:
       plugin-id: logger
     }
 
+
+.. _trunking-options-server-chapter:
+
 Trunking options
 ----------------
 
 Trunk is a persistent TCP connection between SNMP Proxy Forwarder parts
 maintained for the purpose of relaying SNMP messages.
 
+.. _trunk-bind-address-server-option:
+
 *trunk-bind-address*
 ++++++++++++++++++++
 
 Local network endpoint address to bind trunk connection to.
 
+.. _trunk-peer-address-server-option:
+
 *trunk-peer-address*
 ++++++++++++++++++++
 
 Remote network endpoint address to connect to when establishing trunk connection.
+
+.. _trunk-ping-period-server-option:
 
 *trunk-ping-period*
 +++++++++++++++++++
@@ -379,6 +404,8 @@ The value of *0* disables trunk keep alive messaging.
     Each side of the trunk can monitor trunk connection independently of
     its peer guided by its own *trunk-ping-period* option.
 
+.. _trunk-connection-mode-server-option:
+
 *trunk-connection-mode*
 +++++++++++++++++++++++
 
@@ -391,6 +418,8 @@ TCP port and listens at it for *client* connections.
 
     There is no correlation between SNMP entity and trunk connection roles.
 
+.. _trunk-crypto-key-server-option:
+
 *trunk-crypto-key*
 ++++++++++++++++++
 
@@ -401,6 +430,8 @@ trunk encryption.
 
     The key must be the same at both client and server for trunking link
     between them to establish.
+
+.. _trunk-id-server-option:
 
 *trunk-id*
 ++++++++++
@@ -430,13 +461,19 @@ clients.
       }
     }
 
+.. _snmp-context-matching-server-chapter:
+
 SNMP context matching
 ---------------------
+
+.. _snmp-context-engine-id-pattern-server-option:
 
 *snmp-context-engine-id-pattern*
 ++++++++++++++++++++++++++++++++
 
 A regular expression matching SNMPv3 messages by SNMP context engine ID.
+
+.. _snmp-context-name-pattern-server-option:
 
 *snmp-context-name-pattern*
 +++++++++++++++++++++++++++
@@ -450,7 +487,8 @@ A regular expression matching SNMPv3 messages by SNMP context name.
 
 Unique identifier of a collection of SNMP context configuration options. Used for
 matching SNMP context options in inbound SNMP messages
-(e.g. `snmp-context-engine-id-pattern`_, `snmp-context-name-pattern`_) for
+(e.g. `snmp-context-engine-id-pattern-server-option`_,
+`snmp-context-name-pattern-server-option`_) for
 message routing purposes.
 
 This option can contain :ref:`SNMP macros <snmp-macros>`.
@@ -466,8 +504,12 @@ Example:
       snmp-context-id: any-context
     }
 
+.. _snmp-pdu-contents-matching-server-chapter:
+
 SNMP PDU contents matching
 --------------------------
+
+.. _snmp-pdu-type-pattern-server-option:
 
 *snmp-pdu-type-pattern*
 +++++++++++++++++++++++
@@ -484,6 +526,8 @@ Recognized PDU types are: *GET*, *SET*, *GETNEXT*, *GETBULK*, *TRAPv1*,
       snmp-content-id: get-content
     }
 
+.. _snmp-pdu-oid-prefix-pattern-list-server-option:
+
 *snmp-pdu-oid-prefix-pattern-list*
 ++++++++++++++++++++++++++++++++++
 
@@ -496,7 +540,7 @@ List of regular expressions matching OIDs in SNMP PDU var-binds.
 
 Unique identifier of a collection of SNMP content matching options. Used for
 matching the contents of inbound SNMP messages (e.g.
-`snmp-pdu-type-pattern`_, `snmp-pdu-oid-prefix-pattern-list`_) for
+`snmp-pdu-type-pattern-server-option`_, `snmp-pdu-oid-prefix-pattern-list-server-option`_) for
 message routing purposes.
 
 This option can contain :ref:`SNMP macros <snmp-macros>`.
@@ -521,14 +565,20 @@ Example:
       }
     }
 
+.. _network-peers-matching-server-chapter:
+
 Network peers matching
 ----------------------
+
+.. _snmp-peer-address-pattern-list-server-option:
 
 *snmp-peer-address-pattern-list*
 ++++++++++++++++++++++++++++++++
 
 List of regular expressions matching source transport endpoints
 of SNMP message.
+
+.. _snmp-bind-address-pattern-list-server-option:
 
 *snmp-bind-address-pattern-list*
 ++++++++++++++++++++++++++++++++
@@ -540,7 +590,7 @@ of SNMP message.
 
     If you want to receive SNMP messages at secondary network interfaces
     and be able to match them, make sure you enable the
-    `snmp-transport-options`_ = *virtual-interface*.
+    `snmp-transport-options-server-option`_ = *virtual-interface*.
 
 .. _snmp-peer-id-server-option:
 
@@ -548,8 +598,8 @@ of SNMP message.
 ++++++++++++++
 
 Unique identifier matching pairs of source and destination SNMP transport
-endpoints. Most importantly, `snmp-bind-address-pattern-list`_ and
-`snmp-peer-address-pattern-list`_ as well as `snmp-transport-domain`_.
+endpoints. Most importantly, `snmp-bind-address-pattern-list-server-option`_ and
+`snmp-peer-address-pattern-list-server-option`_ as well as `snmp-transport-domain-server-option`_.
 The *snmp-peer-id* is typically used for message routing purposes.
 
 This option can contain :ref:`SNMP macros <snmp-macros>`.
@@ -566,6 +616,8 @@ Example:
       snmp-peer-id: 101
     }
 
+.. _message-routing-server-chapter:
+
 Message routing
 ---------------
 
@@ -576,49 +628,60 @@ The purpose of these settings is to determine:
 
 This is done by searching for a combination of matching IDs.
 
+.. _matching-snmp-context-id-list-server-option:
+
 *matching-snmp-context-id-list*
 +++++++++++++++++++++++++++++++
 
 Evaluates to True if incoming SNMP message matches at least one
-of `snmp-context-id`_ in the list.
+of `snmp-context-id-server-option`_ in the list.
+
+.. _matching-snmp-content-id-list-server-option:
 
 *matching-snmp-content-id-list*
 +++++++++++++++++++++++++++++++
 
 Evaluates to True if incoming SNMP message matches at least one
-of `snmp-content-id`_ in the list.
+of `snmp-content-id-server-option`_ in the list.
+
+.. _matching-snmp-credentials-id-list-server-option:
 
 *matching-snmp-credentials-id-list*
 +++++++++++++++++++++++++++++++++++
 
-Evaluates to True if `snmp-credentials-id`_ used for processing incoming
+Evaluates to True if `snmp-credentials-id-server-option`_ used for processing incoming
 SNMP message is present in the list.
 
+.. _matching-snmp-peer-id-list-server-option:
 
 *matching-snmp-peer-id-list*
 ++++++++++++++++++++++++++++
 
 Evaluates to True if incoming SNMP message originates from and arrived at
-one of the `snmp-peer-id`_ in the list.
+one of the `snmp-peer-id-server-option`_ in the list.
+
+.. _using-plugin-id-list-server-option:
 
 *using-plugin-id-list*
 ++++++++++++++++++++++
 
-Invoke each of the `plugin-id`_ in the list in order passing request and response
+Invoke each of the `plugin-id-server-option`_ in the list in order passing request and response
 SNMP PDUs from one :ref:`plugin <plugins>` to the other.
 
 Plugins may modify the message in any way and even block it from further
 propagation in which case SNMP message will be dropped.
 
+.. _using-trunk-id-list-server-option:
+
 *using-trunk-id-list*
 +++++++++++++++++++++
 
 Unique identifier matching a group of *matching-\** identifiers. Specifically,
-these are: `matching-snmp-context-id-list`_, `matching-snmp-content-id-list`_,
-`matching-snmp-credentials-id-list`_ and `matching-snmp-peer-id-list`_.
+these are: `matching-snmp-context-id-list-server-option`_, `matching-snmp-content-id-list-server-option`_,
+`matching-snmp-credentials-id-list-server-option`_ and `matching-snmp-peer-id-list-server-option`_.
 
 Incoming (and possibly modified) SNMP message will be forwarded to each
-`trunk-id`_ present in the list.
+`trunk-id-server-option`_ present in the list.
 
 Example:
 

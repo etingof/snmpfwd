@@ -85,8 +85,8 @@ global scope.
 Plugins
 -------
 
-Both :ref:`client <plugin-options-client>` and
-:ref:`server <plugin-options-server>` parts of SNMP Proxy Forwarder
+Both :ref:`client <plugin-options-client-chapter>` and
+:ref:`server <plugin-options-server-chapter>` parts of SNMP Proxy Forwarder
 can be configured to pass PDUs through a chain of plugin modules.
 A plugin module can modify or replace passing PDU or take any other
 action of its choice.
