@@ -522,7 +522,7 @@ def main():
         trunkRsp = {}
 
         if errorIndication:
-            log.debug('SNMP error returned for message ID %s received from trunk %s: %s' % (msgId, trunkId, errorIndication))
+            log.info('SNMP error returned for message ID %s received from trunk %s: %s' % (msgId, trunkId, errorIndication))
             trunkRsp['error-indication'] = errorIndication
 
         reqPdu = trunkReq['snmp-pdu']
