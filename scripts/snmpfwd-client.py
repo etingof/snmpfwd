@@ -100,11 +100,11 @@ def main():
 
     except Exception:
         sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-        sys.exit(-1)
+        return
 
     if params:
         sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
-        sys.exit(-1)
+        return
 
     pidFile = ''
     cfgFile = CONFIG_FILE
@@ -127,7 +127,7 @@ def main():
 
 %s
 """ % helpMessage)
-            sys.exit(-1)
+            return
         if opt[0] == '-v' or opt[0] == '--version':
             import snmpfwd
             import pysnmp
@@ -139,7 +139,7 @@ def main():
     Software documentation and support at https://github.com/etingof/snmpfwd
     %s
     """ % (snmpfwd.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
-            sys.exit(-1)
+            return
         elif opt[0] == '--debug-snmp':
             pysnmp_debug.setLogger(pysnmp_debug.Debug(*opt[1].split(','), **dict(loggerName=PROGRAM_NAME + '.pysnmp')))
         elif opt[0] == '--debug-asn1':
@@ -157,13 +157,13 @@ def main():
                 log.setLogger(PROGRAM_NAME, *opt[1].split(':'), **dict(force=True))
             except SnmpfwdError:
                 sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-                sys.exit(-1)
+                return
         elif opt[0] == '--log-level':
             try:
                 log.setLevel(opt[1])
             except SnmpfwdError:
                 sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-                sys.exit(-1)
+                return
         elif opt[0] == '--config-file':
             cfgFile = opt[1]
 
@@ -172,15 +172,15 @@ def main():
 
     except SnmpfwdError:
         sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-        sys.exit(-1)
+        return
 
     if cfgTree.getAttrValue('program-name', '', default=None) != PROGRAM_NAME:
         log.error('config file %s does not match program name %s' % (cfgFile, PROGRAM_NAME))
-        sys.exit(-1)
+        return
 
     if cfgTree.getAttrValue('config-version', '', default=None) != CONFIG_VERSION:
         log.error('config file %s version is not compatible with program version %s' % (cfgFile, CONFIG_VERSION))
-        sys.exit(-1)
+        return
 
     random.seed()
 
@@ -226,13 +226,13 @@ def main():
 
         except SnmpfwdError:
             log.error('plugin %s not loaded: %s' % (pluginId, sys.exc_info()[1]))
-            sys.exit(-1)
+            return
 
     for peerEntryPath in cfgTree.getPathsToAttr('snmp-peer-id'):
         peerId = cfgTree.getAttrValue('snmp-peer-id', *peerEntryPath)
         if peerId in peerIdMap:
             log.error('duplicate snmp-peer-id=%s at %s' % (peerId, '.'.join(peerEntryPath)))
-            sys.exit(-1)
+            return
 
         log.info('configuring SNMP peer %s (at %s)...' % (peerId, '.'.join(peerEntryPath)))
 
@@ -272,7 +272,7 @@ def main():
 
                 except (ValueError, IndexError):
                     log.error('bad snmp-bind-address specification %s at %s' % (bindAddr, '.'.join(peerEntryPath)))
-                    exit(-1)
+                    return
         else:
             try:
                 if ':' in bindAddr:
@@ -297,7 +297,7 @@ def main():
                 transport = udp6.Udp6Transport()
             else:
                 log.error('unknown transport domain %s' % (transportDomain,))
-                sys.exit(-1)
+                return
 
             snmpEngine.registerTransportDispatcher(
                 transportDispatcher, transportDomain
@@ -404,14 +404,14 @@ def main():
                     peerAddr = peerAddr[0], int(peerAddr[1])
                 except (ValueError, IndexError):
                     log.error('bad snmp-peer-address specification %s at %s' % (peerAddr, '.'.join(peerEntryPath)))
-                    sys.exit(-1)
+                    return
         else:
             try:
                 peerAddr = peerAddr.split(':', 1)
                 peerAddr = peerAddr[0], int(peerAddr[1])
             except (ValueError, IndexError):
                 log.error('bad snmp-peer-address specification %s at %s' % (peerAddr, '.'.join(peerEntryPath)))
-                sys.exit(-1)
+                return
 
         timeout = cfgTree.getAttrValue('snmp-peer-timeout', *peerEntryPath)
         retries = cfgTree.getAttrValue('snmp-peer-retries', *peerEntryPath)
@@ -430,7 +430,7 @@ def main():
         origCredId = cfgTree.getAttrValue('orig-snmp-peer-id', *origCredCfgPath)
         if origCredId in duplicates:
             log.error('duplicate orig-snmp-peer-id=%s at %s and %s' % (origCredId, '.'.join(origCredCfgPath), '.'.join(duplicates[origCredId])))
-            sys.exit(-1)
+            return
 
         duplicates[origCredId] = origCredCfgPath
 
@@ -458,7 +458,7 @@ def main():
         srvClassId = cfgTree.getAttrValue('server-classification-id', *srvClassCfgPath)
         if srvClassId in duplicates:
             log.error('duplicate server-classification-id=%s at %s and %s' % (srvClassId, '.'.join(srvClassCfgPath), '.'.join(duplicates[srvClassId])))
-            sys.exit(-1)
+            return
 
         duplicates[srvClassId] = srvClassCfgPath
 
@@ -484,14 +484,14 @@ def main():
                     k = credId, srvClassId, trunkId
                     if k in pluginIdMap:
                         log.error('duplicate snmp-credentials-id=%s and server-classification-id=%s and trunk-id=%s at plugin-id %s' % (credId, srvClassId, trunkId, ','.join(pluginIdList)))
-                        sys.exit(-1)
+                        return
                     else:
                         log.info('configuring plugin(s) %s (at %s), composite key: %s' % (','.join(pluginIdList), '.'.join(pluginCfgPath), '/'.join(k)))
 
                         for pluginId in pluginIdList:
                             if not pluginManager.hasPlugin(pluginId):
                                 log.error('undefined plugin ID %s referenced at %s' % (pluginId, '.'.join(pluginCfgPath)))
-                                sys.exit(-1)
+                                return
 
                         pluginIdMap[k] = pluginIdList
 
@@ -504,12 +504,12 @@ def main():
                     k = credId, srvClassId, trunkId
                     if k in routingMap:
                         log.error('duplicate snmp-credentials-id=%s and server-classification-id=%s and trunk-id=%s at snmp-peer-id %s' % (credId, srvClassId, trunkId, ','.join(peerIdList)))
-                        sys.exit(-1)
+                        return
                     else:
                         for peerId in peerIdList:
                             if peerId not in peerIdMap:
                                 log.error('missing peer-id %s at %s' % (peerId, '.'.join(routeCfgPath)))
-                                sys.exit(-1)
+                                return
 
                         routingMap[k] = peerIdList
 
@@ -771,7 +771,7 @@ def main():
 
     except Exception:
         sys.stderr.write('ERROR: cant drop privileges: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-        sys.exit(-1)
+        return
 
     if not foregroundFlag:
         try:
@@ -779,7 +779,7 @@ def main():
 
         except Exception:
             sys.stderr.write('ERROR: cant daemonize process: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-            sys.exit(-1)
+            return
 
     # Run mainloop
 
@@ -789,32 +789,33 @@ def main():
 
     # Python 2.4 does not support the "finally" clause
 
-    exc_info = None
-
     while True:
         try:
             transportDispatcher.runDispatcher()
 
-        except KeyboardInterrupt:
-            log.info('shutting down process...')
-            break
-
         except (PySnmpError, SnmpfwdError, socket.error):
-            log.error(sys.exc_info()[1])
+            log.error(str(sys.exc_info()[1]))
             continue
 
         except Exception:
-            exc_info = sys.exc_info()
-            break
-
-    transportDispatcher.closeDispatcher()
-
-    log.info('process terminated')
-
-    if exc_info:
-        for line in traceback.format_exception(*exc_info):
-            log.error(line.replace('\n', ';'))
+            transportDispatcher.closeDispatcher()
+            raise
 
 
 if __name__ == '__main__':
-    main()
+    rc = 1
+
+    try:
+        main()
+
+    except KeyboardInterrupt:
+        log.info('shutting down process...')
+        rc = 0
+
+    except Exception:
+        for line in traceback.format_exception(*sys.exc_info()):
+            log.error(line.replace('\n', ';'))
+
+    log.info('process terminated')
+
+    sys.exit(rc)
