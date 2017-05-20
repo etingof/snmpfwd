@@ -37,7 +37,7 @@ class TrunkingSuperServer(asyncore.dispatcher):
         except socket.error:
             raise error.SnmpfwdError('%s socket error: %s' % (self, sys.exc_info()[1]))
 
-        log.msg('%s: listening...' % self)
+        log.info('%s: listening...' % self)
 
     def __str__(self):
         return '%s at %s' % (self.__class__.__name__, ':'.join([str(x) for x in self.__localEndpoint]))
@@ -51,10 +51,10 @@ class TrunkingSuperServer(asyncore.dispatcher):
         try:
             sock, remoteEndpoint = self.accept()
         except socket.error:
-            log.msg('%s accept() failed: %s' % (self, sys.exc_info()[1]))
+            log.error('%s accept() failed: %s' % (self, sys.exc_info()[1]))
             return
 
-        log.msg('%s new connection from %s' % (self, ':'.join([str(x) for x in remoteEndpoint])))
+        log.info('%s new connection from %s' % (self, ':'.join([str(x) for x in remoteEndpoint])))
 
         TrunkingServer(sock,
                        self.__localEndpoint, remoteEndpoint, self.__secret,
@@ -62,10 +62,10 @@ class TrunkingSuperServer(asyncore.dispatcher):
         
     def handle_error(self, *info):
         exc_info = sys.exc_info()
-        log.msg('%s: error: %s' % (self, exc_info[1]))
+        log.error('%s: error: %s' % (self, exc_info[1]))
         if exc_info and not isinstance(exc_info[1], socket.error):
             for line in traceback.format_exception(*exc_info):
-                log.msg(line.replace('\n', ';'))
+                log.error(line.replace('\n', ';'))
         self.handle_close()
 
 
@@ -95,7 +95,7 @@ class TrunkingServer(asyncore.dispatcher_with_send):
         except socket.error:
             raise error.SnmpfwdError('%s socket error: %s' % (self, sys.exc_info()[1]))
         else:
-            log.msg('%s: serving new connection...' % (self,))
+            log.info('%s: serving new connection...' % (self,))
 
     def __str__(self):
         return '%s at %s, peer %s' % (self.__class__.__name__, ':'.join([str(x) for x in self.__localEndpoint]), ':'.join([str(x) for x in self.__remoteEndpoint]))
@@ -133,7 +133,7 @@ class TrunkingServer(asyncore.dispatcher_with_send):
 
             if msgId is None:
                 if self.__pendingCounter > 5:
-                    log.msg('incomplete message pending for too long, closing connection with %s' % (self,))
+                    log.error('%s: incomplete message pending for too long, closing connection' % (self,))
                     self.close()
                     return
                 else:
@@ -157,17 +157,17 @@ class TrunkingServer(asyncore.dispatcher_with_send):
             elif contentId == protocol.MSG_TYPE_ANNOUNCEMENT:
                 self.__ctlCbFun(self, msg, self.__ctlCbCtx)
             else:
-                log.msg('unknown message content-id %s from %s ignored' % (contentId, self))
+                log.error('%s: unknown trunk message content-id %s ignored' % (self, contentId))
                 
     def handle_close(self):
-        log.msg('%s: connection closed' % (self,))
+        log.info('%s: connection closed' % (self,))
         self.__ctlCbFun(self, {}, self.__ctlCbCtx)
         self.close()
         
     def handle_error(self, *info):
         exc_info = sys.exc_info()
-        log.msg('connection with %s broken: %s' % (self.__remoteEndpoint, exc_info[1]))
+        log.error('%s: connection with %s broken: %s' % (self, ':'.join([str(x) for x in self.__remoteEndpoint]), exc_info[1]))
         if exc_info and not isinstance(exc_info[1], socket.error):
             for line in traceback.format_exception(*exc_info):
-                log.msg(line.replace('\n', ';'))
+                log.error(line.replace('\n', ';'))
         self.handle_close()

@@ -40,7 +40,8 @@ class TrunkingClient(asyncore.dispatcher_with_send):
             self.connect(remoteEndpoint)
         except socket.error:
             raise error.SnmpfwdError('%s socket error: %s' % (self, sys.exc_info()[1]))
-        log.msg('initiated trunk client connection from %s to %s...' % (localEndpoint, remoteEndpoint))
+
+        log.info('%s: initiated trunk client connection from %s to %s...' % (self, localEndpoint, remoteEndpoint))
 
     def sendReq(self, req, cbFun, cbCtx):
         msgId = next.getId()
@@ -81,9 +82,9 @@ class TrunkingClient(asyncore.dispatcher_with_send):
         if self.__announcementData:
             self.send(self.__announcementData)
             self.__announcementData = null
-            log.msg('trunking client %s sent trunk announcement' % self)
+            log.debug('%s: trunk announcement sent' % (self,))
 
-        log.msg('trunk client %s is now connected' % self)
+        log.info('%s: client is now connected' % (self,))
         
     def handle_read(self):
         chunk = self.recv(65535)
@@ -96,7 +97,7 @@ class TrunkingClient(asyncore.dispatcher_with_send):
             )
             if msgId is None:
                 if self.__pendingCounter > 5:
-                    log.msg('incomplete message pending for too long, closing connection with %s' % (self,))
+                    log.error('%s: incomplete trunk message pending for too long, closing connection' % (self,))
                     self.close()
                     return
                 else:
@@ -118,17 +119,17 @@ class TrunkingClient(asyncore.dispatcher_with_send):
                     cbFun, cbCtx = self.__pendingReqs.pop(msgId)
                     cbFun(msg, cbCtx)
             else:
-                log.msg('unknown message content-id %s from %s ignored' % (contentId, self))
+                log.error('%s: unknown trunk message content-id %s ignored' % (self, contentId))
             
     def handle_close(self):
+        log.info('%s: connection with %s closed' % (self, ':'.join([str(x) for x in self.__remoteEndpoint])))
         self.isUp = False
-        log.msg('trunk client connection with %s:%s closed' % self.__remoteEndpoint)
         self.close()
 
     def handle_error(self, *info):
         exc_info = sys.exc_info()
-        log.msg('connection with %s broken: %s' % (self.__remoteEndpoint, exc_info[1]))
+        log.error('%s: connection with %s broken: %s' % (self, ':'.join([str(x) for x in self.__remoteEndpoint]), exc_info[1]))
         if exc_info and not isinstance(exc_info[1], socket.error):
             for line in traceback.format_exception(*exc_info):
-                log.msg(line.replace('\n', ';'))
+                log.error(line.replace('\n', ';'))
         self.handle_close()

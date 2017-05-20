@@ -10,7 +10,7 @@ import sys
 import bisect
 from snmpfwd.plugins import status
 from snmpfwd.error import SnmpfwdError
-from snmpfwd.log import msg
+from snmpfwd.log import debug, info, error
 from pysnmp.proto.api import v2c
 
 hostProgs = 'snmpfwd-server', 'snmpfwd-client'
@@ -74,7 +74,7 @@ if moduleOptions[0] == 'config':
 
             idx += 1
 
-            msg('%s: #%d skip to %s allow from %s to %s' % (PLUGIN_NAME, idx, skip, begin, end))
+            debug('%s: #%d skip to %s allow from %s to %s' % (PLUGIN_NAME, idx, skip, begin, end))
 
         # cast to built-in tuple type for better comparison performance down the road
         oidsList = [(tuple(skip), tuple(begin), tuple(end)) for skip, begin, end in oidsList]
@@ -85,7 +85,7 @@ if moduleOptions[0] == 'config':
     except Exception:
         raise SnmpfwdError('%s: config file load failure: %s' % (PLUGIN_NAME, sys.exc_info()[1]))
 
-msg('%s: plugin initialization complete' % PLUGIN_NAME)
+info('%s: plugin initialization complete' % PLUGIN_NAME)
 
 noSuchObject = v2c.NoSuchObject('')
 endOfMibVew = v2c.EndOfMibView('')
@@ -219,7 +219,7 @@ def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
                 varBind = rspVarBinds[rspIdx]
 
             except IndexError:
-                msg('%s: missing response OID #%s' % (PLUGIN_NAME, rspIdx))
+                error('%s: missing response OID #%s' % (PLUGIN_NAME, rspIdx))
                 return status.DROP, pdu
 
             else:

@@ -15,7 +15,7 @@ except ImportError:
     from configparser import RawConfigParser, Error
 from snmpfwd.plugins import status
 from snmpfwd.error import SnmpfwdError
-from snmpfwd.log import msg
+from snmpfwd.log import debug, info, error
 from pysnmp.proto.api import v2c
 
 hostProgs = 'snmpfwd-server', 'snmpfwd-client'
@@ -56,7 +56,7 @@ if moduleOptions[0] == 'config':
     else:
         raise SnmpfwdError('%s: unknown logging method %s at %s' % (PLUGIN_NAME, method, configFile))
 
-    msg('%s: using %s logging method' % (PLUGIN_NAME, method))
+    debug('%s: using %s logging method' % (PLUGIN_NAME, method))
 
     logger.setLevel(logging.INFO)
 
@@ -69,23 +69,23 @@ if moduleOptions[0] == 'config':
             raise SnmpfwdError('%s: unknown PDU %s' % (PLUGIN_NAME, pdu))
 
         else:
-            msg('%s: PDU ACL includes %s' % (PLUGIN_NAME, pdu))
+            debug('%s: PDU ACL includes %s' % (PLUGIN_NAME, pdu))
 
     try:
         leftParen, rightParen = config.get('content', 'parentheses').split()
 
     except Exception:
-        msg('%s: malformed "parentheses" values at %s' % (PLUGIN_NAME, configFile))
+        error('%s: malformed "parentheses" values at %s' % (PLUGIN_NAME, configFile))
 
     template = config.get('content', 'template')
 
-    msg('%s: using var-bind value parentheses %s %s' % (PLUGIN_NAME, leftParen, rightParen))
+    debug('%s: using var-bind value parentheses %s %s' % (PLUGIN_NAME, leftParen, rightParen))
 
     logger.addHandler(handler)
 
 started = time.time()
 
-msg('%s: plugin initialization complete' % PLUGIN_NAME)
+info('%s: plugin initialization complete' % PLUGIN_NAME)
 
 
 def _format(template, pdu, context):

@@ -80,18 +80,22 @@ def main():
         [--process-user=<uname>] [--process-group=<gname>]
         [--pid-file=<file>]
         [--logging-method=<%s[:args>]>]
+        [--log-level=<%s>]
         [--config-file=<file>]""" % (
             sys.argv[0],
             '|'.join([x for x in pysnmp_debug.flagMap.keys() if x != 'mibview']),
             '|'.join([x for x in pyasn1_debug.flagMap.keys()]),
-            '|'.join(log.gMap.keys())
+            '|'.join(log.methodsMap),
+            '|'.join(log.levelsMap)
         )
+
+    log.setLogger(PROGRAM_NAME, 'stderr')
 
     try:
         opts, params = getopt.getopt(sys.argv[1:], 'hv', [
             'help', 'version', 'debug=', 'debug-snmp=', 'debug-asn1=', 'daemonize',
             'process-user=', 'process-group=', 'pid-file=', 'logging-method=',
-            'config-file='
+            'log-level=', 'config-file='
         ])
 
     except Exception:
@@ -117,10 +121,12 @@ def main():
       transmission towards SNMP Agents.
       Can implement complex routing and protocol conversion logic through
       analyzing parts of SNMP messages and matching them against proxying rules.
+
     Documentation:
-      http://snmpfwd.sourceforge.net/
-    %s
-    """ % helpMessage)
+      http://snmpfwd.sourceforge.io/
+
+%s
+""" % helpMessage)
             sys.exit(-1)
         if opt[0] == '-v' or opt[0] == '--version':
             import snmpfwd
@@ -152,10 +158,14 @@ def main():
             except SnmpfwdError:
                 sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
                 sys.exit(-1)
+        elif opt[0] == '--log-level':
+            try:
+                log.setLevel(opt[1])
+            except SnmpfwdError:
+                sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+                sys.exit(-1)
         elif opt[0] == '--config-file':
             cfgFile = opt[1]
-
-    log.setLogger(PROGRAM_NAME, 'stderr')
 
     try:
         cfgTree = cparser.Config().load(cfgFile)
@@ -165,11 +175,11 @@ def main():
         sys.exit(-1)
 
     if cfgTree.getAttrValue('program-name', '', default=None) != PROGRAM_NAME:
-        log.msg('ERROR: config file %s does not match program name %s' % (cfgFile, PROGRAM_NAME))
+        log.error('config file %s does not match program name %s' % (cfgFile, PROGRAM_NAME))
         sys.exit(-1)
 
     if cfgTree.getAttrValue('config-version', '', default=None) != CONFIG_VERSION:
-        log.msg('ERROR: config file %s version is not compatible with program version %s' % (cfgFile, CONFIG_VERSION))
+        log.error('config file %s version is not compatible with program version %s' % (cfgFile, CONFIG_VERSION))
         sys.exit(-1)
 
     random.seed()
@@ -210,26 +220,26 @@ def main():
             {'config-dir': os.path.dirname(cfgFile)}
         )
 
-        log.msg('configuring plugin ID %s (at %s) from module %s with options %s...' % (pluginId, '.'.join(pluginCfgPath), pluginMod, pluginOptions or '<none>'))
+        log.info('configuring plugin ID %s (at %s) from module %s with options %s...' % (pluginId, '.'.join(pluginCfgPath), pluginMod, pluginOptions or '<none>'))
         try:
             pluginManager.loadPlugin(pluginId, pluginMod, pluginOptions)
 
         except SnmpfwdError:
-            log.msg('ERROR: plugin %s not loaded: %s' % (pluginId, sys.exc_info()[1]))
+            log.error('plugin %s not loaded: %s' % (pluginId, sys.exc_info()[1]))
             sys.exit(-1)
 
     for peerEntryPath in cfgTree.getPathsToAttr('snmp-peer-id'):
         peerId = cfgTree.getAttrValue('snmp-peer-id', *peerEntryPath)
         if peerId in peerIdMap:
-            log.msg('duplicate snmp-peer-id=%s at %s' % (peerId, '.'.join(peerEntryPath)))
+            log.error('duplicate snmp-peer-id=%s at %s' % (peerId, '.'.join(peerEntryPath)))
             sys.exit(-1)
 
-        log.msg('configuring SNMP peer %s (at %s)...' % (peerId, '.'.join(peerEntryPath)))
+        log.info('configuring SNMP peer %s (at %s)...' % (peerId, '.'.join(peerEntryPath)))
 
         engineId = cfgTree.getAttrValue('snmp-engine-id', *peerEntryPath)
         if engineId in engineIdMap:
             snmpEngine, snmpContext, snmpEngineMap = engineIdMap[engineId]
-            log.msg('using engine-id: %s' % snmpEngine.snmpEngineID.prettyPrint())
+            log.info('using engine-id: %s' % snmpEngine.snmpEngineID.prettyPrint())
         else:
             snmpEngine = engine.SnmpEngine(snmpEngineID=engineId)
             snmpContext = context.SnmpContext(snmpEngine)
@@ -241,7 +251,7 @@ def main():
 
             engineIdMap[engineId] = snmpEngine, snmpContext, snmpEngineMap
 
-            log.msg('new engine-id %s' % snmpEngine.snmpEngineID.prettyPrint())
+            log.info('new engine-id %s' % snmpEngine.snmpEngineID.prettyPrint())
 
         transportOptions = cfgTree.getAttrValue('snmp-transport-options', *peerEntryPath, **dict(default=[], vector=True))
 
@@ -261,7 +271,7 @@ def main():
                         bindAddr = bindAddr, 0
 
                 except (ValueError, IndexError):
-                    log.msg('bad snmp-bind-address specification %s at %s' % (bindAddr, '.'.join(peerEntryPath)))
+                    log.error('bad snmp-bind-address specification %s at %s' % (bindAddr, '.'.join(peerEntryPath)))
                     exit(-1)
         else:
             try:
@@ -272,21 +282,21 @@ def main():
                     bindAddr = bindAddr, 0
 
             except (ValueError, IndexError):
-                log.msg('bad snmp-bind-address specification %s at %s' % (bindAddr, '.'.join(peerEntryPath)))
+                log.error('bad snmp-bind-address specification %s at %s' % (bindAddr, '.'.join(peerEntryPath)))
                 exit(-1)
 
         transportDomain = cfgTree.getAttrValue('snmp-transport-domain', *peerEntryPath)
         transportDomain = rfc1902.ObjectName(str(transportDomain))
 
         if transportDomain in snmpEngineMap['transportDomain']:
-            log.msg('using transport endpoint with transport ID %s' % (transportDomain,))
+            log.info('using transport endpoint with transport ID %s' % (transportDomain,))
         else:
             if transportDomain[:len(udp.domainName)] == udp.domainName:
                 transport = udp.UdpTransport()
             elif transportDomain[:len(udp6.domainName)] == udp6.domainName:
                 transport = udp6.Udp6Transport()
             else:
-                log.msg('unknown transport domain %s' % (transportDomain,))
+                log.error('unknown transport domain %s' % (transportDomain,))
                 sys.exit(-1)
 
             snmpEngine.registerTransportDispatcher(
@@ -304,7 +314,7 @@ def main():
             config.addSocketTransport(snmpEngine, transportDomain, t)
 
             snmpEngineMap['transportDomain'][transportDomain] = bindAddr[0], bindAddr[1], transportDomain
-            log.msg('new transport endpoint at bind address %s:%s, options %s, transport ID %s' % (bindAddr[0], bindAddr[1], transportOptions and '/'.join(transportOptions) or '<none>', transportDomain))
+            log.info('new transport endpoint at bind address %s:%s, options %s, transport ID %s' % (bindAddr[0], bindAddr[1], transportOptions and '/'.join(transportOptions) or '<none>', transportDomain))
 
         securityModel = cfgTree.getAttrValue('snmp-security-model', *peerEntryPath)
         securityModel = rfc1902.Integer(securityModel)
@@ -318,38 +328,39 @@ def main():
         if securityModel in (1, 2):
             if securityName in snmpEngineMap['securityName']:
                 if snmpEngineMap['securityName'][securityName] == securityModel:
-                    log.msg('using security-name %s' % securityName)
+                    log.info('using security-name %s' % securityName)
                 else:
-                    raise SnmpfwdError('security-name %s already in use at security-model %s' % (securityName, securityModel))
+                    log.error('security-name %s already in use at security-model %s' % (securityName, securityModel))
+                    sys.exit(1)
             else:
                 communityName = cfgTree.getAttrValue('snmp-community-name', *peerEntryPath)
                 config.addV1System(snmpEngine, securityName, communityName,
                                    securityName=securityName)
 
-                log.msg('new community-name %s, security-model %s, security-name %s, security-level %s' % (communityName, securityModel, securityName, securityLevel))
+                log.info('new community-name %s, security-model %s, security-name %s, security-level %s' % (communityName, securityModel, securityName, securityLevel))
                 snmpEngineMap['securityName'][securityName] = securityModel
 
         elif securityModel == 3:
             if securityName in snmpEngineMap['securityName']:
                 if snmpEngineMap['securityName'][securityName] == securityModel:
-                    log.msg('using USM security-name: %s' % securityName)
+                    log.info('using USM security-name: %s' % securityName)
                 else:
                     raise SnmpfwdError('security-name %s already in use at security-model %s' % (securityName, securityModel))
             else:
                 usmUser = cfgTree.getAttrValue('snmp-usm-user', *peerEntryPath)
-                log.msg('new USM user %s, security-model %s, security-level %s, security-name %s' % (usmUser, securityModel, securityLevel, securityName))
+                log.info('new USM user %s, security-model %s, security-level %s, security-name %s' % (usmUser, securityModel, securityLevel, securityName))
 
                 if securityLevel in (2, 3):
                     usmAuthProto = cfgTree.getAttrValue('snmp-usm-auth-protocol', *peerEntryPath, **dict(default=config.usmHMACMD5AuthProtocol))
                     usmAuthProto = rfc1902.ObjectName(usmAuthProto)
                     usmAuthKey = cfgTree.getAttrValue('snmp-usm-auth-key', *peerEntryPath)
-                    log.msg('new USM authentication key: %s, authentication protocol: %s' % (usmAuthKey, usmAuthProto))
+                    log.info('new USM authentication key: %s, authentication protocol: %s' % (usmAuthKey, usmAuthProto))
 
                     if securityLevel == 3:
                         usmPrivProto = cfgTree.getAttrValue('snmp-usm-priv-protocol', *peerEntryPath, **dict(default=config.usmDESPrivProtocol))
                         usmPrivProto = rfc1902.ObjectName(usmPrivProto)
                         usmPrivKey = cfgTree.getAttrValue('snmp-usm-priv-key', *peerEntryPath, **dict(default=None))
-                        log.msg('new USM encryption key: %s, encryption protocol: %s' % (usmPrivKey, usmPrivProto))
+                        log.info('new USM encryption key: %s, encryption protocol: %s' % (usmPrivKey, usmPrivProto))
 
                         config.addV3User(
                             snmpEngine, usmUser,
@@ -366,17 +377,18 @@ def main():
                 snmpEngineMap['securityName'][securityName] = securityModel
 
         else:
-            raise SnmpfwdError('unknown security-model: %s' % securityModel)
+            log.error('unknown security-model: %s' % securityModel)
+            sys.exit(1)
 
         credId = '/'.join([str(x) for x in (securityName, securityLevel, securityModel)])
         if credId in snmpEngineMap['credIds']:
-            log.msg('using credentials ID %s...' % credId)
+            log.info('using credentials ID %s...' % credId)
         else:
             config.addTargetParams(
                 snmpEngine, credId, securityName, securityLevel,
                 securityModel == 3 and 3 or securityModel-1
             )
-            log.msg('new credentials %s, security-name %s, security-level %s, security-model %s' % (credId, securityName, securityLevel, securityModel))
+            log.info('new credentials %s, security-name %s, security-level %s, security-model %s' % (credId, securityName, securityLevel, securityModel))
             snmpEngineMap['credIds'].add(credId)
 
         peerAddrMacro = None
@@ -391,15 +403,15 @@ def main():
                     peerAddr = peerAddr.split(':', 1)
                     peerAddr = peerAddr[0], int(peerAddr[1])
                 except (ValueError, IndexError):
-                    log.msg('bad snmp-peer-address specification %s at %s' % (peerAddr, '.'.join(peerEntryPath)))
-                    exit(-1)
+                    log.error('bad snmp-peer-address specification %s at %s' % (peerAddr, '.'.join(peerEntryPath)))
+                    sys.exit(-1)
         else:
             try:
                 peerAddr = peerAddr.split(':', 1)
                 peerAddr = peerAddr[0], int(peerAddr[1])
             except (ValueError, IndexError):
-                log.msg('bad snmp-peer-address specification %s at %s' % (peerAddr, '.'.join(peerEntryPath)))
-                exit(-1)
+                log.error('bad snmp-peer-address specification %s at %s' % (peerAddr, '.'.join(peerEntryPath)))
+                sys.exit(-1)
 
         timeout = cfgTree.getAttrValue('snmp-peer-timeout', *peerEntryPath)
         retries = cfgTree.getAttrValue('snmp-peer-retries', *peerEntryPath)
@@ -410,14 +422,14 @@ def main():
 
         peerIdMap[peerId] = snmpEngine, contextEngineId, contextName, bindAddr, bindAddrMacro, peerAddr, peerAddrMacro
 
-        log.msg('new peer ID %s, bind address %s, peer address %s, timeout %s, retries %s, credentials ID %s' % (peerId, bindAddrMacro or '<default>', peerAddrMacro or '%s:%s' % peerAddr, timeout, retries, credId))
+        log.info('new peer ID %s, bind address %s, peer address %s, timeout %s, retries %s, credentials ID %s' % (peerId, bindAddrMacro or '<default>', peerAddrMacro or '%s:%s' % peerAddr, timeout, retries, credId))
 
     duplicates = {}
 
     for origCredCfgPath in cfgTree.getPathsToAttr('orig-snmp-peer-id'):
         origCredId = cfgTree.getAttrValue('orig-snmp-peer-id', *origCredCfgPath)
         if origCredId in duplicates:
-            log.msg('duplicate orig-snmp-peer-id=%s at %s and %s' % (origCredId, '.'.join(origCredCfgPath), '.'.join(duplicates[origCredId])))
+            log.error('duplicate orig-snmp-peer-id=%s at %s and %s' % (origCredId, '.'.join(origCredCfgPath), '.'.join(duplicates[origCredId])))
             sys.exit(-1)
 
         duplicates[origCredId] = origCredCfgPath
@@ -436,7 +448,7 @@ def main():
              cfgTree.getAttrValue('orig-snmp-oid-prefix-pattern', *origCredCfgPath))
         )
 
-        log.msg('configuring original SNMP peer ID %s (at %s), composite key: %s' % (origCredId, '.'.join(origCredCfgPath), k))
+        log.info('configuring original SNMP peer ID %s (at %s), composite key: %s' % (origCredId, '.'.join(origCredCfgPath), k))
 
         origCredIdList.append((origCredId, re.compile(k)))
 
@@ -445,7 +457,7 @@ def main():
     for srvClassCfgPath in cfgTree.getPathsToAttr('server-classification-id'):
         srvClassId = cfgTree.getAttrValue('server-classification-id', *srvClassCfgPath)
         if srvClassId in duplicates:
-            log.msg('duplicate server-classification-id=%s at %s and %s' % (srvClassId, '.'.join(srvClassCfgPath), '.'.join(duplicates[srvClassId])))
+            log.error('duplicate server-classification-id=%s at %s and %s' % (srvClassId, '.'.join(srvClassCfgPath), '.'.join(duplicates[srvClassId])))
             sys.exit(-1)
 
         duplicates[srvClassId] = srvClassCfgPath
@@ -457,7 +469,7 @@ def main():
              cfgTree.getAttrValue('server-snmp-peer-id-pattern', *srvClassCfgPath))
         )
 
-        log.msg('configuring server classification ID %s (at %s), composite key: %s' % (srvClassId, '.'.join(srvClassCfgPath), k))
+        log.info('configuring server classification ID %s (at %s), composite key: %s' % (srvClassId, '.'.join(srvClassCfgPath), k))
 
         srvClassIdList.append((srvClassId, re.compile(k)))
 
@@ -465,38 +477,38 @@ def main():
 
     for pluginCfgPath in cfgTree.getPathsToAttr('using-plugin-id-list'):
         pluginIdList = cfgTree.getAttrValue('using-plugin-id-list', *pluginCfgPath, **dict(vector=True))
-        log.msg('configuring plugin ID(s) %s (at %s)...' % (','.join(pluginIdList), '.'.join(pluginCfgPath)))
+        log.info('configuring plugin ID(s) %s (at %s)...' % (','.join(pluginIdList), '.'.join(pluginCfgPath)))
         for credId in cfgTree.getAttrValue('matching-orig-snmp-peer-id-list', *pluginCfgPath, **dict(vector=True)):
             for srvClassId in cfgTree.getAttrValue('matching-server-classification-id-list', *pluginCfgPath, **dict(vector=True)):
                 for trunkId in cfgTree.getAttrValue('matching-trunk-id-list', *pluginCfgPath, **dict(vector=True)):
                     k = credId, srvClassId, trunkId
                     if k in pluginIdMap:
-                        log.msg('duplicate snmp-credentials-id=%s and server-classification-id=%s and trunk-id=%s at plugin-id %s' % (credId, srvClassId, trunkId, ','.join(pluginIdList)))
+                        log.error('duplicate snmp-credentials-id=%s and server-classification-id=%s and trunk-id=%s at plugin-id %s' % (credId, srvClassId, trunkId, ','.join(pluginIdList)))
                         sys.exit(-1)
                     else:
-                        log.msg('configuring plugin(s) %s (at %s), composite key: %s' % (','.join(pluginIdList), '.'.join(pluginCfgPath), '/'.join(k)))
+                        log.info('configuring plugin(s) %s (at %s), composite key: %s' % (','.join(pluginIdList), '.'.join(pluginCfgPath), '/'.join(k)))
 
                         for pluginId in pluginIdList:
                             if not pluginManager.hasPlugin(pluginId):
-                                log.msg('ERROR: undefined plugin ID %s referenced at %s' % (pluginId, '.'.join(pluginCfgPath)))
+                                log.error('undefined plugin ID %s referenced at %s' % (pluginId, '.'.join(pluginCfgPath)))
                                 sys.exit(-1)
 
                         pluginIdMap[k] = pluginIdList
 
     for routeCfgPath in cfgTree.getPathsToAttr('using-snmp-peer-id-list'):
         peerIdList = cfgTree.getAttrValue('using-snmp-peer-id-list', *routeCfgPath, **dict(vector=True))
-        log.msg('configuring routing entry with peer IDs %s (at %s)...' % (','.join(peerIdList), '.'.join(routeCfgPath)))
+        log.info('configuring routing entry with peer IDs %s (at %s)...' % (','.join(peerIdList), '.'.join(routeCfgPath)))
         for credId in cfgTree.getAttrValue('matching-orig-snmp-peer-id-list', *routeCfgPath, **dict(vector=True)):
             for srvClassId in cfgTree.getAttrValue('matching-server-classification-id-list', *routeCfgPath, **dict(vector=True)):
                 for trunkId in cfgTree.getAttrValue('matching-trunk-id-list', *routeCfgPath, **dict(vector=True)):
                     k = credId, srvClassId, trunkId
                     if k in routingMap:
-                        log.msg('duplicate snmp-credentials-id=%s and server-classification-id=%s and trunk-id=%s at snmp-peer-id %s' % (credId, srvClassId, trunkId, ','.join(peerIdList)))
+                        log.error('duplicate snmp-credentials-id=%s and server-classification-id=%s and trunk-id=%s at snmp-peer-id %s' % (credId, srvClassId, trunkId, ','.join(peerIdList)))
                         sys.exit(-1)
                     else:
                         for peerId in peerIdList:
                             if peerId not in peerIdMap:
-                                log.msg('missing peer-id %s at %s' % (peerId, '.'.join(routeCfgPath)))
+                                log.error('missing peer-id %s at %s' % (peerId, '.'.join(routeCfgPath)))
                                 sys.exit(-1)
 
                         routingMap[k] = peerIdList
@@ -510,7 +522,7 @@ def main():
         trunkRsp = {}
 
         if errorIndication:
-            log.msg('SNMP error returned for message ID %s received from trunk %s: %s' % (msgId, trunkId, errorIndication))
+            log.debug('SNMP error returned for message ID %s received from trunk %s: %s' % (msgId, trunkId, errorIndication))
             trunkRsp['error-indication'] = errorIndication
 
         reqPdu = trunkReq['snmp-pdu']
@@ -527,21 +539,21 @@ def main():
                         pluginId, snmpEngine, rspPDU, snmpReqInfo, reqCtx
                     )
                 else:
-                    log.msg('ignoring unsupported PDU')
+                    log.error('ignoring unsupported PDU')
                     break
 
                 if st == status.BREAK:
                     break
 
                 elif st == status.DROP:
-                    log.msg('received SNMP %s message, snmp-var-binds=%s, plugin %s muted response' % (errorIndication and 'error' or 'response', prettyVarBinds(rspPDU), pluginId))
+                    log.debug('received SNMP %s message, snmp-var-binds=%s, plugin %s muted response' % (errorIndication and 'error' or 'response', prettyVarBinds(rspPDU), pluginId))
                     trunkRsp['snmp-pdu'] = None
                     trunkingManager.sendRsp(trunkId, msgId, trunkRsp)
                     return
 
         trunkRsp['snmp-pdu'] = rspPDU
 
-        log.msg('received SNMP %s message, sending trunk message #%s to trunk %s, original SNMP peer address %s:%s received at %s:%s, var-binds: %s' % (errorIndication and 'error' or 'response', msgId, trunkId, trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port'], prettyVarBinds(rspPDU)))
+        log.debug('received SNMP %s message, sending trunk message #%s to trunk %s, original SNMP peer address %s:%s received at %s:%s, var-binds: %s' % (errorIndication and 'error' or 'response', msgId, trunkId, trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port'], prettyVarBinds(rspPDU)))
 
         trunkingManager.sendRsp(trunkId, msgId, trunkRsp)
 
@@ -603,7 +615,7 @@ def main():
 
         peerIdList = routingMap.get((origPeerId, srvClassId, macro.expandMacro(trunkId, msg)))
         if not peerIdList:
-            log.msg('unroutable trunk message #%s from trunk %s, srv-classification-id %s, orig-peer-id %s (original SNMP info: %s)' % (msgId, trunkId, srvClassId, origPeerId or '<none>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg])))
+            log.error('unroutable trunk message #%s from trunk %s, srv-classification-id %s, orig-peer-id %s (original SNMP info: %s)' % (msgId, trunkId, srvClassId, origPeerId or '<none>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg])))
             errorIndication = 'no route to SNMP peer configured'
 
         cbCtx = trunkId, msgId, msg, (), {}, {}
@@ -612,7 +624,7 @@ def main():
             __rspCbFun(None, None, errorIndication, None, cbCtx)
             return
 
-        log.msg('received trunk message #%s from trunk %s' % (msgId, trunkId))
+        log.debug('received trunk message #%s from trunk %s' % (msgId, trunkId))
 
         for peerId in peerIdList:
             peerId = macro.expandMacro(peerId, msg)
@@ -637,7 +649,7 @@ def main():
 
             logMsg = 'SNMP message to peer ID %s, bind-address %s, peer-address %s (original SNMP info: %s; original server classification: %s)' % (peerId, bindAddr[0] or '<default>', peerAddr[0] or '<default>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg if x.startswith('snmp-')]), ' '.join(['%s=%s' % (x, msg[x].prettyPrint()) for x in msg if x.startswith('server-')]))
 
-            log.msg('sending %s' % logMsg)
+            log.debug('sending %s' % logMsg)
 
             pdu = msg['snmp-pdu']
 
@@ -660,7 +672,7 @@ def main():
                         )
 
                     else:
-                        log.msg('ignoring unsupported PDU')
+                        log.error('ignoring unsupported PDU')
                         break
 
                     if st == status.BREAK:
@@ -668,12 +680,12 @@ def main():
                         break
 
                     elif st == status.DROP:
-                        log.msg('plugin %s muted request %s' % (pluginId, logMsg))
+                        log.debug('plugin %s muted request %s' % (pluginId, logMsg))
                         __rspCbFun(snmpEngine, None, None, None, cbCtx)
                         break
 
                     elif st == status.RESPOND:
-                        log.msg('plugin %s forced immediate response to %s' % (pluginId, logMsg))
+                        log.debug('plugin %s forced immediate response to %s' % (pluginId, logMsg))
                         __rspCbFun(snmpEngine, None, None, pdu, cbCtx)
                         break
 
@@ -713,7 +725,7 @@ def main():
                 )
 
             else:
-                log.msg('ignoring unsupported PDU')
+                log.error('ignoring unsupported PDU')
 
     trunkingManager = TrunkingManager(dataCbFun)
 
@@ -728,7 +740,7 @@ def main():
         trunkId = cfgTree.getAttrValue('trunk-id', *trunkCfgPath)
         secret = cfgTree.getAttrValue('trunk-crypto-key', *trunkCfgPath, **dict(default=''))
         secret = secret and (secret*((16//len(secret))+1))[:16]
-        log.msg('configuring trunk ID %s (at %s)...' % (trunkId, '.'.join(trunkCfgPath)))
+        log.info('configuring trunk ID %s (at %s)...' % (trunkId, '.'.join(trunkCfgPath)))
         connectionMode = cfgTree.getAttrValue('trunk-connection-mode', *trunkCfgPath)
         if connectionMode == 'client':
             trunkingManager.addClient(
@@ -738,14 +750,14 @@ def main():
                 cfgTree.getAttrValue('trunk-ping-period', *trunkCfgPath, default=0, expect=int),
                 secret
             )
-            log.msg('new trunking client from %s to %s' % (cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath), cfgTree.getAttrValue('trunk-peer-address', *trunkCfgPath)))
+            log.info('new trunking client from %s to %s' % (cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath), cfgTree.getAttrValue('trunk-peer-address', *trunkCfgPath)))
         if connectionMode == 'server':
             trunkingManager.addServer(
                 getTrunkAddr(cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath), 30201),
                 cfgTree.getAttrValue('trunk-ping-period', *trunkCfgPath, default=0, expect=int),
                 secret
             )
-            log.msg('new trunking server at %s' % (cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath)))
+            log.info('new trunking server at %s' % (cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath)))
 
     transportDispatcher.registerTimerCbFun(
         trunkingManager.setupTrunks, random.randrange(1, 5)
@@ -771,7 +783,7 @@ def main():
 
     # Run mainloop
 
-    log.msg('starting I/O engine...')
+    log.info('starting I/O engine...')
 
     transportDispatcher.jobStarted(1)  # server job would never finish
 
@@ -784,11 +796,11 @@ def main():
             transportDispatcher.runDispatcher()
 
         except KeyboardInterrupt:
-            log.msg('shutting down process...')
+            log.info('shutting down process...')
             break
 
         except (PySnmpError, SnmpfwdError, socket.error):
-            log.msg('error: %s' % sys.exc_info()[1])
+            log.error(sys.exc_info()[1])
             continue
 
         except Exception:
@@ -797,11 +809,11 @@ def main():
 
     transportDispatcher.closeDispatcher()
 
-    log.msg('process terminated')
+    log.info('process terminated')
 
     if exc_info:
         for line in traceback.format_exception(*exc_info):
-            log.msg(line.replace('\n', ';'))
+            log.error(line.replace('\n', ';'))
 
 
 if __name__ == '__main__':

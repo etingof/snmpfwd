@@ -25,14 +25,14 @@ class PluginManager(object):
             raise error.SnmpfwdError('duplicate plugin ID %s' % pluginId)
 
         for pluginModulesDir in self.__path:
-            log.msg('scanning "%s" directory for plugin modules...' % pluginModulesDir)
+            log.info('scanning "%s" directory for plugin modules...' % pluginModulesDir)
             if not os.path.exists(pluginModulesDir):
-                log.msg('directory "%s" does not exist' % pluginModulesDir)
+                log.error('directory "%s" does not exist' % pluginModulesDir)
                 continue
 
             mod = os.path.join(pluginModulesDir, pluginModuleName + '.py')
             if not os.path.exists(mod):
-                log.msg('Variation module "%s" not found' % mod)
+                log.error('Variation module "%s" not found' % mod)
                 continue
             
             ctx = {'modulePath': mod,
@@ -52,19 +52,19 @@ class PluginManager(object):
                 pluginModule = ctx
                 try:
                     if self.__progId not in pluginModule['hostProgs']:
-                        log.msg('ignoring plugin module "%s" (unmatched program ID)' % mod)
+                        log.error('ignoring plugin module "%s" (unmatched program ID)' % mod)
                         continue
 
                     if self.__apiVer not in pluginModule['apiVersions']:
-                        log.msg('ignoring plugin module "%s" (incompatible API version)' % mod)
+                        log.error('ignoring plugin module "%s" (incompatible API version)' % mod)
                         continue
                 except KeyError:
-                    log.msg('ignoring plugin module "%s" (missing versioning info)' % mod)
+                    log.error('ignoring plugin module "%s" (missing versioning info)' % mod)
                     continue
                     
                 self.__plugins[pluginId] = pluginModule
 
-                log.msg('plugin module "%s" loaded' % mod)
+                log.info('plugin module "%s" loaded' % mod)
                 break
 
         else:
@@ -72,7 +72,7 @@ class PluginManager(object):
 
     def processCommandRequest(self, pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
         if pluginId not in self.__plugins:
-            log.msg('WARNING: skipping non-existing plugin %s' % pluginId)
+            log.error('skipping non-existing plugin %s' % pluginId)
             return NEXT, pdu
 
         if 'processCommandRequest' not in self.__plugins[pluginId]:
@@ -84,7 +84,7 @@ class PluginManager(object):
 
     def processCommandResponse(self, pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
         if pluginId not in self.__plugins:
-            log.msg('WARNING: skipping non-existing plugin %s' % pluginId)
+            log.error('skipping non-existing plugin %s' % pluginId)
             return NEXT, pdu
 
         if 'processCommandResponse' not in self.__plugins[pluginId]:
@@ -96,7 +96,7 @@ class PluginManager(object):
 
     def processNotificationRequest(self, pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
         if pluginId not in self.__plugins:
-            log.msg('WARNING: skipping non-existing plugin %s' % pluginId)
+            log.error('skipping non-existing plugin %s' % pluginId)
             return NEXT, pdu
 
         if 'processNotificationRequest' not in self.__plugins[pluginId]:
@@ -108,7 +108,7 @@ class PluginManager(object):
 
     def processNotificationResponse(self, pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
         if pluginId not in self.__plugins:
-            log.msg('WARNING: skipping non-existing plugin %s' % pluginId)
+            log.error('skipping non-existing plugin %s' % pluginId)
             return NEXT, pdu
 
         if 'processNotificationResponse' not in self.__plugins[pluginId]:
