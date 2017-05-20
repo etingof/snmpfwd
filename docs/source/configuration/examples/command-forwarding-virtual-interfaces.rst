@@ -28,9 +28,9 @@ Server is configured to:
 * respond to queries, performed over SNMPv2c, from the same IP to which
   the request was sent
 
-.. literalinclude:: /../../conf/command-forwarder-virtual-interfaces/server.conf
+.. literalinclude:: /../../conf/command-forwarding-virtual-interfaces/server.conf
 
-:download:`Download </../../conf/command-forwarder-virtual-interfaces/server.conf>` server configuration file.
+:download:`Download </../../conf/command-forwarding-virtual-interfaces/server.conf>` server configuration file.
 
 Client configuration
 --------------------
@@ -43,6 +43,6 @@ Client is configured to:
 * place inbound PDUs into SNMP v2c messages and forward them towards SNMP agent
   running at *demo.snmplabs.com*
 
-.. literalinclude:: /../../conf/command-forwarder-virtual-interfaces/client.conf
+.. literalinclude:: /../../conf/command-forwarding-virtual-interfaces/client.conf
 
-:download:`Download </../../conf/command-forwarder-virtual-interfaces/client.conf>` client configuration file.
+:download:`Download </../../conf/command-forwarding-virtual-interfaces/client.conf>` client configuration file.
