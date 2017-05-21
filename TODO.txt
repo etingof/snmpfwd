@@ -10,3 +10,4 @@
 * formalize request splitting-merging logic
 * improve logging plugin to expand snmp-* options in log file path
 * cross-link options in configuration docs
+* count runtime errors, report them periodically or serve as SNMP table
