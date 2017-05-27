@@ -7,6 +7,7 @@
 import sys
 import logging
 import socket
+import time
 from logging import handlers
 from snmpfwd.error import SnmpfwdError
 
@@ -97,6 +98,9 @@ class FileLogger(AbstractLogger):
 
         self('Log file %s, rotation rules: %s' % (priv[0], maxsize and '> %sKB' % (maxsize/1024) or maxage and '%s%s' % (maxage[1], maxage[0]) or '<none>'))
 
+    def __call__(self, s):
+        AbstractLogger.__call__(self, '%s %s' % (time.strftime('%Y-%m-%dT%H:%M:%S.%s', time.localtime()), s))
+
 
 class StreamLogger(AbstractLogger):
     stream = sys.stderr
@@ -112,7 +116,7 @@ class StreamLogger(AbstractLogger):
 
         handler.setFormatter(logging.Formatter('%(message)s'))
         self._logger.addHandler(handler)
- 
+
 
 class StdoutLogger(StreamLogger):
     stream = sys.stdout
