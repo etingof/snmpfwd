@@ -411,9 +411,9 @@ def main():
         statusInformation = variables.get('statusInformation', {})
 
         if securityModel in (1, 2):
-            logMsg += ' using snmp-community-name "%s"' % variables['securityParameters'][0]
+            logMsg += ' using snmp-community-name "%s"' % statusInformation.get('communityName', '?')
         elif securityModel == 3:
-            logMsg += ' using usm-user "%s"' % statusInformation.get('msgUserName', '?')
+            logMsg += ' using snmp-usm-user "%s"' % statusInformation.get('msgUserName', '?')
 
         try:
             logMsg += ': %s' % statusInformation['errorIndication']
