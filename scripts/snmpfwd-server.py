@@ -401,6 +401,28 @@ def main():
         rfc1905.SNMPv2TrapPDU.tagSet: 'TRAPv2'
     }
 
+    def securityAuditObserver(snmpEngine, execpoint, variables, cbCtx):
+        securityModel = variables.get('securityModel', 0)
+
+        logMsg = 'SNMPv%s auth failure' % securityModel
+        logMsg += ' at %s:%s' % variables['transportAddress'].getLocalAddress()
+        logMsg += ' from %s:%s' % variables['transportAddress']
+
+        statusInformation = variables.get('statusInformation', {})
+
+        if securityModel in (1, 2):
+            logMsg += ' using snmp-community-name "%s"' % variables['securityParameters'][0]
+        elif securityModel == 3:
+            logMsg += ' using usm-user "%s"' % statusInformation.get('msgUserName', '?')
+
+        try:
+            logMsg += ': %s' % statusInformation['errorIndication']
+
+        except KeyError:
+            pass
+
+        log.error(logMsg)
+
     def requestObserver(snmpEngine, execpoint, variables, cbCtx):
         msg = {
             'snmp-engine-id': snmpEngine.snmpEngineID,
@@ -518,6 +540,13 @@ def main():
                 'transportDomain': {},
                 'securityName': {}
             }
+
+            snmpEngine.observer.registerObserver(
+                securityAuditObserver,
+                'rfc2576.prepareDataElements:sm-failure',
+                'rfc3412.prepareDataElements:sm-failure',
+                cbCtx=gCurrentRequestContext
+            )
 
             snmpEngine.observer.registerObserver(
                 requestObserver,
