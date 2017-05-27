@@ -113,7 +113,7 @@ def _format(template, pdu, context):
 
     token = '${isotime}'
     if token in template:
-        template = template.replace(token, time.strftime('%Y-%m-%dT%H:%M:%s.%S', time.localtime()))
+        template = template.replace(token, time.strftime('%Y-%m-%dT%H:%M:%S.%s', time.localtime()))
 
     token = '${timestamp}'
     if token in template:

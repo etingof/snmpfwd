@@ -3,7 +3,10 @@ Revision 0.2.1, released XX-05-2017
 -----------------------------------
 
 - Built-in logging at different verbosity levels implemented
-  (via new --log-level option).
+  (via new --log-level option)
+- Log SNMP authentication failures
+- Added timestamping to file log
+- Fixed malformed timestamp logging at the logger plugin
 
 Revision 0.2.0, released 16-05-2017
 -----------------------------------
