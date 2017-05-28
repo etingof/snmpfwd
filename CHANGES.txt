@@ -5,6 +5,7 @@ Revision 0.2.1, released XX-05-2017
 - Built-in logging at different verbosity levels implemented
   (via new --log-level option)
 - Log SNMP authentication failures
+- Optionally log denied OIDs at the oidfilter plugin
 - Added timestamping to file log
 - The plugin-options setting fixed to support a list of options,
   as its name suggests

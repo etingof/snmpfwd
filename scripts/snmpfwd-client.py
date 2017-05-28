@@ -549,14 +549,24 @@ def main():
                 elif st == status.DROP:
                     log.debug('received SNMP %s message, snmp-var-binds=%s, plugin %s muted response' % (errorIndication and 'error' or 'response', prettyVarBinds(rspPDU), pluginId))
                     trunkRsp['snmp-pdu'] = None
-                    trunkingManager.sendRsp(trunkId, msgId, trunkRsp)
+
+                    try:
+                        trunkingManager.sendRsp(trunkId, msgId, trunkRsp)
+
+                    except SnmpfwdError:
+                        log.error('trunk message not sent: %s' % sys.exc_info()[1])
+
                     return
 
         trunkRsp['snmp-pdu'] = rspPDU
 
         log.debug('received SNMP %s message, sending trunk message #%s to trunk %s, original SNMP peer address %s:%s received at %s:%s, var-binds: %s' % (errorIndication and 'error' or 'response', msgId, trunkId, trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port'], prettyVarBinds(rspPDU)))
 
-        trunkingManager.sendRsp(trunkId, msgId, trunkRsp)
+        try:
+            trunkingManager.sendRsp(trunkId, msgId, trunkRsp)
+
+        except SnmpfwdError:
+            log.error('trunk message not sent: %s' % sys.exc_info()[1])
 
     #
     # The following needs proper support in pysnmp. Meanwhile - monkey patching!

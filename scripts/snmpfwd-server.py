@@ -238,7 +238,11 @@ def main():
 
                 cbCtx = pluginIdList, trunkId, trunkReq, snmpEngine, stateReference, snmpReqInfo, reqCtx
 
-                trunkingManager.sendReq(trunkId, trunkReq, self.__recvCb, cbCtx)
+                try:
+                    trunkingManager.sendReq(trunkId, trunkReq, self.__recvCb, cbCtx)
+
+                except SnmpfwdError:
+                    log.error('trunk message not sent: %s' % sys.exc_info()[1])
 
         def __recvCb(self, trunkRsp, cbCtx):
             pluginIdList, trunkId, trunkReq, snmpEngine, stateReference, snmpReqInfo, reqCtx = cbCtx
@@ -333,7 +337,11 @@ def main():
                 # TODO: pass messageProcessingModel to respond
                 cbCtx = pluginIdList, trunkId, trunkReq, snmpEngine, stateReference, snmpReqInfo, reqCtx
 
-                trunkingManager.sendReq(trunkId, trunkReq, self.__recvCb, cbCtx)
+                try:
+                    trunkingManager.sendReq(trunkId, trunkReq, self.__recvCb, cbCtx)
+
+                except SnmpfwdError:
+                    log.error('trunk message not sent: %s' % sys.exc_info()[1])
 
         def __recvCb(self, trunkRsp, cbCtx):
             pluginIdList, trunkId, trunkReq, snmpEngine, stateReference, snmpReqInfo, reqCtx = cbCtx

@@ -309,7 +309,7 @@ module in the system.
 
 .. note::
 
-    Client-side plugins are also :ref:`available <plugin-options-client>`.
+    Client-side plugins are also :ref:`available <plugin-options-client-chapter>`.
 
 .. _plugin-modules-path-list-server-option:
 
@@ -333,6 +333,8 @@ Plugin module file name to load and run (without .py).
 ++++++++++++++++
 
 Plugin-specific configuration option to pass to plugin.
+
+This option can reference :ref:`config-dir <config-dir-macro>` macro.
 
 .. _plugin-id-server-option:
 
