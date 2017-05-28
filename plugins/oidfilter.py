@@ -24,6 +24,7 @@ PLUGIN_NAME = 'oidfilter'
 oidsList = []
 endOids = []
 
+logDenials = False
 
 for moduleOption in moduleOptions:
 
@@ -88,10 +89,22 @@ for moduleOption in moduleOptions:
         except Exception:
             raise SnmpfwdError('%s: config file load failure: %s' % (PLUGIN_NAME, sys.exc_info()[1]))
 
+    elif optionName == 'log-denials':
+        logDenials = optionValue == 'true'
+        info('%s: will log denied OIDs' % PLUGIN_NAME)
+
 info('%s: plugin initialization complete' % PLUGIN_NAME)
 
 noSuchObject = v2c.NoSuchObject('')
 endOfMibVew = v2c.EndOfMibView('')
+
+
+def formatDenialMsg(pdu, snmpReqInfo):
+    denialMsg = '%s: %s' % (PLUGIN_NAME, pdu.__class__.__name__)
+    denialMsg += ' from %s:%s' % (snmpReqInfo['snmp-peer-address'], snmpReqInfo['snmp-peer-port'])
+    denialMsg += ' at %s:%s' % (snmpReqInfo['snmp-bind-address'], snmpReqInfo['snmp-bind-port'])
+    denialMsg += ' snmp-credentials-id %s' % snmpReqInfo['server-snmp-credentials-id']
+    return denialMsg
 
 
 def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
@@ -100,6 +113,8 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     rspVarBinds = []
 
     if pdu.tagSet in (v2c.GetRequestPDU.tagSet, v2c.SetRequestPDU.tagSet):
+
+        deniedOids = []
 
         for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
             oid, val = v2c.apiVarBind.getOIDVal(varBind)
@@ -117,11 +132,22 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
                 val = None
 
             if val is None:
+                # pretend no such OID exists even without asking the backend
                 v2c.apiVarBind.setOIDVal(varBind, (oid, noSuchObject))
                 rspVarBinds.append(varBind)
+
+                # report OIDs we are sending errors for
+                if logDenials:
+                    deniedOids.append(str(varBind[0]))
             else:
                 reqVarBinds.append(varBind)
                 rspVarBinds.append(None)
+
+        if logDenials and deniedOids:
+            denialMsg = formatDenialMsg(pdu, snmpReqInfo)
+            denialMsg += ' OIDs ' + ', '.join(deniedOids)
+            denialMsg += ' denied'
+            error(denialMsg)
 
         if reqVarBinds:
             reqCtx['setaside-oids'] = rspVarBinds
@@ -138,16 +164,24 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     elif pdu.tagSet == v2c.GetNextRequestPDU.tagSet:
 
         reqAclIndices = []
+        skippedOids = []
 
         for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
+            hitEndOfRange = False
+
             oid, val = v2c.apiVarBind.getOIDVal(varBind)
             oid = tuple(oid)
             idx = bisect.bisect_left(endOids, oid)
+
             while idx < len(endOids):
                 skip, begin, end = oidsList[idx]
 
                 # OID preceding range
                 if oid < begin:
+                    # report only completely out-of-ranges OIDs
+                    if logDenials and not hitEndOfRange and oid != skip:
+                        skippedOids.append((oid, skip))
+
                     # OID allowed, fast-forward to the start of this range
                     oid = skip
                     reqAclIndices.append(idx)
@@ -155,6 +189,7 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
 
                 # response will get out of range - skip to the next range
                 elif oid == end:
+                    hitEndOfRange = True
                     idx += 1
                     continue
 
@@ -178,6 +213,11 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
                 v2c.apiVarBind.setOIDVal(varBind, (oid, val))
                 reqVarBinds.append(varBind)
                 rspVarBinds.append(None)
+
+        if logDenials and skippedOids:
+            denialMsg = formatDenialMsg(pdu, snmpReqInfo)
+            denialMsg += ' ' + ', '.join(['%s not in range skipping to %s' % (v2c.ObjectIdentifier(x[0]), v2c.ObjectIdentifier(x[1])) for x in skippedOids])
+            info(denialMsg)
 
         if reqVarBinds:
             reqCtx['setaside-oids'] = rspVarBinds
