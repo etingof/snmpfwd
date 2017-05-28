@@ -32,56 +32,59 @@ leftParen, rightParen = '', ''
 
 logger = logging.getLogger('snmpfwd-logger')
 
-moduleOptions = moduleOptions.split('=')
+for moduleOption in moduleOptions:
 
-if moduleOptions[0] == 'config':
-    configFile = moduleOptions[1]
+    optionName, optionValue = moduleOption.split('=', 1)
 
-    config = RawConfigParser()
-    config.read(configFile)
+    if optionName == 'config':
 
-    method = config.get('general', 'method')
-    if method == 'file':
+        configFile = optionValue
 
-        rotation = config.get('file', 'rotation')
-        if rotation == 'timed':
-            handler = handlers.TimedRotatingFileHandler(
-                config.get('file', 'destination'),
-                config.get('file', 'timescale'),
-                int(config.get('file', 'interval')),
-                int(config.get('file', 'backupcount'))
-            )
+        config = RawConfigParser()
+        config.read(configFile)
+
+        method = config.get('general', 'method')
+        if method == 'file':
+
+            rotation = config.get('file', 'rotation')
+            if rotation == 'timed':
+                handler = handlers.TimedRotatingFileHandler(
+                    config.get('file', 'destination'),
+                    config.get('file', 'timescale'),
+                    int(config.get('file', 'interval')),
+                    int(config.get('file', 'backupcount'))
+                )
+            else:
+                raise SnmpfwdError('%s: unknown rotation method %s at %s' % (PLUGIN_NAME, rotation, configFile))
         else:
-            raise SnmpfwdError('%s: unknown rotation method %s at %s' % (PLUGIN_NAME, rotation, configFile))
-    else:
-        raise SnmpfwdError('%s: unknown logging method %s at %s' % (PLUGIN_NAME, method, configFile))
+            raise SnmpfwdError('%s: unknown logging method %s at %s' % (PLUGIN_NAME, method, configFile))
 
-    debug('%s: using %s logging method' % (PLUGIN_NAME, method))
+        debug('%s: using %s logging method' % (PLUGIN_NAME, method))
 
-    logger.setLevel(logging.INFO)
+        logger.setLevel(logging.INFO)
 
-    pdus = config.get('content', 'pdus')
-    for pdu in pdus.split():
+        pdus = config.get('content', 'pdus')
+        for pdu in pdus.split():
+            try:
+                pduMap[getattr(v2c, pdu + 'PDU').tagSet] = pdu
+
+            except AttributeError:
+                raise SnmpfwdError('%s: unknown PDU %s' % (PLUGIN_NAME, pdu))
+
+            else:
+                debug('%s: PDU ACL includes %s' % (PLUGIN_NAME, pdu))
+
         try:
-            pduMap[getattr(v2c, pdu + 'PDU').tagSet] = pdu
+            leftParen, rightParen = config.get('content', 'parentheses').split()
 
-        except AttributeError:
-            raise SnmpfwdError('%s: unknown PDU %s' % (PLUGIN_NAME, pdu))
+        except Exception:
+            error('%s: malformed "parentheses" values at %s' % (PLUGIN_NAME, configFile))
 
-        else:
-            debug('%s: PDU ACL includes %s' % (PLUGIN_NAME, pdu))
+        template = config.get('content', 'template')
 
-    try:
-        leftParen, rightParen = config.get('content', 'parentheses').split()
+        debug('%s: using var-bind value parentheses %s %s' % (PLUGIN_NAME, leftParen, rightParen))
 
-    except Exception:
-        error('%s: malformed "parentheses" values at %s' % (PLUGIN_NAME, configFile))
-
-    template = config.get('content', 'template')
-
-    debug('%s: using var-bind value parentheses %s %s' % (PLUGIN_NAME, leftParen, rightParen))
-
-    logger.addHandler(handler)
+        logger.addHandler(handler)
 
 started = time.time()
 

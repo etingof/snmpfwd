@@ -37,31 +37,33 @@ nullifyMap = {
 
 rewriteList = []
 
-moduleOptions = moduleOptions.split('=')
+for moduleOption in moduleOptions:
 
-if moduleOptions[0] == 'config':
+    optionName, optionValue = moduleOption.split('=', 1)
 
-    try:
-        configFile = moduleOptions[1]
+    if optionName == 'config':
 
-        for lineNo, line in enumerate(open(configFile).readlines()):
-            line = line.strip()
+        try:
+            configFile = optionValue
 
-            if not line or line.startswith('#'):
-                continue
+            for lineNo, line in enumerate(open(configFile).readlines()):
+                line = line.strip()
 
-            try:
-                oidPatt, valPatt, valRepl, replCount = shlex.split(line)
+                if not line or line.startswith('#'):
+                    continue
 
-            except ValueError:
-                raise SnmpfwdError('%s: syntax error at %s:%d: %s' % (PLUGIN_NAME, configFile, lineNo + 1, sys.exc_info()[1]))
+                try:
+                    oidPatt, valPatt, valRepl, replCount = shlex.split(line)
 
-            debug('%s: for OIDs like "%s" and values matching "%s" rewrite value into "%s" (max %s times)' % (PLUGIN_NAME, oidPatt, valPatt, valRepl, replCount))
+                except ValueError:
+                    raise SnmpfwdError('%s: syntax error at %s:%d: %s' % (PLUGIN_NAME, configFile, lineNo + 1, sys.exc_info()[1]))
 
-            rewriteList.append((re.compile(oidPatt), re.compile(valPatt), valRepl, int(replCount)))
+                debug('%s: for OIDs like "%s" and values matching "%s" rewrite value into "%s" (max %s times)' % (PLUGIN_NAME, oidPatt, valPatt, valRepl, replCount))
 
-    except Exception:
-        raise SnmpfwdError('%s: config file load failure: %s' % (PLUGIN_NAME, sys.exc_info()[1]))
+                rewriteList.append((re.compile(oidPatt), re.compile(valPatt), valRepl, int(replCount)))
+
+        except Exception:
+            raise SnmpfwdError('%s: config file load failure: %s' % (PLUGIN_NAME, sys.exc_info()[1]))
 
 info('%s: plugin initialization complete' % PLUGIN_NAME)
 

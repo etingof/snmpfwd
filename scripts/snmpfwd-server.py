@@ -510,12 +510,13 @@ def main():
     for pluginCfgPath in cfgTree.getPathsToAttr('plugin-id'):
         pluginId = cfgTree.getAttrValue('plugin-id', *pluginCfgPath)
         pluginMod = cfgTree.getAttrValue('plugin-module', *pluginCfgPath)
-        pluginOptions = macro.expandMacro(
-            cfgTree.getAttrValue('plugin-options', *pluginCfgPath, **dict(default='')),
+        pluginOptions = macro.expandMacros(
+            cfgTree.getAttrValue('plugin-options', *pluginCfgPath, **dict(default=[], vector=True)),
             {'config-dir': os.path.dirname(cfgFile)}
         )
 
-        log.info('configuring plugin ID %s (at %s) from module %s with options %s...' % (pluginId, '.'.join(pluginCfgPath), pluginMod, pluginOptions or '<none>'))
+        log.info('configuring plugin ID %s (at %s) from module %s with options %s...' % (pluginId, '.'.join(pluginCfgPath), pluginMod, ', '.join(pluginOptions) or '<none>'))
+
         try:
             pluginManager.loadPlugin(pluginId, pluginMod, pluginOptions)
 

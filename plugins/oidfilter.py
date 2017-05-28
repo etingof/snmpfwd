@@ -24,66 +24,69 @@ PLUGIN_NAME = 'oidfilter'
 oidsList = []
 endOids = []
 
-moduleOptions = moduleOptions.split('=')
 
-if moduleOptions[0] == 'config':
-    try:
-        configFile = moduleOptions[1]
+for moduleOption in moduleOptions:
 
-        for line in open(configFile).readlines():
-            line = line.strip()
+    optionName, optionValue = moduleOption.split('=', 1)
 
-            if not line or line.startswith('#'):
-                continue
+    if optionName == 'config':
+        try:
+            configFile = optionValue
 
-            try:
-                skip, begin, end = line.split()
+            for line in open(configFile).readlines():
+                line = line.strip()
 
-            except ValueError:
-                raise SnmpfwdError('%s: bad configuration syntax: "%s"' % (PLUGIN_NAME, line))
+                if not line or line.startswith('#'):
+                    continue
 
-            try:
-                skip = v2c.ObjectIdentifier(skip)
-                begin = v2c.ObjectIdentifier(begin)
-                end = v2c.ObjectIdentifier(end)
+                try:
+                    skip, begin, end = line.split()
 
-            except Exception:
-                raise SnmpfwdError('%s: malformed OID %s/%s/%s' % (PLUGIN_NAME, skip, begin, end))
+                except ValueError:
+                    raise SnmpfwdError('%s: bad configuration syntax: "%s"' % (PLUGIN_NAME, line))
 
-            oidsList.append((skip, begin, end))
+                try:
+                    skip = v2c.ObjectIdentifier(skip)
+                    begin = v2c.ObjectIdentifier(begin)
+                    end = v2c.ObjectIdentifier(end)
 
-        oidsList.sort(key=lambda x: x[0])
+                except Exception:
+                    raise SnmpfwdError('%s: malformed OID %s/%s/%s' % (PLUGIN_NAME, skip, begin, end))
 
-        idx = 0
-        while idx < len(oidsList):
-            skip, begin, end = oidsList[idx]
-            if skip >= begin:
-                raise SnmpfwdError('%s: skip OID %s >= begin OID %s at %s' % (PLUGIN_NAME, skip, begin, configFile))
-            if end < begin:
-                raise SnmpfwdError('%s: end OID %s < begin OID %s at %s' % (PLUGIN_NAME, end, begin, configFile))
-            if idx:
-                prev_skip, prev_begin, prev_end = oidsList[idx - 1]
-                if skip <= prev_skip:
-                    raise SnmpfwdError('%s: skip OID %s not increasing at %s' % (PLUGIN_NAME, skip, configFile))
-                if begin <= prev_begin:
-                    raise SnmpfwdError('%s: begin OID %s not increasing at %s' % (PLUGIN_NAME, begin, configFile))
-                if end <= prev_end:
-                    raise SnmpfwdError('%s: end OID %s not increasing at %s' % (PLUGIN_NAME, end, configFile))
-                if begin < prev_end:
-                    raise SnmpfwdError('%s: non-adjacent end OID %s followed by begin OID %s at %s' % (PLUGIN_NAME, prev_end, begin, configFile))
+                oidsList.append((skip, begin, end))
 
-            idx += 1
+            oidsList.sort(key=lambda x: x[0])
 
-            debug('%s: #%d skip to %s allow from %s to %s' % (PLUGIN_NAME, idx, skip, begin, end))
+            idx = 0
+            while idx < len(oidsList):
+                skip, begin, end = oidsList[idx]
+                if skip >= begin:
+                    raise SnmpfwdError('%s: skip OID %s >= begin OID %s at %s' % (PLUGIN_NAME, skip, begin, configFile))
+                if end < begin:
+                    raise SnmpfwdError('%s: end OID %s < begin OID %s at %s' % (PLUGIN_NAME, end, begin, configFile))
+                if idx:
+                    prev_skip, prev_begin, prev_end = oidsList[idx - 1]
+                    if skip <= prev_skip:
+                        raise SnmpfwdError('%s: skip OID %s not increasing at %s' % (PLUGIN_NAME, skip, configFile))
+                    if begin <= prev_begin:
+                        raise SnmpfwdError('%s: begin OID %s not increasing at %s' % (PLUGIN_NAME, begin, configFile))
+                    if end <= prev_end:
+                        raise SnmpfwdError('%s: end OID %s not increasing at %s' % (PLUGIN_NAME, end, configFile))
+                    if begin < prev_end:
+                        raise SnmpfwdError('%s: non-adjacent end OID %s followed by begin OID %s at %s' % (PLUGIN_NAME, prev_end, begin, configFile))
 
-        # cast to built-in tuple type for better comparison performance down the road
-        oidsList = [(tuple(skip), tuple(begin), tuple(end)) for skip, begin, end in oidsList]
+                idx += 1
 
-        # we use this for pivoting dichotomy search
-        endOids = [x[2] for x in oidsList]
+                debug('%s: #%d skip to %s allow from %s to %s' % (PLUGIN_NAME, idx, skip, begin, end))
 
-    except Exception:
-        raise SnmpfwdError('%s: config file load failure: %s' % (PLUGIN_NAME, sys.exc_info()[1]))
+            # cast to built-in tuple type for better comparison performance down the road
+            oidsList = [(tuple(skip), tuple(begin), tuple(end)) for skip, begin, end in oidsList]
+
+            # we use this for pivoting dichotomy search
+            endOids = [x[2] for x in oidsList]
+
+        except Exception:
+            raise SnmpfwdError('%s: config file load failure: %s' % (PLUGIN_NAME, sys.exc_info()[1]))
 
 info('%s: plugin initialization complete' % PLUGIN_NAME)
 
