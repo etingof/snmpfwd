@@ -6,6 +6,24 @@ The *logger* plugin can record contents, properties and effective system configu
 the passing SNMP messages into a local file or send log message over to the
 syslog service.
 
+Plugin options
+--------------
+
+One or more options could be passed to the plugin via the
+:ref:`plugin-options <plugin-options-server-option>` server
+and/or client configuration option.
+
+The values to the *plugin-options* setting must be one or more
+key-value pairs separated via the equal sign (*=*). The following
+plugin options are recognized.
+
+*config*
+++++++++
+
+Path to plugin configuration file.
+
+This option can reference :ref:`config-dir <config-dir-macro>` macro.
+
 .. _logger-config:
 
 Configuration syntax
@@ -211,4 +229,4 @@ This configuration forwards important facts about passing SNMP RESPONSE PDUs to 
     template: ${snmp-peer-address} ${snmp-security-name} ${snmp-var-binds}
     parentheses: < >
 
-For more information please refer to :doc:`the full configuration example </configuration/examples/command-forwarding-with-logging>`.
+For more information please refer to :doc:`the full configuration example </configuration/examples/command-forwarding-logging>`.

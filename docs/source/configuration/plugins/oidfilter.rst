@@ -8,6 +8,32 @@ actually trivial due to the dynamic nature of SNMP tables and the existence
 of *GETNEXT*/*GETBULK* operations supporting them. That explains why configuration
 file for *oidfilter* plugin is not just a bunch of regular expression patterns.
 
+Plugin options
+--------------
+
+One or more options could be passed to the plugin via the
+:ref:`plugin-options <plugin-options-server-option>` server
+and/or client configuration option.
+
+The values to the *plugin-options* setting must be one or more
+key-value pairs separated via the equal sign (*=*). The following
+plugin options are recognized.
+
+*config*
+++++++++
+
+Path to plugin configuration file.
+
+This option can reference :ref:`config-dir <config-dir-macro>` macro.
+
+*log-denials*
++++++++++++++
+
+If set to *true*, the plugin will log (via server/client system log)
+request PDU and OIDs not fitting any of the configured OID ranges.
+
+.. _oidfilter-config:
+
 Configuration syntax
 --------------------
 
