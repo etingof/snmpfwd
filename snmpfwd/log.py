@@ -99,7 +99,9 @@ class FileLogger(AbstractLogger):
         self('Log file %s, rotation rules: %s' % (priv[0], maxsize and '> %sKB' % (maxsize/1024) or maxage and '%s%s' % (maxage[1], maxage[0]) or '<none>'))
 
     def __call__(self, s):
-        AbstractLogger.__call__(self, '%s %s' % (time.strftime('%Y-%m-%dT%H:%M:%S.%s', time.localtime()), s))
+        now = time.time()
+        timestamp = time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime(now))
+        AbstractLogger.__call__(self, '%s.%02d %s' % (timestamp, now % 1 * 100, s))
 
 
 class StreamLogger(AbstractLogger):

@@ -110,21 +110,28 @@ def _format(template, pdu, context):
     if token in template:
         template = template.replace(token, pduMap[pdu.tagSet])
 
+    now = time.time()
+
     token = '${asctime}'
     if token in template:
-        template = template.replace(token, time.asctime())
+        timestamp = time.asctime(time.localtime(now))
+        template = template.replace(token, timestamp)
 
     token = '${isotime}'
     if token in template:
-        template = template.replace(token, time.strftime('%Y-%m-%dT%H:%M:%S.%s', time.localtime()))
+        timestamp = time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime(now))
+        timestamp += '.%02d' % (now % 1 * 100)
+        template = template.replace(token, timestamp)
 
     token = '${timestamp}'
     if token in template:
-        template = template.replace(token, str(time.time()))
+        timestamp = '%.2f' % now
+        template = template.replace(token, timestamp)
 
     token = '${uptime}'
     if token in template:
-        template = template.replace(token, str(time.time() - started))
+        timestamp = '%012.2f' % (time.time() - started)
+        template = template.replace(token, timestamp)
 
     return template
 

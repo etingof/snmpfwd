@@ -184,13 +184,19 @@ can optionally be surrounded by the `content.parentheses`_.
 *asctime* and *isotime*
 +++++++++++++++++++++++
 
-Expands into a human-friendly representation of current date and time in local timezone.
+Expands into a human-friendly representation of current date and time in local timezone:
+
+* *${asctime}:* Fri Jun  2 00:15:46 2017
+* *${isotime}:* 2017-06-02T00:15:46.59
 
 *timestamp* and *uptime*
 ++++++++++++++++++++++++
 
 Expands into a floating point number representing the number of seconds passed since
-start if UNIX epoch or SNMP Proxy Forwarder process start respectively.
+start if UNIX epoch or SNMP Proxy Forwarder process start respectively:
+
+* *${timestamp}:* 1496354552.59
+* *${uptime}:* 0003600.59
 
 .. _logger-examples:
 
