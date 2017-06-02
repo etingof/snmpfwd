@@ -11,7 +11,7 @@ from pysnmp.proto import rfc1905
 from snmpfwd.trunking import crypto
 from snmpfwd.error import SnmpfwdError
 
-PROTOCOL_VERSION = 1
+PROTOCOL_VERSION = 2
 
 MSG_TYPE_REQUEST = 0
 MSG_TYPE_RESPONSE = 1
@@ -31,6 +31,8 @@ class Message(univ.Sequence):
 
 class Request(univ.Sequence):
     componentType = namedtype.NamedTypes(
+        namedtype.NamedType('callflow-id', univ.OctetString()),
+        # SNMP details
         namedtype.NamedType('snmp-engine-id', univ.OctetString()),
         namedtype.NamedType('snmp-transport-domain', univ.ObjectIdentifier()),
         namedtype.NamedType('snmp-peer-address', univ.OctetString()),
@@ -87,7 +89,8 @@ pduMap = {
 
 def prepareRequestData(msgId, req, secret):
     r = Request()
-    for k in ('snmp-engine-id',
+    for k in ('callflow-id',
+              'snmp-engine-id',
               'snmp-transport-domain',
               'snmp-peer-address', 'snmp-peer-port',
               'snmp-bind-address', 'snmp-bind-port',
@@ -193,7 +196,8 @@ def prepareDataElements(octets, secret):
     rsp = {}
 
     if msg['content-id'] == MSG_TYPE_REQUEST:
-        for k in ('snmp-engine-id',
+        for k in ('callflow-id',
+                  'snmp-engine-id',
                   'snmp-transport-domain',
                   'snmp-peer-address', 'snmp-peer-port',
                   'snmp-bind-address', 'snmp-bind-port',

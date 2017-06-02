@@ -518,12 +518,12 @@ def main():
         return not pdu and '<none>' or ';'.join(['%s:%s' % (vb[0].prettyPrint(), vb[1].prettyPrint()) for vb in v2c.apiPDU.getVarBinds(pdu)])
 
     def __rspCbFun(snmpEngine, sendRequestHandle, errorIndication, rspPDU, cbCtx):
-        trunkId, msgId, trunkReq, pluginIdList, snmpReqInfo, reqCtx = cbCtx
+        trunkId, msgId, callflowId, trunkReq, pluginIdList, snmpReqInfo, reqCtx = cbCtx
 
         trunkRsp = {}
 
         if errorIndication:
-            log.info('SNMP error returned for message ID %s received from trunk %s: %s' % (msgId, trunkId, errorIndication))
+            log.info('SNMP error returned for message ID %s received from trunk %s callflow-id %s: %s' % (msgId, trunkId, callflowId, errorIndication))
             trunkRsp['error-indication'] = errorIndication
 
         reqPdu = trunkReq['snmp-pdu']
@@ -547,7 +547,7 @@ def main():
                     break
 
                 elif st == status.DROP:
-                    log.debug('received SNMP %s message, snmp-var-binds=%s, plugin %s muted response' % (errorIndication and 'error' or 'response', prettyVarBinds(rspPDU), pluginId))
+                    log.debug('received SNMP %s message, callflow-id %s, snmp-var-binds=%s, plugin %s muted response' % (errorIndication and 'error' or 'response', callflowId, prettyVarBinds(rspPDU), pluginId))
                     trunkRsp['snmp-pdu'] = None
 
                     try:
@@ -560,7 +560,7 @@ def main():
 
         trunkRsp['snmp-pdu'] = rspPDU
 
-        log.debug('received SNMP %s message, sending trunk message #%s to trunk %s, original SNMP peer address %s:%s received at %s:%s, var-binds: %s' % (errorIndication and 'error' or 'response', msgId, trunkId, trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port'], prettyVarBinds(rspPDU)))
+        log.debug('received SNMP %s message, sending trunk message #%s to trunk %s, callflow-id %s original SNMP peer address %s:%s received at %s:%s, var-binds: %s' % (errorIndication and 'error' or 'response', msgId, trunkId, callflowId, trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port'], prettyVarBinds(rspPDU)))
 
         try:
             trunkingManager.sendRsp(trunkId, msgId, trunkRsp)
@@ -587,6 +587,8 @@ def main():
     lcd.getTargetAddr = getTargetAddr
 
     def dataCbFun(trunkId, msgId, msg):
+        callflowId = msg['callflow-id']
+
         k = [str(x) for x in (msg['snmp-engine-id'],
                               msg['snmp-transport-domain'],
                               msg['snmp-peer-address'] + ':' + str(msg['snmp-peer-port']),
@@ -629,13 +631,13 @@ def main():
             log.error('unroutable trunk message #%s from trunk %s, srv-classification-id %s, orig-peer-id %s (original SNMP info: %s)' % (msgId, trunkId, srvClassId, origPeerId or '<none>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg])))
             errorIndication = 'no route to SNMP peer configured'
 
-        cbCtx = trunkId, msgId, msg, (), {}, {}
+        cbCtx = trunkId, msgId, callflowId, msg, (), {}, {}
 
         if errorIndication:
             __rspCbFun(None, None, errorIndication, None, cbCtx)
             return
 
-        log.debug('received trunk message #%s from trunk %s' % (msgId, trunkId))
+        log.debug('received trunk message #%s from trunk %s callflow-id %s' % (msgId, trunkId, callflowId))
 
         for peerId in peerIdList:
             peerId = macro.expandMacro(peerId, msg)
@@ -658,7 +660,7 @@ def main():
             if peerAddr:
                 q.append(peerAddr)
 
-            logMsg = 'SNMP message to peer ID %s, bind-address %s, peer-address %s (original SNMP info: %s; original server classification: %s)' % (peerId, bindAddr[0] or '<default>', peerAddr[0] or '<default>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg if x.startswith('snmp-')]), ' '.join(['%s=%s' % (x, msg[x].prettyPrint()) for x in msg if x.startswith('server-')]))
+            logMsg = 'SNMP message to peer ID %s, callflow-id %s, bind-address %s, peer-address %s (original SNMP info: %s; original server classification: %s)' % (peerId, callflowId, bindAddr[0] or '<default>', peerAddr[0] or '<default>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg if x.startswith('snmp-')]), ' '.join(['%s=%s' % (x, msg[x].prettyPrint()) for x in msg if x.startswith('server-')]))
 
             log.debug('sending %s' % logMsg)
 
@@ -668,7 +670,7 @@ def main():
                 snmpReqInfo = msg.copy()
                 reqCtx = {}
 
-                cbCtx = trunkId, msgId, msg, pluginIdList, snmpReqInfo, reqCtx
+                cbCtx = trunkId, msgId, callflowId, msg, pluginIdList, snmpReqInfo, reqCtx
 
                 for pluginNum, pluginId in enumerate(pluginIdList):
 

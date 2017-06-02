@@ -263,7 +263,7 @@ def main():
                         self.releaseStateInformation(stateReference)
                         return
 
-                log.debug('received trunk message through trunk %s, sending SNMP response to peer address %s:%s from %s:%s, snmp-var-binds=%s' % (trunkId, trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port'], prettyVarBinds(PDU)))
+                log.debug('received trunk message through trunk %s callflow-id %s, sending SNMP response to peer address %s:%s from %s:%s, snmp-var-binds=%s' % (trunkId, trunkReq['callflow-id'], trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port'], prettyVarBinds(PDU)))
 
                 self.sendPdu(
                     snmpEngine,
@@ -432,6 +432,7 @@ def main():
         log.error(logMsg)
 
     def requestObserver(snmpEngine, execpoint, variables, cbCtx):
+
         msg = {
             'snmp-engine-id': snmpEngine.snmpEngineID,
             'snmp-transport-domain': variables['transportDomain'],
@@ -443,7 +444,8 @@ def main():
             'snmp-security-level': variables['securityLevel'],
             'snmp-security-name': variables['securityName'],
             'snmp-context-engine-id': variables['contextEngineId'],
-            'snmp-context-name': variables['contextName']
+            'snmp-context-name': variables['contextName'],
+            'callflow-id': '%10.10x' % random.randint(0, 0xffffffffff),
         }
 
         cbCtx['snmp-credentials-id'] = macro.expandMacro(
