@@ -136,9 +136,9 @@ def _format(template, pdu, context):
     return template
 
 
-def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
+def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
     if pdu.tagSet in pduMap:
-        logger.info(_format(template, pdu, snmpReqInfo))
+        logger.info(_format(template, pdu, trunkMsg))
 
     return status.NEXT, pdu
 

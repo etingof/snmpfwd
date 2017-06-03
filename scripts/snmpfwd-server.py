@@ -208,12 +208,12 @@ def main():
                     break
 
                 elif st == status.DROP:
-                    log.debug('plugin %s muted request' % pluginId, ctx=logCtx)
+                    log.debug('received SNMP message, plugin %s muted request' % pluginId, ctx=logCtx)
                     self.releaseStateInformation(stateReference)
                     return
 
                 elif st == status.RESPOND:
-                    log.debug('plugin %s forced immediate response' % pluginId, ctx=logCtx)
+                    log.debug('received SNMP message, plugin %s forced immediate response' % pluginId, ctx=logCtx)
                     self.sendPdu(snmpEngine, stateReference, pdu)
                     self.releaseStateInformation(stateReference)
                     return
@@ -234,12 +234,12 @@ def main():
                     msgId = trunkingManager.sendReq(trunkId, trunkReq, self.trunkCbFun, cbCtx)
 
                 except SnmpfwdError:
-                    log.error('message not sent to trunk: %s' % sys.exc_info()[1], ctx=logCtx)
+                    log.error('received SNMP message, message not sent to trunk "%s"' % sys.exc_info()[1], ctx=logCtx)
+                    return
 
                 log.debug('received SNMP message, forwarded as trunk message #%s' % msgId, ctx=logCtx)
 
         def trunkCbFun(self, msgId, trunkRsp, cbCtx):
-
             pluginIdList, trunkId, trunkReq, snmpEngine, stateReference, reqCtx = cbCtx
 
             for key in tuple(trunkRsp):
@@ -252,7 +252,7 @@ def main():
             logCtx = LogString(trunkRsp)
 
             if trunkRsp['client-error-indication']:
-                log.info('received trunk message #%s, remote end reported error-indication %s, NOT responding' % (msgId, trunkRsp['client-error-indication']), ctx=logCtx)
+                log.info('received trunk message #%s, remote end reported error-indication "%s", NOT responding' % (msgId, trunkRsp['client-error-indication']), ctx=logCtx)
             else:
                 pdu = trunkRsp['client-snmp-pdu']
 
@@ -334,13 +334,14 @@ def main():
             for trunkId in trunkIdList:
 
                 # TODO: pass messageProcessingModel to respond
-                cbCtx = pluginIdList, trunkId, trunkReq, snmpEngine, stateReference, trunkReq, reqCtx
+                cbCtx = pluginIdList, trunkId, trunkReq, snmpEngine, stateReference, reqCtx
 
                 try:
                     msgId = trunkingManager.sendReq(trunkId, trunkReq, self.trunkCbFun, cbCtx)
 
                 except SnmpfwdError:
-                    log.error('message not sent to trunk %s: %s' % (trunkId, sys.exc_info()[1]), ctx=logCtx)
+                    log.error('received SNMP message, message not sent to trunk "%s" %s' % (trunkId, sys.exc_info()[1]), ctx=logCtx)
+                    return
 
                 log.debug('received SNMP message, forwarded as trunk message #%s' % msgId, ctx=logCtx)
 
@@ -357,7 +358,7 @@ def main():
             logCtx = LazyLogString(trunkReq, trunkRsp)
 
             if trunkRsp['client-error-indication']:
-                log.info('received trunk message #%s, remote end reported error-indication %s, NOT responding' % (msgId, trunkRsp['client-error-indication']), ctx=logCtx)
+                log.info('received trunk message #%s, remote end reported error-indication "%s", NOT responding' % (msgId, trunkRsp['client-error-indication']), ctx=logCtx)
             else:
                 if 'client-snmp-pdu' not in trunkRsp:
                     log.debug('received trunk message #%s -- unconfirmed SNMP message' % msgId, ctx=logCtx)
@@ -374,7 +375,7 @@ def main():
                         log.debug('plugin %s inhibits other plugins' % pluginId, ctx=logCtx)
                         break
                     elif st == status.DROP:
-                        log.debug('plugin %s muted response' % pluginId, ctx=logCtx)
+                        log.debug('received trunk message #%s, plugin %s muted response' % (msgId, pluginId), ctx=logCtx)
                         return
 
                 log.debug('received trunk message #%s, forwarded as SNMP message' % msgId, ctx=logCtx)

@@ -557,6 +557,7 @@ def main():
         }
 
     def snmpCbFun(snmpEngine, sendRequestHandle, errorIndication, rspPDU, cbCtx):
+
         trunkId, msgId, trunkReq, pluginIdList, reqCtx = cbCtx
 
         trunkRsp = {
@@ -567,7 +568,7 @@ def main():
         logCtx = LogString(trunkRsp)
 
         if errorIndication:
-            log.info('received SNMP error-indication %s for message ID %s' % (msgId, errorIndication), ctx=logCtx)
+            log.info('received SNMP error-indication "%s"' % errorIndication, ctx=logCtx)
             trunkRsp['error-indication'] = errorIndication
 
         if rspPDU:
@@ -588,25 +589,20 @@ def main():
                     break
 
                 if st == status.BREAK:
+                    log.debug('plugin %s inhibits other plugins' % pluginId, ctx=logCtx)
                     break
 
                 elif st == status.DROP:
                     log.debug('received SNMP %s, plugin %s muted response' % (errorIndication and 'error' or 'response', pluginId), ctx=logCtx)
                     trunkRsp['snmp-pdu'] = None
-
-                    try:
-                        trunkingManager.sendRsp(trunkId, msgId, trunkRsp)
-
-                    except SnmpfwdError:
-                        log.error('trunk message not sent: %s' % sys.exc_info()[1], ctx=logCtx)
-
-                    return
+                    break
 
         try:
             trunkingManager.sendRsp(trunkId, msgId, trunkRsp)
 
         except SnmpfwdError:
-            log.error('trunk message not sent: %s' % sys.exc_info()[1], ctx=logCtx)
+            log.error('received SNMP %s message, trunk message not sent "%s"' % (msgId, sys.exc_info()[1]), ctx=logCtx)
+            return
 
         log.debug('received SNMP %s message, forwarded as trunk message #%s' % (errorIndication and 'error' or 'response', msgId), ctx=logCtx)
 
@@ -750,14 +746,14 @@ def main():
                         break
 
                     elif st == status.DROP:
-                        log.debug('plugin %s muted request' % pluginId, ctx=logCtx)
+                        log.debug('received trunk message #%s, plugin %s muted request' % (msgId, pluginId), ctx=logCtx)
                         snmpCbFun(snmpEngine, None, None, None, cbCtx)
-                        break
+                        return
 
                     elif st == status.RESPOND:
-                        log.debug('plugin %s forced immediate response' % pluginId, ctx=logCtx)
+                        log.debug('received trunk message #%s, plugin %s forced immediate response' % (msgId, pluginId), ctx=logCtx)
                         snmpCbFun(snmpEngine, None, None, pdu, cbCtx)
-                        break
+                        return
 
             if pdu.tagSet in rfc3411.notificationClassPDUs:
                 if pdu.tagSet in rfc3411.unconfirmedClassPDUs:

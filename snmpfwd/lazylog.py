@@ -61,7 +61,7 @@ class LazyLogString(object):
                 else:
                     val = '<nil>'
 
-                logMsg += '%s:%s' % (oid.prettyPrint(), val)
+                logMsg += '%s:%s' % (oid.prettyPrint(), val) + ','
         else:
             logMsg = '<nil>'
 
