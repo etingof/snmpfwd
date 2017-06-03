@@ -198,13 +198,20 @@ start if UNIX epoch or SNMP Proxy Forwarder process start respectively:
 * *${timestamp}:* 1496354552.59
 * *${uptime}:* 0003600.59
 
+*callflow-id*
++++++++++++++
+
+Expands into a semi-unique identifier associated with the SNMP message
+being forwarded. This identifier stays the same at server and client
+parts.
+
 .. _logger-examples:
 
 Example configuration
 ---------------------
 
-The following example logs important pieces of SNMP command request messages
-into a local file.
+The following example logs important pieces of SNMP command request
+and response messages into a local file.
 
 .. code-block:: bash
 
@@ -215,8 +222,8 @@ into a local file.
     destination: /tmp/snmpfwd-brief.log
 
     [content]
-    pdus: GetRequest GetNextRequest SetRequest GetBulkRequest
-    template: ${timestamp} ${snmp-peer-address} ${snmp-pdu-type} ${snmp-var-binds}
+    pdus: GetRequest GetNextRequest SetRequest GetBulkRequest Response
+    template: ${timestamp} ${callflow-id} ${snmp-peer-address} ${snmp-pdu-type} ${snmp-var-binds}
 
 This configuration forwards important facts about passing SNMP RESPONSE PDUs to the syslog service:
 

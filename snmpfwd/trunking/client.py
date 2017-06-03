@@ -47,6 +47,7 @@ class TrunkingClient(asyncore.dispatcher_with_send):
         msgId = next.getId()
         self.send(protocol.prepareRequestData(msgId, req, self.__secret))
         self.__pendingReqs[msgId] = cbFun, cbCtx
+        return msgId
 
     def sendRsp(self, msgId, rsp):
         self.send(protocol.prepareResponseData(msgId, rsp, self.__secret))
@@ -111,7 +112,7 @@ class TrunkingClient(asyncore.dispatcher_with_send):
             elif contentId == protocol.MSG_TYPE_RESPONSE:
                 if msgId in self.__pendingReqs:
                     cbFun, cbCtx = self.__pendingReqs.pop(msgId)
-                    cbFun(msg, cbCtx)
+                    cbFun(msgId, msg, cbCtx)
             elif contentId == protocol.MSG_TYPE_PING:
                     self.__ackPingCbFun(msgId, msg)
             elif contentId == protocol.MSG_TYPE_PONG:

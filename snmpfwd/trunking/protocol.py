@@ -11,7 +11,7 @@ from pysnmp.proto import rfc1905
 from snmpfwd.trunking import crypto
 from snmpfwd.error import SnmpfwdError
 
-PROTOCOL_VERSION = 1
+PROTOCOL_VERSION = 2
 
 MSG_TYPE_REQUEST = 0
 MSG_TYPE_RESPONSE = 1
@@ -31,6 +31,8 @@ class Message(univ.Sequence):
 
 class Request(univ.Sequence):
     componentType = namedtype.NamedTypes(
+        namedtype.NamedType('callflow-id', univ.OctetString()),
+        # SNMP details
         namedtype.NamedType('snmp-engine-id', univ.OctetString()),
         namedtype.NamedType('snmp-transport-domain', univ.ObjectIdentifier()),
         namedtype.NamedType('snmp-peer-address', univ.OctetString()),
@@ -44,10 +46,10 @@ class Request(univ.Sequence):
         namedtype.NamedType('snmp-context-name', univ.OctetString()),
         namedtype.NamedType('snmp-pdu', univ.OctetString()),
         # server classifiers
-        namedtype.NamedType('server-snmp-credentials-id', univ.OctetString('')),
-        namedtype.NamedType('server-snmp-context-id', univ.OctetString('')),
-        namedtype.NamedType('server-snmp-content-id', univ.OctetString('')),
-        namedtype.NamedType('server-snmp-peer-id', univ.OctetString('')),
+        namedtype.NamedType('snmp-credentials-id', univ.OctetString('')),
+        namedtype.NamedType('snmp-context-id', univ.OctetString('')),
+        namedtype.NamedType('snmp-content-id', univ.OctetString('')),
+        namedtype.NamedType('snmp-peer-id', univ.OctetString('')),
     )
 
 
@@ -87,15 +89,24 @@ pduMap = {
 
 def prepareRequestData(msgId, req, secret):
     r = Request()
+
+    r['callflow-id'] = req['callflow-id']
+
     for k in ('snmp-engine-id',
               'snmp-transport-domain',
-              'snmp-peer-address', 'snmp-peer-port',
-              'snmp-bind-address', 'snmp-bind-port',
-              'snmp-security-model', 'snmp-security-level',
-              'snmp-security-name', 'snmp-context-engine-id',
+              'snmp-peer-address',
+              'snmp-peer-port',
+              'snmp-bind-address',
+              'snmp-bind-port',
+              'snmp-security-model',
+              'snmp-security-level',
+              'snmp-security-name',
+              'snmp-context-engine-id',
               'snmp-context-name',
-              'server-snmp-credentials-id', 'server-snmp-context-id',
-              'server-snmp-content-id', 'server-snmp-peer-id'):
+              'snmp-credentials-id',
+              'snmp-context-id',
+              'snmp-content-id',
+              'snmp-peer-id'):
         r[k] = req[k]
 
     r['snmp-pdu'] = encoder.encode(req['snmp-pdu'])
@@ -104,10 +115,12 @@ def prepareRequestData(msgId, req, secret):
     msg['version'] = PROTOCOL_VERSION
     msg['msg-id'] = msgId
     msg['content-id'] = 'request'
+
     if secret:
         msg['payload'] = crypto.encrypt(secret, encoder.encode(r))
     else:
         msg['payload'] = encoder.encode(r)
+
     return encoder.encode(msg)
 
 
@@ -193,23 +206,33 @@ def prepareDataElements(octets, secret):
     rsp = {}
 
     if msg['content-id'] == MSG_TYPE_REQUEST:
+        rsp['callflow-id'] = r['callflow-id']
+
         for k in ('snmp-engine-id',
                   'snmp-transport-domain',
-                  'snmp-peer-address', 'snmp-peer-port',
-                  'snmp-bind-address', 'snmp-bind-port',
-                  'snmp-security-model', 'snmp-security-level',
+                  'snmp-peer-address',
+                  'snmp-peer-port',
+                  'snmp-bind-address',
+                  'snmp-bind-port',
+                  'snmp-security-model',
+                  'snmp-security-level',
                   'snmp-security-name',
-                  'snmp-context-engine-id', 'snmp-context-name',
-                  'server-snmp-credentials-id', 'server-snmp-context-id',
-                  'server-snmp-content-id', 'server-snmp-peer-id'):
+                  'snmp-context-engine-id',
+                  'snmp-context-name',
+                  'snmp-credentials-id',
+                  'snmp-context-id',
+                  'snmp-content-id',
+                  'snmp-peer-id'):
             rsp[k] = r[k]
 
-        rsp['snmp-pdu'], _ = decoder.decode(r['snmp-pdu'], asn1Spec=rfc1905.PDUs())
+        pdu, _ = decoder.decode(r['snmp-pdu'], asn1Spec=rfc1905.PDUs())
+        rsp['snmp-pdu'] = pdu.getComponent()
 
     elif msg['content-id'] == MSG_TYPE_RESPONSE:
         rsp['error-indication'] = r['error-indication']
         if not r['error-indication'] and r['snmp-pdu']:
-            rsp['snmp-pdu'], _ = decoder.decode(r['snmp-pdu'], asn1Spec=rfc1905.PDUs())
+            pdu, _ = decoder.decode(r['snmp-pdu'], asn1Spec=rfc1905.PDUs())
+            rsp['snmp-pdu'] = pdu.getComponent()
 
     elif msg['content-id'] == MSG_TYPE_ANNOUNCEMENT:
         rsp['trunk-id'] = r['trunk-id']
@@ -219,8 +242,5 @@ def prepareDataElements(octets, secret):
 
     elif msg['content-id'] == MSG_TYPE_PONG:
         rsp['serial'] = r['serial']
-
-    if 'snmp-pdu' in rsp:
-        rsp['snmp-pdu'] = rsp['snmp-pdu'].getComponent()
 
     return msg['msg-id'], msg['content-id'], rsp, octets

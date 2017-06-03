@@ -68,7 +68,7 @@ for moduleOption in moduleOptions:
 info('%s: plugin initialization complete' % PLUGIN_NAME)
 
 
-def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
+def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
     varBinds = []
 
     for oid, val in v2c.apiPDU.getVarBinds(pdu):

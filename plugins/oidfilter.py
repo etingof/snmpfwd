@@ -99,15 +99,14 @@ noSuchObject = v2c.NoSuchObject('')
 endOfMibVew = v2c.EndOfMibView('')
 
 
-def formatDenialMsg(pdu, snmpReqInfo):
-    denialMsg = '%s: %s' % (PLUGIN_NAME, pdu.__class__.__name__)
-    denialMsg += ' from %s:%s' % (snmpReqInfo['snmp-peer-address'], snmpReqInfo['snmp-peer-port'])
-    denialMsg += ' at %s:%s' % (snmpReqInfo['snmp-bind-address'], snmpReqInfo['snmp-bind-port'])
-    denialMsg += ' snmp-credentials-id %s' % snmpReqInfo['server-snmp-credentials-id']
+def formatDenialMsg(pdu, trunkMsg):
+    denialMsg = '%s: callflow-id %s %s' % (PLUGIN_NAME, trunkMsg['callflow-id'], pdu.__class__.__name__)
+    denialMsg += ' from %s:%s' % (trunkMsg['snmp-peer-address'], trunkMsg['snmp-peer-port'])
+    denialMsg += ' at %s:%s' % (trunkMsg['snmp-bind-address'], trunkMsg['snmp-bind-port'])
     return denialMsg
 
 
-def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
+def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
     reqVarBinds = v2c.VarBindList()
     rspVarBinds = []
@@ -144,7 +143,7 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
                 rspVarBinds.append(None)
 
         if logDenials and deniedOids:
-            denialMsg = formatDenialMsg(pdu, snmpReqInfo)
+            denialMsg = formatDenialMsg(pdu, trunkMsg)
             denialMsg += ' OIDs ' + ', '.join(deniedOids)
             denialMsg += ' denied'
             error(denialMsg)
@@ -215,7 +214,7 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
                 rspVarBinds.append(None)
 
         if logDenials and skippedOids:
-            denialMsg = formatDenialMsg(pdu, snmpReqInfo)
+            denialMsg = formatDenialMsg(pdu, trunkMsg)
             denialMsg += ' ' + ', '.join(['%s not in range skipping to %s' % (v2c.ObjectIdentifier(x[0]), v2c.ObjectIdentifier(x[1])) for x in skippedOids])
             info(denialMsg)
 
@@ -240,7 +239,7 @@ def processCommandRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
         return status.NEXT, pdu
 
 
-def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
+def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
     if pdu.tagSet != v2c.GetResponsePDU.tagSet:
         return status.NEXT, pdu
 
@@ -292,7 +291,7 @@ def processCommandResponse(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
     return status.NEXT, pdu
 
 
-def processNotificationRequest(pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx):
+def processNotificationRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
     if pdu.tagSet not in (v2c.SNMPv2TrapPDU.tagSet, v2c.InformRequestPDU.tagSet):
         return status.NEXT, pdu
 

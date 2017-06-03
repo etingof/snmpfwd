@@ -36,6 +36,7 @@ from snmpfwd import log, daemon, cparser
 from snmpfwd.plugins.manager import PluginManager
 from snmpfwd.plugins import status
 from snmpfwd.trunking.manager import TrunkingManager
+from snmpfwd.lazylog import LazyLogString
 
 # Settings
 PROGRAM_NAME = 'snmpfwd-client'
@@ -427,6 +428,8 @@ def main():
 
     duplicates = {}
 
+    # TODO: rename orig-* into server-* and orig-snmp-peer-id into server-snmp-entity-id
+
     for origCredCfgPath in cfgTree.getPathsToAttr('orig-snmp-peer-id'):
         origCredId = cfgTree.getAttrValue('orig-snmp-peer-id', *origCredCfgPath)
         if origCredId in duplicates:
@@ -514,59 +517,94 @@ def main():
 
                         routingMap[k] = peerIdList
 
-    def prettyVarBinds(pdu):
-        return not pdu and '<none>' or ';'.join(['%s:%s' % (vb[0].prettyPrint(), vb[1].prettyPrint()) for vb in v2c.apiPDU.getVarBinds(pdu)])
 
-    def __rspCbFun(snmpEngine, sendRequestHandle, errorIndication, rspPDU, cbCtx):
-        trunkId, msgId, trunkReq, pluginIdList, snmpReqInfo, reqCtx = cbCtx
+    class LogString(LazyLogString):
 
-        trunkRsp = {}
+        GROUPINGS = [
+            ['callflow-id'],
+            ['trunk-id'],
+            ['server-snmp-engine-id',
+             'server-snmp-transport-domain',
+             'server-snmp-peer-address',
+             'server-snmp-peer-port',
+             'server-snmp-bind-address',
+             'server-snmp-bind-port',
+             'server-snmp-security-model',
+             'server-snmp-security-level',
+             'server-snmp-security-name',
+             'server-snmp-context-engine-id',
+             'server-snmp-context-name',
+             'server-snmp-pdu',
+             'server-snmp-entity-id'],
+            ['server-snmp-credentials-id',
+             'server-snmp-context-id',
+             'server-snmp-content-id',
+             'server-snmp-peer-id',
+             'server-classification-id'],
+            ['snmp-peer-id',
+             'snmp-bind-address',
+             'snmp-bind-port',
+             'snmp-peer-address',
+             'snmp-peer-port',
+             'snmp-context-engine-id',
+             'snmp-context-name',
+             'snmp-pdu'],
+        ]
+
+        FORMATTERS = {
+            'server-snmp-pdu': LazyLogString.prettyVarBinds,
+            'snmp-pdu': LazyLogString.prettyVarBinds,
+        }
+
+    def snmpCbFun(snmpEngine, sendRequestHandle, errorIndication, rspPDU, cbCtx):
+
+        trunkId, msgId, trunkReq, pluginIdList, reqCtx = cbCtx
+
+        trunkRsp = {
+            'callflow-id': trunkReq['callflow-id'],
+            'snmp-pdu': rspPDU,
+        }
+
+        logCtx = LogString(trunkRsp)
 
         if errorIndication:
-            log.info('SNMP error returned for message ID %s received from trunk %s: %s' % (msgId, trunkId, errorIndication))
+            log.info('received SNMP error-indication "%s"' % errorIndication, ctx=logCtx)
             trunkRsp['error-indication'] = errorIndication
 
-        reqPdu = trunkReq['snmp-pdu']
-
         if rspPDU:
+            reqPdu = trunkReq['server-snmp-pdu']
+
             for pluginId in pluginIdList:
                 if reqPdu.tagSet in rfc3411.notificationClassPDUs:
                     st, rspPDU = pluginManager.processNotificationResponse(
-                        pluginId, snmpEngine, rspPDU, snmpReqInfo, reqCtx
+                        pluginId, snmpEngine, rspPDU, trunkReq, reqCtx
                     )
 
                 elif reqPdu.tagSet not in rfc3411.unconfirmedClassPDUs:
                     st, rspPDU = pluginManager.processCommandResponse(
-                        pluginId, snmpEngine, rspPDU, snmpReqInfo, reqCtx
+                        pluginId, snmpEngine, rspPDU, trunkReq, reqCtx
                     )
                 else:
-                    log.error('ignoring unsupported PDU')
+                    log.error('ignoring unsupported PDU', ctx=logCtx)
                     break
 
                 if st == status.BREAK:
+                    log.debug('plugin %s inhibits other plugins' % pluginId, ctx=logCtx)
                     break
 
                 elif st == status.DROP:
-                    log.debug('received SNMP %s message, snmp-var-binds=%s, plugin %s muted response' % (errorIndication and 'error' or 'response', prettyVarBinds(rspPDU), pluginId))
+                    log.debug('received SNMP %s, plugin %s muted response' % (errorIndication and 'error' or 'response', pluginId), ctx=logCtx)
                     trunkRsp['snmp-pdu'] = None
-
-                    try:
-                        trunkingManager.sendRsp(trunkId, msgId, trunkRsp)
-
-                    except SnmpfwdError:
-                        log.error('trunk message not sent: %s' % sys.exc_info()[1])
-
-                    return
-
-        trunkRsp['snmp-pdu'] = rspPDU
-
-        log.debug('received SNMP %s message, sending trunk message #%s to trunk %s, original SNMP peer address %s:%s received at %s:%s, var-binds: %s' % (errorIndication and 'error' or 'response', msgId, trunkId, trunkReq['snmp-peer-address'], trunkReq['snmp-peer-port'], trunkReq['snmp-bind-address'], trunkReq['snmp-bind-port'], prettyVarBinds(rspPDU)))
+                    break
 
         try:
             trunkingManager.sendRsp(trunkId, msgId, trunkRsp)
 
         except SnmpfwdError:
-            log.error('trunk message not sent: %s' % sys.exc_info()[1])
+            log.error('received SNMP %s message, trunk message not sent "%s"' % (msgId, sys.exc_info()[1]), ctx=logCtx)
+            return
+
+        log.debug('received SNMP %s message, forwarded as trunk message #%s' % (errorIndication and 'error' or 'response', msgId), ctx=logCtx)
 
     #
     # The following needs proper support in pysnmp. Meanwhile - monkey patching!
@@ -586,59 +624,70 @@ def main():
 
     lcd.getTargetAddr = getTargetAddr
 
-    def dataCbFun(trunkId, msgId, msg):
-        k = [str(x) for x in (msg['snmp-engine-id'],
-                              msg['snmp-transport-domain'],
-                              msg['snmp-peer-address'] + ':' + str(msg['snmp-peer-port']),
-                              msg['snmp-bind-address'] + ':' + str(msg['snmp-bind-port']),
-                              msg['snmp-security-model'],
-                              msg['snmp-security-level'],
-                              msg['snmp-security-name'],
-                              msg['snmp-context-engine-id'],
-                              msg['snmp-context-name'])]
-        k.append(snmpPduTypesMap.get(msg['snmp-pdu'].tagSet, '?'))
-        k.append('|'.join([str(x[0]) for x in v2c.apiPDU.getVarBinds(msg['snmp-pdu'])]))
+    def trunkCbFun(trunkId, msgId, trunkReq):
+
+        for key in tuple(trunkReq):
+            if key != 'callflow-id':
+                trunkReq['server-' + key] = trunkReq[key]
+                del trunkReq[key]
+
+        trunkReq['trunk-id'] = trunkId
+
+        k = [str(x) for x in (trunkReq['server-snmp-engine-id'],
+                              trunkReq['server-snmp-transport-domain'],
+                              trunkReq['server-snmp-peer-address'] + ':' + str(trunkReq['server-snmp-peer-port']),
+                              trunkReq['server-snmp-bind-address'] + ':' + str(trunkReq['server-snmp-bind-port']),
+                              trunkReq['server-snmp-security-model'],
+                              trunkReq['server-snmp-security-level'],
+                              trunkReq['server-snmp-security-name'],
+                              trunkReq['server-snmp-context-engine-id'],
+                              trunkReq['server-snmp-context-name'])]
+
+        k.append(snmpPduTypesMap.get(trunkReq['server-snmp-pdu'].tagSet, '?'))
+        k.append('|'.join([str(x[0]) for x in v2c.apiPDU.getVarBinds(trunkReq['server-snmp-pdu'])]))
         k = '#'.join(k)
 
         for x, y in origCredIdList:
             if y.match(k):
-                origPeerId = macro.expandMacro(x, msg)
+                origPeerId = trunkReq['server-snmp-entity-id'] = macro.expandMacro(x, trunkReq)
                 break
         else:
             origPeerId = None
 
-        k = [str(x) for x in (msg['server-snmp-credentials-id'],
-                              msg['server-snmp-context-id'],
-                              msg['server-snmp-content-id'],
-                              msg['server-snmp-peer-id'])]
+        k = [str(x) for x in (trunkReq['server-snmp-credentials-id'],
+                              trunkReq['server-snmp-context-id'],
+                              trunkReq['server-snmp-content-id'],
+                              trunkReq['server-snmp-peer-id'])]
         k = '#'.join(k)
 
         for x, y in srvClassIdList:
             if y.match(k):
-                srvClassId = macro.expandMacro(x, msg)
+                srvClassId = trunkReq['server-classification-id'] = macro.expandMacro(x, trunkReq)
                 break
         else:
             srvClassId = None
 
+
+        logCtx = LogString(trunkReq)
+
         errorIndication = None
 
-        pluginIdList = pluginIdMap.get((origPeerId, srvClassId, macro.expandMacro(trunkId, msg)))
-
-        peerIdList = routingMap.get((origPeerId, srvClassId, macro.expandMacro(trunkId, msg)))
+        peerIdList = routingMap.get((origPeerId, srvClassId, macro.expandMacro(trunkId, trunkReq)))
         if not peerIdList:
-            log.error('unroutable trunk message #%s from trunk %s, srv-classification-id %s, orig-peer-id %s (original SNMP info: %s)' % (msgId, trunkId, srvClassId, origPeerId or '<none>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg])))
+            log.error('unroutable trunk message #%s' % msgId, ctx=logCtx)
             errorIndication = 'no route to SNMP peer configured'
 
-        cbCtx = trunkId, msgId, msg, (), {}, {}
+        cbCtx = trunkId, msgId, trunkReq, (), {}
 
         if errorIndication:
-            __rspCbFun(None, None, errorIndication, None, cbCtx)
+            snmpCbFun(None, None, errorIndication, None, cbCtx)
             return
 
-        log.debug('received trunk message #%s from trunk %s' % (msgId, trunkId))
-
+        pluginIdList = pluginIdMap.get((origPeerId, srvClassId, macro.expandMacro(trunkId, trunkReq)))
         for peerId in peerIdList:
-            peerId = macro.expandMacro(peerId, msg)
+            peerId = macro.expandMacro(peerId, trunkReq)
+
+            trunkReqCopy = trunkReq.copy()
 
             (snmpEngine,
              contextEngineId,
@@ -649,78 +698,84 @@ def main():
              peerAddrMacro) = peerIdMap[peerId]
 
             if bindAddrMacro:
-                bindAddr = macro.expandMacro(bindAddrMacro, msg), 0
+                bindAddr = macro.expandMacro(bindAddrMacro, trunkReqCopy), 0
             if bindAddr:
                 q.append(bindAddr)
 
             if peerAddrMacro:
-                peerAddr = macro.expandMacro(peerAddrMacro, msg), 161
+                peerAddr = macro.expandMacro(peerAddrMacro, trunkReqCopy), 161
             if peerAddr:
                 q.append(peerAddr)
 
-            logMsg = 'SNMP message to peer ID %s, bind-address %s, peer-address %s (original SNMP info: %s; original server classification: %s)' % (peerId, bindAddr[0] or '<default>', peerAddr[0] or '<default>', ', '.join([x == 'snmp-pdu' and 'snmp-var-binds=%s' % prettyVarBinds(msg['snmp-pdu']) or '%s=%s' % (x, msg[x].prettyPrint()) for x in msg if x.startswith('snmp-')]), ' '.join(['%s=%s' % (x, msg[x].prettyPrint()) for x in msg if x.startswith('server-')]))
+            trunkReqCopy['snmp-peer-id'] = peerId
 
-            log.debug('sending %s' % logMsg)
+            trunkReqCopy['snmp-context-engine-id'] = contextEngineId
+            trunkReqCopy['snmp-context-name'] = contextName
 
-            pdu = msg['snmp-pdu']
+            trunkReqCopy['snmp-bind-address'], trunkReqCopy['snmp-bind-port'] = bindAddr
+            trunkReqCopy['snmp-peer-address'], trunkReqCopy['snmp-peer-port'] = peerAddr
+
+            logCtx.update(trunkReqCopy)
+
+            pdu = trunkReqCopy['server-snmp-pdu']
 
             if pluginIdList:
-                snmpReqInfo = msg.copy()
                 reqCtx = {}
 
-                cbCtx = trunkId, msgId, msg, pluginIdList, snmpReqInfo, reqCtx
+                cbCtx = trunkId, msgId, trunkReqCopy, pluginIdList, reqCtx
 
                 for pluginNum, pluginId in enumerate(pluginIdList):
 
                     if pdu.tagSet in rfc3411.notificationClassPDUs:
                         st, pdu = pluginManager.processNotificationRequest(
-                            pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx
+                            pluginId, snmpEngine, pdu, trunkReqCopy, reqCtx
                         )
 
                     elif pdu.tagSet not in rfc3411.unconfirmedClassPDUs:
                         st, pdu = pluginManager.processCommandRequest(
-                            pluginId, snmpEngine, pdu, snmpReqInfo, reqCtx
+                            pluginId, snmpEngine, pdu, trunkReqCopy, reqCtx
                         )
 
                     else:
-                        log.error('ignoring unsupported PDU')
+                        log.error('ignoring unsupported PDU', ctx=logCtx)
                         break
 
                     if st == status.BREAK:
-                        cbCtx = trunkId, msgId, msg, pluginIdList[:pluginNum], snmpReqInfo, reqCtx
+                        log.debug('plugin %s inhibits other plugins' % pluginId, ctx=logCtx)
+                        cbCtx = trunkId, msgId, trunkReqCopy, pluginIdList[:pluginNum], reqCtx
                         break
 
                     elif st == status.DROP:
-                        log.debug('plugin %s muted request %s' % (pluginId, logMsg))
-                        __rspCbFun(snmpEngine, None, None, None, cbCtx)
-                        break
+                        log.debug('received trunk message #%s, plugin %s muted request' % (msgId, pluginId), ctx=logCtx)
+                        snmpCbFun(snmpEngine, None, None, None, cbCtx)
+                        return
 
                     elif st == status.RESPOND:
-                        log.debug('plugin %s forced immediate response to %s' % (pluginId, logMsg))
-                        __rspCbFun(snmpEngine, None, None, pdu, cbCtx)
-                        break
+                        log.debug('received trunk message #%s, plugin %s forced immediate response' % (msgId, pluginId), ctx=logCtx)
+                        snmpCbFun(snmpEngine, None, None, pdu, cbCtx)
+                        return
 
             if pdu.tagSet in rfc3411.notificationClassPDUs:
                 if pdu.tagSet in rfc3411.unconfirmedClassPDUs:
                     notificationOriginator.sendPdu(
                         snmpEngine,
                         peerId,
-                        macro.expandMacro(contextEngineId, msg),
-                        macro.expandMacro(contextName, msg),
+                        macro.expandMacro(contextEngineId, trunkReq),
+                        macro.expandMacro(contextName, trunkReq),
                         pdu
                     )
 
                     # respond to trunk right away
-                    __rspCbFun(snmpEngine, None, errorIndication, None, cbCtx)
+                    snmpCbFun(snmpEngine, None, errorIndication, None, cbCtx)
 
                 else:
                     notificationOriginator.sendPdu(
                         snmpEngine,
                         peerId,
-                        macro.expandMacro(contextEngineId, msg),
-                        macro.expandMacro(contextName, msg),
+                        macro.expandMacro(contextEngineId, trunkReq),
+                        macro.expandMacro(contextName, trunkReq),
                         pdu,
-                        __rspCbFun,
+                        snmpCbFun,
                         cbCtx
                     )
 
@@ -728,17 +783,19 @@ def main():
                 commandGenerator.sendPdu(
                     snmpEngine,
                     peerId,
-                    macro.expandMacro(contextEngineId, msg),
-                    macro.expandMacro(contextName, msg),
+                    macro.expandMacro(contextEngineId, trunkReq),
+                    macro.expandMacro(contextName, trunkReq),
                     pdu,
-                    __rspCbFun,
+                    snmpCbFun,
                     cbCtx
                 )
 
             else:
-                log.error('ignoring unsupported PDU')
+                log.error('ignoring unsupported PDU', ctx=logCtx)
 
-    trunkingManager = TrunkingManager(dataCbFun)
+            log.debug('received trunk message #%s, forwarded as SNMP message' % msgId, ctx=logCtx)
+
+    trunkingManager = TrunkingManager(trunkCbFun)
 
     def getTrunkAddr(a, port=0):
         f = lambda h, p=port: (h, int(p))
