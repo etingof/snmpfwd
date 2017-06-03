@@ -155,19 +155,19 @@ msg = lambda x: None
 logLevel = LOG_INFO
 
 
-def error(message):
+def error(message, ctx=''):
     if logLevel <= LOG_ERROR:
-      msg('ERROR: ' + message)
+      msg('ERROR: %s %s' % (message, ctx))
 
 
-def info(message):
+def info(message, ctx=''):
     if logLevel <= LOG_INFO:
-        msg(message)
+        msg('%s %s' % (message, ctx))
 
 
-def debug(message):
+def debug(message, ctx=''):
     if logLevel <= LOG_DEBUG:
-        msg(message)
+        msg('%s %s' % (message, ctx))
 
 
 def setLevel(level):
