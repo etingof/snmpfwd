@@ -239,13 +239,17 @@ def main():
                 log.debug('received SNMP message, forwarded as trunk message #%s' % msgId, ctx=logCtx)
 
         def trunkCbFun(self, msgId, trunkRsp, cbCtx):
+
             pluginIdList, trunkId, trunkReq, snmpEngine, stateReference, reqCtx = cbCtx
 
             for key in tuple(trunkRsp):
-                trunkRsp['client-' + key] = trunkRsp[key]
-                del trunkRsp[key]
+                if key != 'callflow-id':
+                    trunkRsp['client-' + key] = trunkRsp[key]
+                    del trunkRsp[key]
 
-            logCtx = LogString(trunkReq, trunkRsp)
+            trunkRsp['callflow-id'] = trunkReq['callflow-id']
+
+            logCtx = LogString(trunkRsp)
 
             if trunkRsp['client-error-indication']:
                 log.info('received trunk message #%s, remote end reported error-indication %s, NOT responding' % (msgId, trunkRsp['client-error-indication']), ctx=logCtx)
@@ -344,8 +348,11 @@ def main():
             pluginIdList, trunkId, trunkReq, snmpEngine, stateReference, reqCtx = cbCtx
 
             for key in tuple(trunkRsp):
-                trunkRsp['client-' + key] = trunkRsp[key]
-                del trunkRsp[key]
+                if key != 'callflow-id':
+                    trunkRsp['client-' + key] = trunkRsp[key]
+                    del trunkRsp[key]
+
+            trunkRsp['callflow-id'] = trunkReq['callflow-id']
 
             logCtx = LazyLogString(trunkReq, trunkRsp)
 

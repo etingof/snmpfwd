@@ -560,10 +560,11 @@ def main():
         trunkId, msgId, trunkReq, pluginIdList, reqCtx = cbCtx
 
         trunkRsp = {
-            'snmp-pdu': rspPDU
+            'callflow-id': trunkReq['callflow-id'],
+            'snmp-pdu': rspPDU,
         }
 
-        logCtx = LogString(trunkReq, trunkRsp)
+        logCtx = LogString(trunkRsp)
 
         if errorIndication:
             log.info('received SNMP error-indication %s for message ID %s' % (msgId, errorIndication), ctx=logCtx)
@@ -630,8 +631,9 @@ def main():
     def trunkCbFun(trunkId, msgId, trunkReq):
 
         for key in tuple(trunkReq):
-            trunkReq['server-' + key] = trunkReq[key]
-            del trunkReq[key]
+            if key != 'callflow-id':
+                trunkReq['server-' + key] = trunkReq[key]
+                del trunkReq[key]
 
         trunkReq['trunk-id'] = trunkId
 
