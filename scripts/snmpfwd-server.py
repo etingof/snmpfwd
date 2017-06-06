@@ -59,124 +59,18 @@ privProtocols = {
   'NONE': config.usmNoPrivProtocol
 }
 
+snmpPduTypesMap = {
+    rfc1905.GetRequestPDU.tagSet: 'GET',
+    rfc1905.SetRequestPDU.tagSet: 'SET',
+    rfc1905.GetNextRequestPDU.tagSet: 'GETNEXT',
+    rfc1905.GetBulkRequestPDU.tagSet: 'GETBULK',
+    rfc1905.ResponsePDU.tagSet: 'RESPONSE',
+    rfc1157.TrapPDU.tagSet: 'TRAPv1',
+    rfc1905.SNMPv2TrapPDU.tagSet: 'TRAPv2'
+}
+
 
 def main():
-    helpMessage = """\
-    Usage: %s [--help]
-        [--version ]
-        [--debug-snmp=<%s>]
-        [--debug-asn1=<%s>]
-        [--daemonize]
-        [--process-user=<uname>] [--process-group=<gname>]
-        [--pid-file=<file>]
-        [--logging-method=<%s[:args>]>]
-        [--log-level=<%s>]
-        [--config-file=<file>]""" % (
-            sys.argv[0],
-            '|'.join([x for x in pysnmp_debug.flagMap.keys() if x != 'mibview']),
-            '|'.join([x for x in pyasn1_debug.flagMap.keys()]),
-            '|'.join(log.methodsMap.keys()),
-            '|'.join(log.levelsMap)
-    )
-
-    try:
-        opts, params = getopt.getopt(sys.argv[1:], 'hv', [
-            'help', 'version', 'debug=', 'debug-snmp=', 'debug-asn1=', 'daemonize',
-            'process-user=', 'process-group=', 'pid-file=', 'logging-method=',
-            'log-level=', 'config-file='
-        ])
-
-    except Exception:
-        sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-        return
-
-    if params:
-        sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
-        return
-
-    pidFile = ''
-    cfgFile = CONFIG_FILE
-    foregroundFlag = True
-    procUser = procGroup = None
-
-    log.setLogger(PROGRAM_NAME, 'stderr')
-
-    for opt in opts:
-        if opt[0] == '-h' or opt[0] == '--help':
-            sys.stderr.write("""\
-    Synopsis:
-      SNMP Proxy Forwarder: server part. Receives SNMP requests at one or many
-      built-in SNMP Agents and routes them to encrypted trunks established with
-      Forwarder's Manager part(s) running elsewhere.
-      Can implement complex routing logic through analyzing parts of SNMP messages
-      and matching them against proxying rules.
-
-    Documentation:
-      http://snmpfwd.sourceforge.io/
-
-%s
-""" % helpMessage)
-            return
-        if opt[0] == '-v' or opt[0] == '--version':
-            import snmpfwd
-            import pysnmp
-            import pyasn1
-            sys.stderr.write("""\
-    SNMP Proxy Forwarder version %s, written by Ilya Etingof <etingof@gmail.com>
-    Using foundation libraries: pysnmp %s, pyasn1 %s.
-    Python interpreter: %s
-    Software documentation and support at https://github.com/etingof/snmpfwd
-    %s
-    """ % (snmpfwd.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
-            return
-        elif opt[0] == '--debug-snmp':
-            pysnmp_debug.setLogger(pysnmp_debug.Debug(*opt[1].split(','), **dict(loggerName=PROGRAM_NAME + '.pysnmp')))
-        elif opt[0] == '--debug-asn1':
-            pyasn1_debug.setLogger(pyasn1_debug.Debug(*opt[1].split(','), **dict(loggerName=PROGRAM_NAME + '.pyasn1')))
-        elif opt[0] == '--daemonize':
-            foregroundFlag = False
-        elif opt[0] == '--process-user':
-            procUser = opt[1]
-        elif opt[0] == '--process-group':
-            procGroup = opt[1]
-        elif opt[0] == '--pid-file':
-            pidFile = opt[1]
-        elif opt[0] == '--logging-method':
-            try:
-                log.setLogger(PROGRAM_NAME, *opt[1].split(':'), **dict(force=True))
-            except SnmpfwdError:
-                sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-                return
-        elif opt[0] == '--log-level':
-            try:
-                log.setLevel(opt[1])
-            except SnmpfwdError:
-                sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-                return
-        elif opt[0] == '--config-file':
-            cfgFile = opt[1]
-
-    try:
-        cfgTree = cparser.Config().load(cfgFile)
-    except SnmpfwdError:
-        sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-        return
-
-    if cfgTree.getAttrValue('program-name', '', default=None) != PROGRAM_NAME:
-        sys.stderr.write('ERROR: config file %s does not match program name %s\r\n' % (cfgFile, PROGRAM_NAME))
-        return
-
-    if cfgTree.getAttrValue('config-version', '', default=None) != CONFIG_VERSION:
-        sys.stderr.write('ERROR: config file %s version is not compatible with program version %s\r\n' % (cfgFile, CONFIG_VERSION))
-        return
-
-    random.seed()
-
-    gCurrentRequestContext = {}
-
-    #
-    # SNMPv3 CommandResponder implementation
-    #
 
     class CommandResponder(cmdrsp.CommandResponderBase):
         pduTypes = (rfc1905.SetRequestPDU.tagSet,
@@ -399,28 +293,6 @@ def main():
                 # except error.StatusInformation:
                 #         log.error('processPdu: stateReference %s, statusInformation %s' % (stateReference, sys.exc_info()[1]))
 
-    credIdMap = {}
-    peerIdMap = {}
-    contextIdList = []
-    contentIdList = []
-    pluginIdMap = {}
-    trunkIdMap = {}
-    engineIdMap = {}
-
-    transportDispatcher = AsynsockDispatcher()
-    transportDispatcher.registerRoutingCbFun(lambda td, t, d: td)
-    transportDispatcher.setSocketMap()  # use global asyncore socket map
-
-    snmpPduTypesMap = {
-        rfc1905.GetRequestPDU.tagSet: 'GET',
-        rfc1905.SetRequestPDU.tagSet: 'SET',
-        rfc1905.GetNextRequestPDU.tagSet: 'GETNEXT',
-        rfc1905.GetBulkRequestPDU.tagSet: 'GETBULK',
-        rfc1905.ResponsePDU.tagSet: 'RESPONSE',
-        rfc1157.TrapPDU.tagSet: 'TRAPv1',
-        rfc1905.SNMPv2TrapPDU.tagSet: 'TRAPv2'
-    }
-
 
     class LogString(LazyLogString):
 
@@ -551,6 +423,137 @@ def main():
 
         cbCtx.clear()
         cbCtx.update(trunkReq)
+
+    #
+    # main script starts here
+    #
+
+    helpMessage = """\
+        Usage: %s [--help]
+            [--version ]
+            [--debug-snmp=<%s>]
+            [--debug-asn1=<%s>]
+            [--daemonize]
+            [--process-user=<uname>] [--process-group=<gname>]
+            [--pid-file=<file>]
+            [--logging-method=<%s[:args>]>]
+            [--log-level=<%s>]
+            [--config-file=<file>]""" % (
+        sys.argv[0],
+        '|'.join([x for x in pysnmp_debug.flagMap.keys() if x != 'mibview']),
+        '|'.join([x for x in pyasn1_debug.flagMap.keys()]),
+        '|'.join(log.methodsMap.keys()),
+        '|'.join(log.levelsMap)
+    )
+
+    try:
+        opts, params = getopt.getopt(sys.argv[1:], 'hv', [
+            'help', 'version', 'debug=', 'debug-snmp=', 'debug-asn1=', 'daemonize',
+            'process-user=', 'process-group=', 'pid-file=', 'logging-method=',
+            'log-level=', 'config-file='
+        ])
+
+    except Exception:
+        sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+        return
+
+    if params:
+        sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
+        return
+
+    pidFile = ''
+    cfgFile = CONFIG_FILE
+    foregroundFlag = True
+    procUser = procGroup = None
+
+    log.setLogger(PROGRAM_NAME, 'stderr')
+
+    for opt in opts:
+        if opt[0] == '-h' or opt[0] == '--help':
+            sys.stderr.write("""\
+        Synopsis:
+          SNMP Proxy Forwarder: server part. Receives SNMP requests at one or many
+          built-in SNMP Agents and routes them to encrypted trunks established with
+          Forwarder's Manager part(s) running elsewhere.
+          Can implement complex routing logic through analyzing parts of SNMP messages
+          and matching them against proxying rules.
+
+        Documentation:
+          http://snmpfwd.sourceforge.io/
+
+    %s
+    """ % helpMessage)
+            return
+        if opt[0] == '-v' or opt[0] == '--version':
+            import snmpfwd
+            import pysnmp
+            import pyasn1
+            sys.stderr.write("""\
+        SNMP Proxy Forwarder version %s, written by Ilya Etingof <etingof@gmail.com>
+        Using foundation libraries: pysnmp %s, pyasn1 %s.
+        Python interpreter: %s
+        Software documentation and support at https://github.com/etingof/snmpfwd
+        %s
+        """ % (snmpfwd.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown',
+               hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
+            return
+        elif opt[0] == '--debug-snmp':
+            pysnmp_debug.setLogger(pysnmp_debug.Debug(*opt[1].split(','), **dict(loggerName=PROGRAM_NAME + '.pysnmp')))
+        elif opt[0] == '--debug-asn1':
+            pyasn1_debug.setLogger(pyasn1_debug.Debug(*opt[1].split(','), **dict(loggerName=PROGRAM_NAME + '.pyasn1')))
+        elif opt[0] == '--daemonize':
+            foregroundFlag = False
+        elif opt[0] == '--process-user':
+            procUser = opt[1]
+        elif opt[0] == '--process-group':
+            procGroup = opt[1]
+        elif opt[0] == '--pid-file':
+            pidFile = opt[1]
+        elif opt[0] == '--logging-method':
+            try:
+                log.setLogger(PROGRAM_NAME, *opt[1].split(':'), **dict(force=True))
+            except SnmpfwdError:
+                sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+                return
+        elif opt[0] == '--log-level':
+            try:
+                log.setLevel(opt[1])
+            except SnmpfwdError:
+                sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+                return
+        elif opt[0] == '--config-file':
+            cfgFile = opt[1]
+
+    try:
+        cfgTree = cparser.Config().load(cfgFile)
+    except SnmpfwdError:
+        sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+        return
+
+    if cfgTree.getAttrValue('program-name', '', default=None) != PROGRAM_NAME:
+        sys.stderr.write('ERROR: config file %s does not match program name %s\r\n' % (cfgFile, PROGRAM_NAME))
+        return
+
+    if cfgTree.getAttrValue('config-version', '', default=None) != CONFIG_VERSION:
+        sys.stderr.write(
+            'ERROR: config file %s version is not compatible with program version %s\r\n' % (cfgFile, CONFIG_VERSION))
+        return
+
+    random.seed()
+
+    gCurrentRequestContext = {}
+
+    credIdMap = {}
+    peerIdMap = {}
+    contextIdList = []
+    contentIdList = []
+    pluginIdMap = {}
+    trunkIdMap = {}
+    engineIdMap = {}
+
+    transportDispatcher = AsynsockDispatcher()
+    transportDispatcher.registerRoutingCbFun(lambda td, t, d: td)
+    transportDispatcher.setSocketMap()  # use global asyncore socket map
 
     #
     # Initialize plugin modules
