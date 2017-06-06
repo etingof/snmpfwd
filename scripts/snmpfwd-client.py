@@ -165,19 +165,24 @@ def main():
     # The following needs proper support in pysnmp. Meanwhile - monkey patching!
     #
 
-    q = []
+    def makeTargetAddrOverride(targetAddr):
+        endpoints = []
 
-    origGetTargetAddr = lcd.getTargetAddr
+        def getTargetAddr(snmpEngine, snmpTargetAddrName):
+            addrInfo = list(targetAddr(snmpEngine, snmpTargetAddrName))
 
-    def getTargetAddr(snmpEngine, snmpTargetAddrName):
-        r = list(origGetTargetAddr(snmpEngine, snmpTargetAddrName))
-        if q:
-            r[1] = r[1].__class__(q[1]).setLocalAddress(q[0])
-            q.pop()
-            q.pop()
-        return r
+            if endpoints:
+                peerAddr, bindAddr = endpoints.pop(), endpoints.pop()
+                addrInfo[1] = addrInfo[1].__class__(peerAddr).setLocalAddress(bindAddr)
 
-    lcd.getTargetAddr = getTargetAddr
+            return addrInfo
+
+        def updateEndpoints(bindAddr, peerAddr):
+            endpoints.extend((bindAddr, peerAddr))
+
+        return getTargetAddr, updateEndpoints
+
+    lcd.getTargetAddr, updateEndpoints = makeTargetAddrOverride(lcd.getTargetAddr)
 
     def trunkCbFun(trunkId, msgId, trunkReq):
 
@@ -254,13 +259,12 @@ def main():
 
             if bindAddrMacro:
                 bindAddr = macro.expandMacro(bindAddrMacro, trunkReqCopy), 0
-            if bindAddr:
-                q.append(bindAddr)
 
             if peerAddrMacro:
                 peerAddr = macro.expandMacro(peerAddrMacro, trunkReqCopy), 161
-            if peerAddr:
-                q.append(peerAddr)
+
+            if bindAddr and peerAddr:
+                updateEndpoints(bindAddr, peerAddr)
 
             trunkReqCopy['snmp-peer-id'] = peerId
 
