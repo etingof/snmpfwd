@@ -466,7 +466,8 @@ def main():
     foregroundFlag = True
     procUser = procGroup = None
 
-    log.setLogger(PROGRAM_NAME, 'stderr')
+    loggingMethod = ['stderr']
+    loggingLevel = None
 
     for opt in opts:
         if opt[0] == '-h' or opt[0] == '--help':
@@ -510,33 +511,34 @@ def main():
         elif opt[0] == '--pid-file':
             pidFile = opt[1]
         elif opt[0] == '--logging-method':
-            try:
-                log.setLogger(PROGRAM_NAME, *opt[1].split(':'), **dict(force=True))
-            except SnmpfwdError:
-                sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-                return
+            loggingMethod = opt[1].split(':')
         elif opt[0] == '--log-level':
-            try:
-                log.setLevel(opt[1])
-            except SnmpfwdError:
-                sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-                return
+            loggingLevel = opt[1]
         elif opt[0] == '--config-file':
             cfgFile = opt[1]
 
     try:
+        log.setLogger(PROGRAM_NAME, *loggingMethod, **dict(force=True))
+
+        if loggingLevel:
+            log.setLevel(loggingLevel)
+
+    except SnmpfwdError:
+        sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+        return
+
+    try:
         cfgTree = cparser.Config().load(cfgFile)
     except SnmpfwdError:
-        sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+        log.error('configuration parsing error: %s' % sys.exc_info()[1])
         return
 
     if cfgTree.getAttrValue('program-name', '', default=None) != PROGRAM_NAME:
-        sys.stderr.write('ERROR: config file %s does not match program name %s\r\n' % (cfgFile, PROGRAM_NAME))
+        log.error('config file %s does not match program name %s' % (cfgFile, PROGRAM_NAME))
         return
 
     if cfgTree.getAttrValue('config-version', '', default=None) != CONFIG_VERSION:
-        sys.stderr.write(
-            'ERROR: config file %s version is not compatible with program version %s\r\n' % (cfgFile, CONFIG_VERSION))
+        log.error('config file %s version is not compatible with program version %s' % (cfgFile, CONFIG_VERSION))
         return
 
     random.seed()
@@ -878,7 +880,7 @@ def main():
         daemon.dropPrivileges(procUser, procGroup)
 
     except Exception:
-        sys.stderr.write('ERROR: cant drop privileges: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+        log.error('can not drop privileges: %s' % sys.exc_info()[1])
         return
 
     if not foregroundFlag:
@@ -886,7 +888,7 @@ def main():
             daemon.daemonize(pidFile)
 
         except Exception:
-            sys.stderr.write('ERROR: cant daemonize process: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+            log.error('can not daemonize process: %s' % sys.exc_info()[1])
             return
 
     # Run mainloop
