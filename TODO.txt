@@ -1,6 +1,6 @@
 
 * migrate to argparse
-* allow unset configuration options
+* more defaulted configuration options
 * implement INFORM forwarding support (may require pysnmp's NotificationReceiver rework)
 * add more configuration examples
 * add some drawings explaining network topology in different configurations
@@ -13,3 +13,5 @@
 * cross-link options in configuration docs
 * count runtime errors, report them periodically or serve as SNMP table
 * remove old pysnmp monkey patch
+* rename orig- into server- at the client config for consistency
+* auto-reload changed configuration (core and plugins)
