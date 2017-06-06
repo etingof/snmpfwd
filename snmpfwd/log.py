@@ -162,12 +162,12 @@ def error(message, ctx=''):
 
 def info(message, ctx=''):
     if logLevel <= LOG_INFO:
-        msg('%s %s' % (message, ctx))
+        msg('INFO: %s %s' % (message, ctx))
 
 
 def debug(message, ctx=''):
     if logLevel <= LOG_DEBUG:
-        msg('%s %s' % (message, ctx))
+        msg('DEBUG: %s %s' % (message, ctx))
 
 
 def setLevel(level):
