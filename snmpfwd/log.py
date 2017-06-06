@@ -20,6 +20,7 @@ class AbstractLogger(object):
     def __init__(self, progId, *priv):
         self._logger = logging.getLogger(progId)
         self._logger.setLevel(logging.DEBUG)
+        self._progId = progId
         self.init(*priv)
 
     def __call__(self, s):
@@ -49,7 +50,9 @@ class SyslogLogger(AbstractLogger):
 
         except Exception:
             raise SnmpfwdError('Bad syslog option(s): %s' % sys.exc_info()[1])
+
         handler.setFormatter(logging.Formatter('%(asctime)s %(name)s: %(message)s'))
+
         self._logger.addHandler(handler)
 
 
@@ -93,7 +96,8 @@ class FileLogger(AbstractLogger):
                 'Bad log rotation criteria: %s' % sys.exc_info()[1]
             )
 
-        handler.setFormatter(logging.Formatter('%(asctime)s %(name)s: %(message)s'))
+        handler.setFormatter(logging.Formatter('%(message)s'))
+
         self._logger.addHandler(handler)
 
         self('Log file %s, rotation rules: %s' % (priv[0], maxsize and '> %sKB' % (maxsize/1024) or maxage and '%s%s' % (maxage[1], maxage[0]) or '<none>'))
@@ -101,7 +105,7 @@ class FileLogger(AbstractLogger):
     def __call__(self, s):
         now = time.time()
         timestamp = time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime(now))
-        AbstractLogger.__call__(self, '%s.%02d %s' % (timestamp, now % 1 * 100, s))
+        AbstractLogger.__call__(self, '%s.%02d %s: %s' % (timestamp, now % 1 * 100, self._progId, s))
 
 
 class StreamLogger(AbstractLogger):
@@ -116,7 +120,8 @@ class StreamLogger(AbstractLogger):
                 'Stream logger failure: %s' % sys.exc_info()[1]
             )
 
-        handler.setFormatter(logging.Formatter('%(message)s'))
+        handler.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+
         self._logger.addHandler(handler)
 
 
@@ -157,17 +162,17 @@ logLevel = LOG_INFO
 
 def error(message, ctx=''):
     if logLevel <= LOG_ERROR:
-      msg('ERROR: %s %s' % (message, ctx))
+      msg('ERROR %s %s' % (message, ctx))
 
 
 def info(message, ctx=''):
     if logLevel <= LOG_INFO:
-        msg('INFO: %s %s' % (message, ctx))
+        msg('INFO %s %s' % (message, ctx))
 
 
 def debug(message, ctx=''):
     if logLevel <= LOG_DEBUG:
-        msg('DEBUG: %s %s' % (message, ctx))
+        msg('DEBUG %s %s' % (message, ctx))
 
 
 def setLevel(level):
