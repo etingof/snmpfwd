@@ -253,6 +253,9 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
     oidsListIndices = reqCtx.get('varbind-acls', ())
 
+    terminatedOids = []
+    skippedOids = []
+
     rspIdx = idx = 0
 
     for varBind in reqVarBinds:
@@ -277,14 +280,26 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
                     oidsListIdx += 1
 
                     if len(oidsList) == oidsListIdx:
+                        if logDenials:
+                            terminatedOids.append((varBind[0], end))
                         v2c.apiVarBind.setOIDVal(varBind, (end, endOfMibVew))
                     else:
                         skip, begin, end = oidsList[oidsListIdx]
+                        if logDenials:
+                            skippedOids.append((varBind[0], skip))
                         v2c.apiVarBind.setOIDVal(varBind, (skip, v2c.Null()))
 
         varBinds.append(varBind)
 
         idx += 1
+
+    if logDenials and (terminatedOids or skippedOids):
+        denialMsg = formatDenialMsg(pdu, trunkMsg)
+        if terminatedOids:
+            denialMsg += ' ' + 'OID(s) %s replaced with %s and reported as <end-of-mib>' % (','.join([str(v2c.ObjectIdentifier(x[0])) for x in terminatedOids]), ','.join([str(v2c.ObjectIdentifier(x[1])) for x in terminatedOids]))
+        if skippedOids:
+            denialMsg += ' ' + 'OID(s) %s replaced with %s and reported as <nil>' % (','.join([str(v2c.ObjectIdentifier(x[0])) for x in skippedOids]), ','.join([str(v2c.ObjectIdentifier(x[1])) for x in skippedOids]))
+        info(denialMsg)
 
     v2c.apiPDU.setVarBindList(pdu, varBinds)
 
