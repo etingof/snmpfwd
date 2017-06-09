@@ -108,8 +108,16 @@ def main():
 
                 elif st == status.RESPOND:
                     log.debug('received SNMP message, plugin %s forced immediate response' % pluginId, ctx=logCtx)
-                    self.sendPdu(snmpEngine, stateReference, pdu)
-                    self.releaseStateInformation(stateReference)
+
+                    try:
+                        self.sendPdu(snmpEngine, stateReference, pdu)
+
+                    except PySnmpError:
+                        log.error('failure sending SNMP response', ctx=logCtx)
+
+                    else:
+                        self.releaseStateInformation(stateReference)
+
                     return
 
             # pass query to trunk
@@ -163,9 +171,14 @@ def main():
                         self.releaseStateInformation(stateReference)
                         return
 
-                self.sendPdu(snmpEngine, stateReference, pdu)
+                try:
+                    self.sendPdu(snmpEngine, stateReference, pdu)
 
-                log.debug('received trunk message #%s, forwarded as SNMP message' % msgId, ctx=logCtx)
+                except PySnmpError:
+                    log.error('failure sending SNMP response', ctx=logCtx)
+
+                else:
+                    log.debug('received trunk message #%s, forwarded as SNMP message' % msgId, ctx=logCtx)
 
             self.releaseStateInformation(stateReference)
 

@@ -314,21 +314,48 @@ def main():
                         snmpCbFun(snmpEngine, None, None, pdu, cbCtx)
                         return
 
+            snmpMessageSent = False
+
             if pdu.tagSet in rfc3411.notificationClassPDUs:
                 if pdu.tagSet in rfc3411.unconfirmedClassPDUs:
-                    notificationOriginator.sendPdu(
-                        snmpEngine,
-                        peerId,
-                        macro.expandMacro(contextEngineId, trunkReq),
-                        macro.expandMacro(contextName, trunkReq),
-                        pdu
-                    )
+                    try:
+                        notificationOriginator.sendPdu(
+                            snmpEngine,
+                            peerId,
+                            macro.expandMacro(contextEngineId, trunkReq),
+                            macro.expandMacro(contextName, trunkReq),
+                            pdu
+                        )
+
+                        snmpMessageSent = True
+
+                    except PySnmpError:
+                        errorIndication = 'failure sending SNMP notification'
+                        log.error(errorIndication, ctx=logCtx)
 
                     # respond to trunk right away
                     snmpCbFun(snmpEngine, None, errorIndication, None, cbCtx)
 
                 else:
-                    notificationOriginator.sendPdu(
+                    try:
+                        notificationOriginator.sendPdu(
+                            snmpEngine,
+                            peerId,
+                            macro.expandMacro(contextEngineId, trunkReq),
+                            macro.expandMacro(contextName, trunkReq),
+                            pdu,
+                            snmpCbFun,
+                            cbCtx
+                        )
+
+                        snmpMessageSent = True
+
+                    except PySnmpError:
+                        log.error('failure sending SNMP notification', ctx=logCtx)
+
+            elif pdu.tagSet not in rfc3411.unconfirmedClassPDUs:
+                try:
+                    commandGenerator.sendPdu(
                         snmpEngine,
                         peerId,
                         macro.expandMacro(contextEngineId, trunkReq),
@@ -338,21 +365,16 @@ def main():
                         cbCtx
                     )
 
-            elif pdu.tagSet not in rfc3411.unconfirmedClassPDUs:
-                commandGenerator.sendPdu(
-                    snmpEngine,
-                    peerId,
-                    macro.expandMacro(contextEngineId, trunkReq),
-                    macro.expandMacro(contextName, trunkReq),
-                    pdu,
-                    snmpCbFun,
-                    cbCtx
-                )
+                    snmpMessageSent = True
+
+                except PySnmpError:
+                    log.error('failure sending SNMP command', ctx=logCtx)
 
             else:
                 log.error('ignoring unsupported PDU', ctx=logCtx)
 
-            log.debug('received trunk message #%s, forwarded as SNMP message' % msgId, ctx=logCtx)
+            if snmpMessageSent:
+                log.debug('received trunk message #%s, forwarded as SNMP message' % msgId, ctx=logCtx)
 
     #
     # Main script body starts here
