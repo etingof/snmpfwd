@@ -115,7 +115,7 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
         deniedOids = []
 
-        for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
+        for varBind in v2c.apiPDU.getVarBindList(pdu):
             oid, val = v2c.apiVarBind.getOIDVal(varBind)
             oid = tuple(oid)
             idx = bisect.bisect_left(endOids, oid)
@@ -165,7 +165,7 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
         reqAclIndices = []
         skippedOids = []
 
-        for varBind in v2c.apiTrapPDU.getVarBindList(pdu):
+        for varBind in v2c.apiPDU.getVarBindList(pdu):
             hitEndOfRange = False
 
             oid, val = v2c.apiVarBind.getOIDVal(varBind)
