@@ -232,8 +232,65 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
         return nextAction, pdu
 
     elif pdu.tagSet == v2c.GetBulkRequestPDU.tagSet:
-        # TODO: GETBULK handling needs to be implemented
-        return status.DROP, pdu
+
+        nonRepeaters = v2c.apiBulkPDU.getNonRepeaters(pdu)
+        maxRepetitions = v2c.apiBulkPDU.getMaxRepetitions(pdu)
+
+        nonRepeatersOids = []
+        repeatersOids = []
+        blockedOids = []
+
+        for varBindIdx, varBind in enumerate(v2c.apiBulkPDU.getVarBindList(pdu)):
+
+            oid, val = v2c.apiVarBind.getOIDVal(varBind)
+            oid = tuple(oid)
+            idx = bisect.bisect_left(endOids, oid)
+
+            while idx < len(endOids):
+                skip, begin, end = oidsList[idx]
+
+                # OID preceding range
+                if oid < begin:
+                    # OID allowed, fast-forward to the start of this range
+                    oid = skip
+                    break
+
+                # response will get out of range - skip to the next range
+                elif oid == end:
+                    idx += 1
+                    continue
+
+                # OID in range
+                elif begin <= oid <= end:
+                    # OID allowed, pass as-is
+                    break
+
+                else:
+                    idx += 1
+
+            else:
+                # non-matching OIDs -- block
+                blockedOids.append(oid)
+                val = None
+
+            if val is not None:
+                # non-repeating OIDs?
+                if varBindIdx < nonRepeaters:
+                    nonRepeatersOids.append(oid)
+                else:
+                    # repeating OIDs, multiple OIDs range
+                    if begin != end:
+                        repeatersOids.append(oid)
+                    else:
+                        # query all the single OID ranges ahead as non-repeaters
+                        while begin == end:
+                            nonRepeaters.append(oid)
+                            idx += 1
+                            skip, begin, end = oidsList[idx]
+
+        # create new GETBULK PDU
+
+        return status.NEXT, pdu
 
     else:
         return status.NEXT, pdu
