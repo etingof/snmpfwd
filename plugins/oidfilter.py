@@ -160,12 +160,19 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
         return nextAction, pdu
 
-    elif pdu.tagSet == v2c.GetNextRequestPDU.tagSet:
+    elif pdu.tagSet in (v2c.GetNextRequestPDU.tagSet, v2c.GetBulkRequestPDU.tagSet):
+
+        if pdu.tagSet == v2c.GetBulkRequestPDU.tagSet:
+            nonRepeaters = v2c.apiBulkPDU.getNonRepeaters(pdu)
+        else:
+            nonRepeaters = 0
 
         reqAclIndices = []
+        linearizedOids = {}
         skippedOids = []
 
-        for varBind in v2c.apiPDU.getVarBindList(pdu):
+        for varBindIdx, varBind in enumerate(v2c.apiPDU.getVarBindList(pdu)):
+
             hitEndOfRange = False
 
             oid, val = v2c.apiVarBind.getOIDVal(varBind)
@@ -208,10 +215,36 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
             if val is None:
                 v2c.apiVarBind.setOIDVal(varBind, (oid, endOfMibVew))
                 rspVarBinds.append(varBind)
+
             else:
-                v2c.apiVarBind.setOIDVal(varBind, (oid, val))
-                reqVarBinds.append(varBind)
-                rspVarBinds.append(None)
+                if (pdu.tagSet == v2c.GetBulkRequestPDU.tagSet
+                        and (nonRepeaters == 0 or varBindIdx >= nonRepeaters)
+                        and begin == end):
+                    origIdx = idx
+                    # repeating OIDs, multiple OIDs range
+                    while begin == end:
+                        varBind = varBind.clone()
+                        v2c.apiVarBind.setOIDVal(varBind, (skip, v2c.Null()))
+                        reqVarBinds.append(varBind)
+                        rspVarBinds.append(None)
+                        if idx != origIdx:
+                            reqAclIndices.append(idx)
+                        idx += 1
+                        if idx == len(oidsList):
+                            break
+                        skip, begin, end = oidsList[idx]
+
+                    if idx - origIdx > 1:
+                        linearizedOids[varBindIdx] = idx - origIdx
+
+                else:
+                    v2c.apiVarBind.setOIDVal(varBind, (oid, val))
+                    reqVarBinds.append(varBind)
+                    rspVarBinds.append(None)
+
+        if linearizedOids:
+            nonRepeaters += sum(linearizedOids.values())
+            v2c.apiBulkPDU.setNonRepeaters(pdu, nonRepeaters)
 
         if logDenials and skippedOids:
             denialMsg = formatDenialMsg(pdu, trunkMsg)
@@ -221,6 +254,8 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
         if reqVarBinds:
             reqCtx['setaside-oids'] = rspVarBinds
             reqCtx['varbind-acls'] = reqAclIndices
+            reqCtx['linearized-oids'] = linearizedOids
+            reqCtx['non-repeaters'] = nonRepeaters
             nextAction = status.NEXT
         else:
             pdu = v2c.apiPDU.getResponse(pdu)
@@ -230,67 +265,6 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
         v2c.apiPDU.setVarBindList(pdu, reqVarBinds)
 
         return nextAction, pdu
-
-    elif pdu.tagSet == v2c.GetBulkRequestPDU.tagSet:
-
-        nonRepeaters = v2c.apiBulkPDU.getNonRepeaters(pdu)
-        maxRepetitions = v2c.apiBulkPDU.getMaxRepetitions(pdu)
-
-        nonRepeatersOids = []
-        repeatersOids = []
-        blockedOids = []
-
-        for varBindIdx, varBind in enumerate(v2c.apiBulkPDU.getVarBindList(pdu)):
-
-            oid, val = v2c.apiVarBind.getOIDVal(varBind)
-            oid = tuple(oid)
-            idx = bisect.bisect_left(endOids, oid)
-
-            while idx < len(endOids):
-                skip, begin, end = oidsList[idx]
-
-                # OID preceding range
-                if oid < begin:
-                    # OID allowed, fast-forward to the start of this range
-                    oid = skip
-                    break
-
-                # response will get out of range - skip to the next range
-                elif oid == end:
-                    idx += 1
-                    continue
-
-                # OID in range
-                elif begin <= oid <= end:
-                    # OID allowed, pass as-is
-                    break
-
-                else:
-                    idx += 1
-
-            else:
-                # non-matching OIDs -- block
-                blockedOids.append(oid)
-                val = None
-
-            if val is not None:
-                # non-repeating OIDs?
-                if varBindIdx < nonRepeaters:
-                    nonRepeatersOids.append(oid)
-                else:
-                    # repeating OIDs, multiple OIDs range
-                    if begin != end:
-                        repeatersOids.append(oid)
-                    else:
-                        # query all the single OID ranges ahead as non-repeaters
-                        while begin == end:
-                            nonRepeaters.append(oid)
-                            idx += 1
-                            skip, begin, end = oidsList[idx]
-
-        # create new GETBULK PDU
-
-        return status.NEXT, pdu
 
     else:
         return status.NEXT, pdu
@@ -308,47 +282,67 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
     rspVarBinds = v2c.apiPDU.getVarBindList(pdu)
     reqVarBinds = reqCtx['setaside-oids']
 
+    nonRepeaters = reqCtx['non-repeaters']
+
+    if len(reqVarBinds) > nonRepeaters:
+        rowDepth = (len(rspVarBinds) - nonRepeaters) // (len(reqVarBinds) - nonRepeaters)
+    else:
+        rowDepth = 1
+
+    linearizedOids = reqCtx['linearized-oids']
+
     oidsListIndices = reqCtx.get('varbind-acls', ())
 
     terminatedOids = []
     skippedOids = []
 
-    rspIdx = idx = 0
+    rspIdx = 0
 
-    for varBind in reqVarBinds:
+    for reqIdx, varBind in enumerate(reqVarBinds):
+
         if varBind is None:
-            try:
-                varBind = rspVarBinds[rspIdx]
 
-            except IndexError:
-                error('%s: missing response OID #%s' % (PLUGIN_NAME, rspIdx))
-                return status.DROP, pdu
+            rowIdx = 0
 
+            while rowIdx < rowDepth:
+
+                try:
+                    varBind = rspVarBinds[rspIdx]
+
+                except IndexError:
+                    error('%s: missing response OID #%s' % (PLUGIN_NAME, rspIdx))
+                    return status.DROP, pdu
+
+                else:
+                    rspIdx += 1
+                    rowIdx += 1
+
+                # catch leaking response OIDs
+                if oidsListIndices:
+                    oidsListIdx = oidsListIndices[reqIdx]
+
+                    skip, begin, end = oidsList[oidsListIdx]
+
+                    if not (begin <= varBind[0] <= end):
+                        oidsListIdx += 1
+
+                        if len(oidsList) == oidsListIdx:
+                            if logDenials:
+                                terminatedOids.append((varBind[0], end))
+                            v2c.apiVarBind.setOIDVal(varBind, (end, endOfMibVew))
+                        else:
+                            skip, begin, end = oidsList[oidsListIdx]
+                            if logDenials:
+                                skippedOids.append((varBind[0], skip))
+                            v2c.apiVarBind.setOIDVal(varBind, (skip, v2c.Null()))
+
+                varBinds.append(varBind)
+
+        else:
+            if reqIdx > nonRepeaters:
+                varBinds.extend([varBind] * rowDepth)
             else:
-                rspIdx += 1
-
-            # catch leaking response OIDs
-            if oidsListIndices:
-                oidsListIdx = oidsListIndices[idx]
-
-                skip, begin, end = oidsList[oidsListIdx]
-
-                if not (begin <= varBind[0] <= end):
-                    oidsListIdx += 1
-
-                    if len(oidsList) == oidsListIdx:
-                        if logDenials:
-                            terminatedOids.append((varBind[0], end))
-                        v2c.apiVarBind.setOIDVal(varBind, (end, endOfMibVew))
-                    else:
-                        skip, begin, end = oidsList[oidsListIdx]
-                        if logDenials:
-                            skippedOids.append((varBind[0], skip))
-                        v2c.apiVarBind.setOIDVal(varBind, (skip, v2c.Null()))
-
-        varBinds.append(varBind)
-
-        idx += 1
+                varBinds.append(varBind)
 
     if logDenials and (terminatedOids or skippedOids):
         denialMsg = formatDenialMsg(pdu, trunkMsg)
