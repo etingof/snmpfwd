@@ -120,7 +120,7 @@ When GETBULK PDU is received, the *oidfilter* plugin splits the request variable
 onto two parts:
 
 1. the *non-repeaters* OIDs are treated in exactly the same way as the
-   :def:`GETNEXT <oidfilter-getnext-pdu>` PDU OIDs
+   :ref:`GETNEXT <oidfilter-getnext-pdu>` PDU OIDs
 2. the *max-repeaters* request PDU variable-bindings get traversed matching each
    OID against configured OID ranges
 
@@ -128,13 +128,13 @@ Since GETBULK PDU gives RESPONSE PDU a chance to accommodate more variable-bindi
 than it is in request PDU, each *max-repeaters* var-bindings processing may take
 either of two scenarios:
 
-A. The filtering rules potentially allow given request OID to produce many
+A. The filtering rules allow given request OID to produce many
    variable-bindings in response
 B. The filtering rules limit immediate response variable-bindings to just a
    single response OID
 
 In the *A* case request OID processing rules are exactly the same as
-:def:`GETNEXT <oidfilter-getnext-pdu>`, except that all but one denied OIDs
+:ref:`GETNEXT <oidfilter-getnext-pdu>`, except that all but one denied OIDs
 in response get purged out of the response.
 
 With the *B* scenario two things happen:
