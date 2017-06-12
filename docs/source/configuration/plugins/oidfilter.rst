@@ -116,7 +116,8 @@ aside on PDU's way forward and sends the combined PDU in response.
 GETBULK PDU
 +++++++++++
 
-When GETBULK PDU is received, the *oidfilter* plugin splits the request variable-bindings
+When `GETBULK PDU <https://tools.ietf.org/html/rfc1448#section-4.2.3>`_
+is received, the *oidfilter* plugin splits the request variable-bindings
 onto two parts:
 
 1. the *non-repeaters* OIDs are treated in exactly the same way as the
