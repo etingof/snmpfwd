@@ -9,6 +9,8 @@ Revision 0.2.2, released XX-06-2017
 - Fix to catch errors coming from SNMP engine when sending malformed
   message SNMP
 - Fix to snmp-peer-timeout option documentation and examples
+- Fix to the server to handle the case of missing response PDU
+  coming from client
 
 Revision 0.2.1, released 28-05-2017
 -----------------------------------
