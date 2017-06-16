@@ -333,6 +333,9 @@ def main():
                         errorIndication = 'failure sending SNMP notification'
                         log.error(errorIndication, ctx=logCtx)
 
+                    else:
+                        errorIndication = None
+
                     # respond to trunk right away
                     snmpCbFun(snmpEngine, None, errorIndication, None, cbCtx)
 
@@ -368,7 +371,11 @@ def main():
                     snmpMessageSent = True
 
                 except PySnmpError:
-                    log.error('failure sending SNMP command', ctx=logCtx)
+                    errorIndication = 'failure sending SNMP command'
+                    log.error(errorIndication, ctx=logCtx)
+
+                    # respond to trunk right away
+                    snmpCbFun(snmpEngine, None, errorIndication, None, cbCtx)
 
             else:
                 log.error('ignoring unsupported PDU', ctx=logCtx)
