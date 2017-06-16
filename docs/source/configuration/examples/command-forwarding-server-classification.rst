@@ -7,7 +7,7 @@ at the server side and let client(s) re-using the outcome of server
 classification. The example configuration explains server-based
 classification design.
 
-For more information please refer to the :ref:`client configuration documentation <matching-server-classification-chapter>`.
+For more information please refer to the :ref:`client configuration documentation <matching-server-classification-client-chapter>`.
 
 .. toctree::
    :maxdepth: 2
@@ -36,7 +36,7 @@ Client is configured to:
 * process all incoming SNMP messages in the same way
 * route inbound SNMP PDUs into either of two backend
   SNMP agents (at *demo.snmplabs.com*) chosen based
-  on :ref:`server-classification-id <server-classification-id-option>`
+  on :ref:`server-classification-id <server-classification-id-client-option>`
   option.
 
 .. literalinclude:: /../../conf/command-forwarding-server-classification/client.conf
