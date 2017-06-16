@@ -743,7 +743,7 @@ def main():
 
         peerIdMap[peerId] = snmpEngine, contextEngineId, contextName, bindAddr, bindAddrMacro, peerAddr, peerAddrMacro
 
-        log.info('new peer ID %s, bind address %s, peer address %s, timeout %s, retries %s, credentials ID %s' % (peerId, bindAddrMacro or '<default>', peerAddrMacro or '%s:%s' % peerAddr, timeout, retries, credId))
+        log.info('new peer ID %s, bind address %s, peer address %s, timeout %s*0.01 secs, retries %s, credentials ID %s' % (peerId, bindAddrMacro or '<default>', peerAddrMacro or '%s:%s' % peerAddr, timeout, retries, credId))
 
     duplicates = {}
 
