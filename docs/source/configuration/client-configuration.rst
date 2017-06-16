@@ -178,7 +178,12 @@ See `snmp-transport-options-client-option`_ for related options.
 *snmp-peer-timeout*
 +++++++++++++++++++
 
-SNMP request timeout in seconds.
+SNMP request timeout in 0.01 second. For example, the value of 100 means 1 second timeout.
+
+.. code-block:: bash
+
+   # time out SNMP request in 1 second
+   snmp-peer-timeout: 100
 
 .. _snmp-peer-retries-client-option:
 
@@ -186,6 +191,16 @@ SNMP request timeout in seconds.
 +++++++++++++++++++
 
 How many times to retry timed-out SNMP request.
+
+.. code-block:: bash
+
+   # send up to two SNMP requests in total
+   snmp-peer-retries: 1
+
+.. note::
+
+   The *snmp-peer-retries* value configures **additional** SNMP queries if
+   the first query times out.
 
 .. _snmp-security-model-client-option:
 
@@ -328,7 +343,8 @@ Example:
       snmp-bind-address: 0.0.0.0:0
       snmp-peer-address: 104.236.166.95:161
 
-      snmp-peer-timeout: 1
+      # time out SNMP request in 1 second
+      snmp-peer-timeout: 100
       snmp-peer-retries: 0
 
       snmp-community-name: abrakadabra
