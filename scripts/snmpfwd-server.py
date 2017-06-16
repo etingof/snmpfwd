@@ -155,6 +155,10 @@ def main():
 
             if trunkRsp['client-error-indication']:
                 log.info('received trunk message #%s, remote end reported error-indication "%s", NOT responding' % (msgId, trunkRsp['client-error-indication']), ctx=logCtx)
+
+            elif 'client-snmp-pdu' not in trunkRsp:
+                log.info('received trunk message #%s, remote end does not send SNMP PDU, NOT responding' % msgId, ctx=logCtx)
+
             else:
                 pdu = trunkRsp['client-snmp-pdu']
 
