@@ -468,42 +468,41 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
                         if rspVarBindIdx - startIdx < maxColumnDepth:
                             varBinds.append(rspVarBinds[rspVarBindIdx])
-                            reqVarBindIdx += 1
-
                         else:
-                            # pad insufficient rows
-                            insufficientRows = maxColumnDepth - endIdx - startIdx
-
-                            while insufficientRows:
-                                varBind = v2c.VarBind()
-                                v2c.apiVarBind.setOIDVal(varBind, (varBinds[-1][0], v2c.NoSuchInstance()))
-                                varBinds.append(varBind)
-                                reqVarBindIdx += 1
-                                insufficientRows -= 1
-
                             break
 
-                # copy over original repeaters
-                else:
-                    startIdx = (reqVarBindIdx - nonRepeaters) * columnDepth
-                    endIdx = startIdx + columnDepth
-
-                    for rspVarBindIdx in range(startIdx, endIdx):
-                        varBinds.append(rspVarBinds[rspVarBindIdx])
-                        reqVarBindIdx += 1
-
                     # pad insufficient rows
-                    insufficientRows = maxColumnDepth - endIdx - startIdx
+                    insufficientRows = maxColumnDepth - (endIdx - startIdx)
 
                     while insufficientRows:
                         varBind = v2c.VarBind()
                         v2c.apiVarBind.setOIDVal(varBind, (varBinds[-1][0], v2c.NoSuchInstance()))
                         varBinds.append(varBind)
-                        reqVarBindIdx += 1
                         insufficientRows -= 1
 
+                    reqVarBindIdx += 1
+
+                # copy over original repeaters
+                else:
+                    startIdx = nonRepeaters + (reqVarBindIdx - origNonRepeaters) * columnDepth
+                    endIdx = startIdx + columnDepth
+
+                    for rspVarBindIdx in range(startIdx, endIdx):
+                        varBinds.append(rspVarBinds[rspVarBindIdx])
+
+                    # pad insufficient rows
+                    insufficientRows = maxColumnDepth - (endIdx - startIdx)
+
+                    while insufficientRows:
+                        varBind = v2c.VarBind()
+                        v2c.apiVarBind.setOIDVal(varBind, (varBinds[-1][0], v2c.NoSuchInstance()))
+                        varBinds.append(varBind)
+                        insufficientRows -= 1
+
+                    reqVarBindIdx += 1
+
         except IndexError:
-            error('short GETBUK response PDU')
+            error('short GETBULK maxColumnDepth - endIdx - startIdxK response PDU')
             return status.DROP, pdu
 
         v2c.apiBulkPDU.setVarBindList(pdu, varBinds)
