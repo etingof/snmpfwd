@@ -275,6 +275,10 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
         linearizedOidsMap = {}
 
+        reqCtx['linearized-oids-map'] = linearizedOidsMap
+        reqCtx['non-repeaters'] = nonRepeaters
+        reqCtx['req-size'] = len(v2c.apiPDU.getVarBindList(pdu))
+
         for varBindIdx, varBind in enumerate(v2c.apiPDU.getVarBindList(pdu)):
 
             oid, val = v2c.apiVarBind.getOIDVal(varBind)
@@ -327,10 +331,6 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
         v2c.apiBulkPDU.setNonRepeaters(pdu, nonRepeaters + len(linearizedOids))
 
         if reqVarBinds:
-            reqCtx['linearized-oids-map'] = linearizedOidsMap
-            reqCtx['non-repeaters'] = nonRepeaters
-            reqCtx['req-size'] = len(v2c.apiPDU.getVarBindList(pdu))
-
             nextAction = status.NEXT
         else:
             pdu = v2c.apiPDU.getResponse(pdu)
