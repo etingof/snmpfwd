@@ -141,6 +141,7 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
     rspVarBinds = []
 
     reqCtx['req-pdu'] = pdu
+    reqCtx['setaside-oids'] = rspVarBinds
 
     if pdu.tagSet in (v2c.GetRequestPDU.tagSet, v2c.SetRequestPDU.tagSet):
 
@@ -180,7 +181,6 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
             error(denialMsg)
 
         if reqVarBinds:
-            reqCtx['setaside-oids'] = rspVarBinds
             nextAction = status.NEXT
         else:
             pdu = v2c.apiPDU.getResponse(pdu)
@@ -195,6 +195,9 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
         reqAclIndices = []
         skippedOids = []
+
+        reqCtx['setaside-oids'] = rspVarBinds
+        reqCtx['varbind-acls'] = reqAclIndices
 
         for varBind in v2c.apiPDU.getVarBindList(pdu):
             hitEndOfRange = False
@@ -250,8 +253,6 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
             info(denialMsg)
 
         if reqVarBinds:
-            reqCtx['setaside-oids'] = rspVarBinds
-            reqCtx['varbind-acls'] = reqAclIndices
             nextAction = status.NEXT
         else:
             pdu = v2c.apiPDU.getResponse(pdu)
