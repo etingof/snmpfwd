@@ -143,30 +143,34 @@ def overrideLeakingOid(varBind, aclIdx,
                        mutedOids=None,
                        terminatedOids=None,
                        nextCmd=False):
+
     skip, begin, end = oidsList[aclIdx]
 
-    if not (begin <= varBind[0] <= end):
-        aclIdx += 1
+    isAllowed = begin <= varBind[0] <= end
 
-        if len(oidsList) == aclIdx:
-            if nextCmd:
-                if terminatedOids is not None:
-                    terminatedOids.append((varBind[0], end))
+    aclIdx += 1
 
-                v2c.apiVarBind.setOIDVal(varBind, (end, endOfMibView))
-            else:
-                if mutedOids is not None:
-                    mutedOids.append((varBind[0], end))
+    if len(oidsList) == aclIdx:
+        override = end
 
-                v2c.apiVarBind.setOIDVal(varBind, (end, null))
+    else:
+        skip, begin, end = oidsList[aclIdx]
+
+        override = skip
+
+    if not isAllowed:
+        if nextCmd:
+            if terminatedOids is not None:
+                terminatedOids.append((varBind[0], override))
+
+            v2c.apiVarBind.setOIDVal(varBind, (override, endOfMibView))
         else:
-            skip, begin, end = oidsList[aclIdx]
-
             if mutedOids is not None:
-                mutedOids.append((varBind[0], skip))
+                mutedOids.append((varBind[0], override))
 
-            v2c.apiVarBind.setOIDVal(varBind, (skip, null))
+            v2c.apiVarBind.setOIDVal(varBind, (override, null))
 
+    return override
 
 def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
@@ -504,17 +508,24 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
                 # put locally terminated var-binds into response
                 if aclIdx is None:
-                    varBind = v2c.VarBind()
-                    v2c.apiVarBind.setOIDVal(varBind, (oid, endOfMibView))
-                    varBinds.append(varBind)
+                    if reqVarBindIdx < origNonRepeaters:
+                        insufficientRows = 1
+                    else:
+                        insufficientRows = columnDepth
+
+                    while insufficientRows:
+                        varBind = v2c.VarBind()
+                        v2c.apiVarBind.setOIDVal(varBind, (oid, endOfMibView))
+                        varBinds.append(varBind)
+                        insufficientRows -= 1
 
                 # copy over original non-repeaters
                 elif reqVarBindIdx < origNonRepeaters:
                     varBind = rspVarBinds[reqVarBindIdx]
 
-                    overrideLeakingOid(varBind, aclIdx,
-                                       mutedOids, terminatedOids,
-                                       nextCmd=True)
+                    overrideLeakingOid(
+                        varBind, aclIdx, mutedOids, terminatedOids, nextCmd=True
+                    )
 
                     varBinds.append(varBind)
                     continue
@@ -523,15 +534,17 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
                 elif reqVarBindIdx in linearizedOidsMap:
                     startIdx, endIdx = linearizedOidsMap[reqVarBindIdx]
 
+                    override = oid
+
                     # move non-repeaters into repeaters
                     for rspVarBindIdx in range(startIdx, endIdx):
 
                         if rspVarBindIdx - startIdx < maxColumnDepth:
                             varBind = rspVarBinds[rspVarBindIdx]
 
-                            overrideLeakingOid(varBind, aclIdx,
-                                               mutedOids, terminatedOids,
-                                               nextCmd=True)
+                            override = overrideLeakingOid(
+                                varBind, aclIdx, mutedOids, terminatedOids, nextCmd=True
+                            )
 
                             varBinds.append(varBind)
 
@@ -546,7 +559,7 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
                     while insufficientRows:
                         varBind = v2c.VarBind()
-                        v2c.apiVarBind.setOIDVal(varBind, (varBinds[-1][0], noSuchInstance))
+                        v2c.apiVarBind.setOIDVal(varBind, (override, noSuchInstance))
                         varBinds.append(varBind)
                         insufficientRows -= 1
 
@@ -555,10 +568,12 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
                     startIdx = nonRepeaters + (reqVarBindIdx - origNonRepeaters - len(linearizedOidsMap)) * columnDepth
                     endIdx = startIdx + columnDepth
 
+                    override = oid
+
                     for rspVarBindIdx in range(startIdx, endIdx):
                         varBind = rspVarBinds[rspVarBindIdx]
 
-                        overrideLeakingOid(
+                        override = overrideLeakingOid(
                             varBind, aclIdx, mutedOids, terminatedOids, nextCmd=True
                         )
 
@@ -569,7 +584,7 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
                     while insufficientRows:
                         varBind = v2c.VarBind()
-                        v2c.apiVarBind.setOIDVal(varBind, (varBinds[-1][0], noSuchInstance))
+                        v2c.apiVarBind.setOIDVal(varBind, (override, noSuchInstance))
                         varBinds.append(varBind)
                         insufficientRows -= 1
 
