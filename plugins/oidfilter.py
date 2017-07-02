@@ -216,7 +216,7 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
             for oid, _, _ in reqOids:
                 varBind = v2c.VarBind()
-                v2c.apiVarBind.setOIDVal(varBind, (oid, v2c.NoSuchObject()))
+                v2c.apiVarBind.setOIDVal(varBind, (oid, noSuchInstance))
                 reqVarBinds.append(varBind)
 
             nextAction = status.RESPOND
@@ -304,7 +304,6 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
         reqCtx['linearized-oids-map'] = linearizedOidsMap
         reqCtx['non-repeaters'] = nonRepeaters
-        reqCtx['req-size'] = len(v2c.apiBulkPDU.getVarBindList(pdu))
 
         allDenied = True
 
@@ -323,37 +322,43 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
             oid = skip
 
-            # OID went out of range
-            if aclIdx is not None:
-                allDenied = False
+            # original request var-binds
+            reqOids.append((oid, varBindIdx, aclIdx))
+
+            # OID went beyond all ranges
+            if aclIdx is None:
+                continue
+
+            allDenied = False
 
             # original request non-repeaters
             if varBindIdx < nonRepeaters:
                 nonRepOids.append((oid, varBindIdx, aclIdx))
                 continue
 
-            if aclIdx is not None:
-                # original request repeaters
-                skip, begin, end = oidsList[aclIdx]
+            # original request repeaters
+            skip, begin, end = oidsList[aclIdx]
 
-                # move single-OID ranges from repeaters into non-repeaters
-                startIdx = len(nonRepOids) + len(linearizedOids)
-                endIdx = startIdx
+            # move single-OID ranges from repeaters into non-repeaters
+            startIdx = len(nonRepOids) + len(linearizedOids)
+            endIdx = startIdx
 
-                if begin == end:
-                    while endIdx - startIdx < maxRepeaters:
-                        linearizedOids.append((oid, varBindIdx, aclIdx))
-                        endIdx += 1
-                        aclIdx += 1
-                        if aclIdx >= len(endOids):
-                            break
-                        oid, begin, end = oidsList[aclIdx]
-                        if begin != end:
-                            break
+            if begin == end:
+                while endIdx - startIdx < maxRepeaters:
+                    linearizedOids.append((oid, varBindIdx, aclIdx))
+                    endIdx += 1
+                    aclIdx += 1
+                    if aclIdx >= len(endOids):
+                        break
+                    oid, begin, end = oidsList[aclIdx]
+                    if begin != end:
+                        break
 
-                    linearizedOidsMap[varBindIdx] = startIdx, endIdx
+                linearizedOidsMap[varBindIdx] = startIdx, endIdx
 
-                    continue
+                debug('%s: repeating OID #%d (%s) converted into non-repeaters #%d..%d' % (PLUGIN_NAME, varBindIdx, varBind[0], startIdx, endIdx - 1))
+
+                continue
 
             # proceed with original repeaters
             repOids.append((oid, varBindIdx, aclIdx))
@@ -369,7 +374,7 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
         if allDenied:
             pdu = v2c.apiBulkPDU.getResponse(pdu)
 
-            for oid, _, _ in rspOids:
+            for oid, _, _ in reqOids:
                 varBind = v2c.VarBind()
                 v2c.apiVarBind.setOIDVal(varBind, (oid, endOfMibView))
                 reqVarBinds.append(varBind)
@@ -381,11 +386,10 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
             for oid, varBindIdx, aclIdx in nonRepOids + linearizedOids + repOids:
                 if aclIdx is None:
                     continue
+
                 varBind = v2c.VarBind()
                 v2c.apiVarBind.setOIDVal(varBind, (oid, null))
                 reqVarBinds.append(varBind)
-
-                reqOids.append((oid, varBindIdx, aclIdx))
 
             v2c.apiBulkPDU.setNonRepeaters(pdu, nonRepeaters + len(linearizedOids))
 
@@ -424,11 +428,11 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
         terminatedOids = []
         mutedOids = []
 
-        rspIdx = 0
+        rspVarBindIdx = 0
 
         varBinds = v2c.VarBindList()
 
-        for oid, varBindIdx, aclIdx in reqOids:
+        for oid, reqVarBindIdx, aclIdx in reqOids:
 
             if aclIdx is None:
                 varBind = v2c.VarBind()
@@ -436,20 +440,19 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
             else:
                 try:
-                    varBind = rspVarBinds[rspIdx]
+                    varBind = rspVarBinds[rspVarBindIdx]
 
                 except IndexError:
-                    error('%s: missing response OID #%s' % (PLUGIN_NAME, rspIdx))
+                    error('%s: missing response OID #%s' % (PLUGIN_NAME, rspVarBindIdx))
                     return status.DROP, pdu
-
-                else:
-                    rspIdx += 1
 
                 overrideLeakingOid(varBind, aclIdx,
                                    mutedOids, terminatedOids,
                                    nextCmd=True)
 
             varBinds.append(varBind)
+
+            rspVarBindIdx += 1
 
         if logDenials and (terminatedOids or mutedOids):
             denialMsg = formatDenialMsg(pdu, trunkMsg)
@@ -471,8 +474,6 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
         else:
             linearizedColumnDepth = 0
 
-        origReqSize = reqCtx['req-size']
-
         origNonRepeaters = int(reqCtx['non-repeaters'])
         nonRepeaters = int(v2c.apiBulkPDU.getNonRepeaters(reqPdu))
 
@@ -480,10 +481,14 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
         rspVarBinds = v2c.apiBulkPDU.getVarBindList(pdu)
 
         try:
-            columnDepth = (len(rspVarBinds) - origNonRepeaters) // (len(reqVarBinds) - origNonRepeaters)
+            columnDepth = (len(rspVarBinds) - nonRepeaters) // (len(reqVarBinds) - nonRepeaters)
 
         except ZeroDivisionError:
             columnDepth = 0
+
+        if columnDepth < 0:
+            error('%s: malformed GETBULK response table' % PLUGIN_NAME)
+            return status.DROP, pdu
 
         maxColumnDepth = max(columnDepth, linearizedColumnDepth)
 
@@ -492,16 +497,19 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
         terminatedOids = []
         mutedOids = []
 
-        reqVarBindIdx = 0
-
         try:
 
-            while reqVarBindIdx < origReqSize:
+            # Walk over original request var-binds
+            for oid, reqVarBindIdx, aclIdx in reqOids:
 
-                oid, varBindIdx, aclIdx = reqOids[reqVarBindIdx]
+                # put locally terminated var-binds into response
+                if aclIdx is None:
+                    varBind = v2c.VarBind()
+                    v2c.apiVarBind.setOIDVal(varBind, (oid, endOfMibView))
+                    varBinds.append(varBind)
 
                 # copy over original non-repeaters
-                if reqVarBindIdx < origNonRepeaters:
+                elif reqVarBindIdx < origNonRepeaters:
                     varBind = rspVarBinds[reqVarBindIdx]
 
                     overrideLeakingOid(varBind, aclIdx,
@@ -509,7 +517,6 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
                                        nextCmd=True)
 
                     varBinds.append(varBind)
-                    reqVarBindIdx += 1
                     continue
 
                 # process linearized OIDs
@@ -528,6 +535,7 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
                             varBinds.append(varBind)
 
+                            # this assumes that aclIdx grows with endIdx
                             aclIdx += 1
 
                         else:
@@ -538,23 +546,21 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
                     while insufficientRows:
                         varBind = v2c.VarBind()
-                        v2c.apiVarBind.setOIDVal(varBind, (varBinds[-1][0], v2c.NoSuchInstance()))
+                        v2c.apiVarBind.setOIDVal(varBind, (varBinds[-1][0], noSuchInstance))
                         varBinds.append(varBind)
                         insufficientRows -= 1
 
-                    reqVarBindIdx += 1
-
                 # copy over original repeaters
                 else:
-                    startIdx = nonRepeaters + (reqVarBindIdx - origNonRepeaters) * columnDepth
+                    startIdx = nonRepeaters + (reqVarBindIdx - origNonRepeaters - len(linearizedOidsMap)) * columnDepth
                     endIdx = startIdx + columnDepth
 
                     for rspVarBindIdx in range(startIdx, endIdx):
                         varBind = rspVarBinds[rspVarBindIdx]
 
-                        overrideLeakingOid(varBind, aclIdx,
-                                           mutedOids, terminatedOids,
-                                           nextCmd=True)
+                        overrideLeakingOid(
+                            varBind, aclIdx, mutedOids, terminatedOids, nextCmd=True
+                        )
 
                         varBinds.append(varBind)
 
@@ -563,14 +569,12 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
                     while insufficientRows:
                         varBind = v2c.VarBind()
-                        v2c.apiVarBind.setOIDVal(varBind, (varBinds[-1][0], v2c.NoSuchInstance()))
+                        v2c.apiVarBind.setOIDVal(varBind, (varBinds[-1][0], noSuchInstance))
                         varBinds.append(varBind)
                         insufficientRows -= 1
 
-                    reqVarBindIdx += 1
-
         except IndexError:
-            error('short GETBULK maxColumnDepth - endIdx - startIdxK response PDU')
+            error('%s: short GETBULK response PDU' % PLUGIN_NAME)
             return status.DROP, pdu
 
         if logDenials and (terminatedOids or mutedOids):
