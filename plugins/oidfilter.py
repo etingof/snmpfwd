@@ -142,11 +142,13 @@ def findAcl(oid, nextOid=False):
 def overrideLeakingOid(varBind, aclIdx,
                        mutedOids=None,
                        terminatedOids=None,
-                       nextCmd=False):
+                       report=null):
 
     skip, begin, end = oidsList[aclIdx]
 
-    isAllowed = begin <= varBind[0] <= end
+    oid, value = v2c.apiVarBind.getOIDVal(varBind)
+
+    isAllowed = begin <= oid <= end
 
     aclIdx += 1
 
@@ -159,16 +161,17 @@ def overrideLeakingOid(varBind, aclIdx,
         override = skip
 
     if not isAllowed:
-        if nextCmd:
-            if terminatedOids is not None:
-                terminatedOids.append((varBind[0], override))
+        if value.isSameTypeWith(endOfMibView):
+            report = endOfMibView
 
-            v2c.apiVarBind.setOIDVal(varBind, (override, endOfMibView))
-        else:
+        if report is null:
             if mutedOids is not None:
-                mutedOids.append((varBind[0], override))
+                mutedOids.append((oid, override))
+        else:
+            if terminatedOids is not None:
+                terminatedOids.append((oid, override))
 
-            v2c.apiVarBind.setOIDVal(varBind, (override, null))
+        v2c.apiVarBind.setOIDVal(varBind, (override, report))
 
     return override
 
@@ -422,10 +425,7 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
                          v2c.SetRequestPDU.tagSet,
                          v2c.GetNextRequestPDU.tagSet):
 
-        if reqPdu.tagSet == v2c.GetNextRequestPDU.tagSet:
-            errorValue = endOfMibView
-        else:
-            errorValue = noSuchInstance
+        nextCmd = reqPdu.tagSet == v2c.GetNextRequestPDU.tagSet
 
         rspVarBinds = v2c.apiPDU.getVarBindList(pdu)
 
@@ -440,7 +440,11 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
             if aclIdx is None:
                 varBind = v2c.VarBind()
-                v2c.apiVarBind.setOIDVal(varBind, (oid, errorValue))
+
+                if nextCmd:
+                    v2c.apiVarBind.setOIDVal(varBind, (oid, endOfMibView))
+                else:
+                    v2c.apiVarBind.setOIDVal(varBind, (oid, noSuchInstance))
 
             else:
                 try:
@@ -452,9 +456,7 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
                 rspVarBindIdx += 1
 
-                overrideLeakingOid(varBind, aclIdx,
-                                   mutedOids, terminatedOids,
-                                   nextCmd=True)
+                overrideLeakingOid(varBind, aclIdx, mutedOids, terminatedOids)
 
             varBinds.append(varBind)
 
@@ -523,9 +525,7 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
                 elif reqVarBindIdx < origNonRepeaters:
                     varBind = rspVarBinds[reqVarBindIdx]
 
-                    overrideLeakingOid(
-                        varBind, aclIdx, mutedOids, terminatedOids, nextCmd=True
-                    )
+                    overrideLeakingOid(varBind, aclIdx, mutedOids, terminatedOids)
 
                     varBinds.append(varBind)
                     continue
@@ -542,9 +542,7 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
                         if rspVarBindIdx - startIdx < maxColumnDepth:
                             varBind = rspVarBinds[rspVarBindIdx]
 
-                            override = overrideLeakingOid(
-                                varBind, aclIdx, mutedOids, terminatedOids, nextCmd=True
-                            )
+                            override = overrideLeakingOid(varBind, aclIdx, mutedOids, terminatedOids)
 
                             varBinds.append(varBind)
 
@@ -573,9 +571,7 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
                     for rspVarBindIdx in range(startIdx, endIdx):
                         varBind = rspVarBinds[rspVarBindIdx]
 
-                        override = overrideLeakingOid(
-                            varBind, aclIdx, mutedOids, terminatedOids, nextCmd=True
-                        )
+                        override = overrideLeakingOid(varBind, aclIdx, mutedOids, terminatedOids)
 
                         varBinds.append(varBind)
 
