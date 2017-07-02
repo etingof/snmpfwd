@@ -450,13 +450,13 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
                     error('%s: missing response OID #%s' % (PLUGIN_NAME, rspVarBindIdx))
                     return status.DROP, pdu
 
+                rspVarBindIdx += 1
+
                 overrideLeakingOid(varBind, aclIdx,
                                    mutedOids, terminatedOids,
                                    nextCmd=True)
 
             varBinds.append(varBind)
-
-            rspVarBindIdx += 1
 
         if logDenials and (terminatedOids or mutedOids):
             denialMsg = formatDenialMsg(pdu, trunkMsg)
