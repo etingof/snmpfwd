@@ -308,8 +308,11 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
         repOids = []
 
         linearizedOidsMap = {}
+        repeatersOidMap = {}
 
         reqCtx['linearized-oids-map'] = linearizedOidsMap
+        reqCtx['repeaters-oids-map'] = repeatersOidMap
+
         reqCtx['non-repeaters'] = nonRepeaters
 
         allDenied = True
@@ -368,6 +371,8 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
                 continue
 
             # proceed with original repeaters
+            repeatersOidMap[varBindIdx] = len(repOids)
+
             repOids.append((oid, varBindIdx, aclIdx))
 
         if logDenials and skippedOids:
@@ -389,6 +394,9 @@ def processCommandRequest(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
             nextAction = status.RESPOND
 
         else:
+
+            for varBindIdx in repeatersOidMap:
+                repeatersOidMap[varBindIdx] += len(nonRepOids) + len(linearizedOids)
 
             for oid, varBindIdx, aclIdx in nonRepOids + linearizedOids + repOids:
                 if aclIdx is None:
@@ -480,6 +488,8 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
         else:
             linearizedColumnDepth = 0
 
+        repeatersOidsMap = reqCtx['repeaters-oids-map']
+
         origNonRepeaters = int(reqCtx['non-repeaters'])
         nonRepeaters = int(v2c.apiBulkPDU.getNonRepeaters(reqPdu))
 
@@ -562,8 +572,8 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
                         insufficientRows -= 1
 
                 # copy over original repeaters
-                else:
-                    startIdx = nonRepeaters + (reqVarBindIdx - origNonRepeaters - len(linearizedOidsMap)) * columnDepth
+                elif reqVarBindIdx in repeatersOidsMap:
+                    startIdx = repeatersOidsMap[reqVarBindIdx]
                     endIdx = startIdx + columnDepth
 
                     override = oid
@@ -583,6 +593,10 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
                         v2c.apiVarBind.setOIDVal(varBind, (override, noSuchInstance))
                         varBinds.append(varBind)
                         insufficientRows -= 1
+
+                else:
+                    error('%s: malformed GETBULK state information!' % PLUGIN_NAME)
+                    return status.DROP, pdu
 
         except IndexError:
             error('%s: short GETBULK response PDU' % PLUGIN_NAME)
