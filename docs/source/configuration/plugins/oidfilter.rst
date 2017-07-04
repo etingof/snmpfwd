@@ -69,6 +69,8 @@ How it works
 The *oidfilter* may touch the passing PDU when it goes towards SNMP agent and back. The algorithm
 differs depending on the SNMP PDU type.
 
+.. _oidfilter-getset-pdu:
+
 GET/SET PDU
 +++++++++++
 
@@ -81,6 +83,8 @@ each request OID against configured OID ranges.
 
 Once response PDU reaches *oidproxy*, the plugin merges variables-bindings from response PDU
 with set aside variables-bindings and sends the combined PDU in response.
+
+.. _oidfilter-getnext-pdu:
 
 GETNEXT PDU
 +++++++++++
@@ -107,9 +111,48 @@ PDU matching each OID against the OID range that matched the request OID.
 Then the plugin merges variables-bindings from response PDU with the variables-bindings set
 aside on PDU's way forward and sends the combined PDU in response.
 
-.. note::
+.. _oidfilter-getbulk-pdu:
 
-   As of the current *oidfilter* implementation, *GETBULK* PDU is not supported.
+GETBULK PDU
++++++++++++
+
+When `GETBULK PDU <https://tools.ietf.org/html/rfc1448#section-4.2.3>`_
+is received, the *oidfilter* plugin splits the request variable-bindings
+onto two parts:
+
+1. the *non-repeaters* OIDs are treated in exactly the same way as the
+   :ref:`GETNEXT <oidfilter-getnext-pdu>` PDU OIDs
+2. the *max-repeaters* request PDU variable-bindings get traversed matching each
+   OID against configured OID ranges
+
+Since GETBULK PDU gives RESPONSE PDU a chance to accommodate more variable-bindings
+than it is in request PDU, each *max-repeaters* var-bindings processing may take
+either of two scenarios:
+
+A. The filtering rules allow given request OID to produce many
+   variable-bindings in response
+B. The filtering rules limit immediate response variable-bindings to just a
+   single response OID
+
+In the *A* case request OID processing rules are exactly the same as
+:ref:`GETNEXT <oidfilter-getnext-pdu>`, except that more than one var-binding
+might show up in response.
+
+With the *B* scenario two things happen:
+
+* The request OID gets re-classified from *max-repeaters* into *non-repeaters*
+* Some more OIDs are gathered from the allowed OIDs filtering rules that follows
+  the request OID for as long as those rules allow just a single response OID.
+  All the gathered OIDs get classified as *non-repeaters* in request
+
+The above measures are likely to cause request PDU configuration change so that
+a new GETBULK PDU is created and sent down towards the backend SNMP agent. When
+response PDU comes back and the *B* scenario is in effect, response
+variable-bindings get re-arranged in a way to pretend as being a sequence of
+response OIDs following given *max-repeaters* request OID.
+
+Essentially, the above algorithm tries to reduce the number of SNMP exchanges
+when filtering rules exhibit many single-variable entries.
 
 Example configuration
 ---------------------
