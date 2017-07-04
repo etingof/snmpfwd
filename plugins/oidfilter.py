@@ -496,10 +496,12 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
         reqVarBinds = v2c.apiBulkPDU.getVarBindList(reqPdu)
         rspVarBinds = v2c.apiBulkPDU.getVarBindList(pdu)
 
-        try:
-            columnDepth = (len(rspVarBinds) - nonRepeaters) // (len(reqVarBinds) - nonRepeaters)
+        maxColumns = len(reqVarBinds) - nonRepeaters
 
-        except ZeroDivisionError:
+        if maxColumns:
+            columnDepth = (len(rspVarBinds) - nonRepeaters) // maxColumns
+
+        else:
             columnDepth = 0
 
         if columnDepth < 0:
@@ -508,7 +510,8 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
         maxColumnDepth = max(columnDepth, linearizedColumnDepth)
 
-        varBinds = v2c.VarBindList()
+        nonRepVarBinds = []
+        repVarBindTable = []
 
         terminatedOids = []
         mutedOids = []
@@ -530,7 +533,8 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
                         overrideLeakingOid(varBind, aclIdx, mutedOids, terminatedOids)
 
-                    varBinds.append(varBind)
+                    nonRepVarBinds.append(varBind)
+
                     continue
 
                 # process linearized OIDs
@@ -539,7 +543,9 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
                     override = oid
 
-                    # move non-repeaters into repeaters
+                    repVarBindTable.append([])
+
+                    # move non-repeaters into repeaters as individual columns
                     for rspVarBindIdx in range(startIdx, endIdx):
 
                         if rspVarBindIdx - startIdx < maxColumnDepth:
@@ -547,7 +553,7 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
 
                             override = overrideLeakingOid(varBind, aclIdx, mutedOids, terminatedOids)
 
-                            varBinds.append(varBind)
+                            repVarBindTable[-1].append(varBind)
 
                             # this assumes that aclIdx grows with endIdx
                             aclIdx += 1
@@ -561,35 +567,31 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
                     while insufficientRows:
                         varBind = v2c.VarBind()
                         v2c.apiVarBind.setOIDVal(varBind, (override, null))
-                        varBinds.append(varBind)
+                        repVarBindTable[-1].append(varBind)
                         insufficientRows -= 1
 
-                # copy over original repeaters
+                # copy over original repeaters into individual columns
                 elif reqVarBindIdx in repeatersOidsMap:
                     override = oid
 
-                    if aclIdx is None:
-                        insufficientRows = maxColumnDepth
+                    repVarBindTable.append([])
 
-                    else:
-                        startIdx = repeatersOidsMap[reqVarBindIdx]
-                        endIdx = startIdx + columnDepth
+                    startIdx = repeatersOidsMap[reqVarBindIdx]
 
-                        for rspVarBindIdx in range(startIdx, endIdx):
+                    for row in range(maxColumnDepth):
+
+                        if aclIdx is not None and row < columnDepth:
+                            rspVarBindIdx = startIdx + maxColumns * row
+
                             varBind = rspVarBinds[rspVarBindIdx]
 
                             override = overrideLeakingOid(varBind, aclIdx, mutedOids, terminatedOids)
 
-                            varBinds.append(varBind)
+                        else:
+                            varBind = v2c.VarBind()
+                            v2c.apiVarBind.setOIDVal(varBind, (override, null))
 
-                        # pad insufficient rows
-                        insufficientRows = maxColumnDepth - (endIdx - startIdx)
-
-                    while insufficientRows:
-                        varBind = v2c.VarBind()
-                        v2c.apiVarBind.setOIDVal(varBind, (override, null))
-                        varBinds.append(varBind)
-                        insufficientRows -= 1
+                        repVarBindTable[-1].append(varBind)
 
                 else:
                     error('%s: malformed GETBULK state information!' % PLUGIN_NAME)
@@ -606,6 +608,15 @@ def processCommandResponse(pluginId, snmpEngine, pdu, trunkMsg, reqCtx):
             if mutedOids:
                 denialMsg += ' ' + 'OID(s) %s replaced with %s and reported as <nil>' % (','.join([str(v2c.ObjectIdentifier(x[0])) for x in mutedOids]), ','.join([str(v2c.ObjectIdentifier(x[1])) for x in mutedOids]))
             info(denialMsg)
+
+        varBinds = v2c.VarBindList()
+
+        for varBind in nonRepVarBinds:
+            varBinds.append(varBind)
+
+        for row in range(maxColumnDepth):
+            for repVarBinds in repVarBindTable:
+                varBinds.append(repVarBinds[row])
 
         v2c.apiBulkPDU.setVarBindList(pdu, varBinds)
 
