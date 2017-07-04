@@ -5,7 +5,6 @@
 * add more configuration examples
 * add some drawings explaining network topology in different configurations
 * unify network endpoint string parser defaulting port part
-* implement GETBULK handling at the "oidfilter" plugin
 * implement PDU split at content map
 * formalize request splitting-merging logic
 * improve logging plugin to expand snmp-* options in log file path
@@ -16,3 +15,7 @@
 * rename orig- into server- at the client config for consistency
 * auto-reload changed configuration (core and plugins)
 * allow for multiple --logging-method parameters
+* further optimize GETBULK PDU handling at the oidfilter plugin
+  - when linearlized var-binds might produce less than max-repeaters,
+    add some more repeaters from the oidfilter rule that follows
+  - strip nullified rows off the response PDU PDU

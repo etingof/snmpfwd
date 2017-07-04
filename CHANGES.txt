@@ -1,7 +1,8 @@
 
-Revision 0.2.2, released XX-06-2017
+Revision 0.2.2, released 04-07-2017
 -----------------------------------
 
+- GETBULK PDU support added to the oidfilter plugin
 - Two-digit subsecond precision implemented across all logs
 - Unique, system-wide request identifier implemented under the name
   of callflow-id

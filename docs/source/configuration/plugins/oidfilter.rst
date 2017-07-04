@@ -135,8 +135,8 @@ B. The filtering rules limit immediate response variable-bindings to just a
    single response OID
 
 In the *A* case request OID processing rules are exactly the same as
-:ref:`GETNEXT <oidfilter-getnext-pdu>`, except that all but single of the
-denied OIDs in response get purged out of the response.
+:ref:`GETNEXT <oidfilter-getnext-pdu>`, except that more than one var-binding
+might show up in response.
 
 With the *B* scenario two things happen:
 
@@ -150,6 +150,9 @@ a new GETBULK PDU is created and sent down towards the backend SNMP agent. When
 response PDU comes back and the *B* scenario is in effect, response
 variable-bindings get re-arranged in a way to pretend as being a sequence of
 response OIDs following given *max-repeaters* request OID.
+
+Essentially, the above algorithm tries to reduce the number of SNMP exchanges
+when filtering rules exhibit many single-variable entries.
 
 Example configuration
 ---------------------
