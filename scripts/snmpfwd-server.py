@@ -408,14 +408,13 @@ def main():
             trunkReq['snmp-peer-id'] = None
 
         pdu = variables['pdu']
-        if pdu.tagSet in v1.TrapPDU.tagSet:
-            apiPDU = v1.apiTrapPDU
-        else:
-            apiPDU = v2c.apiPDU
+        if pdu.tagSet == v1.TrapPDU.tagSet:
+            pdu = rfc2576.v1ToV2(pdu)
+            v2c.apiTrapPDU.setDefaults(pdu)
 
         k = '#'.join(
             [snmpPduTypesMap.get(variables['pdu'].tagSet, '?'),
-             '|'.join([str(x[0]) for x in apiPDU.getVarBinds(variables['pdu'])])]
+             '|'.join([str(x[0]) for x in v2c.apiTrapPDU.getVarBinds(pdu)])]
         )
 
         for x, y in contentIdList:
