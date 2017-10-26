@@ -1,3 +1,4 @@
+# Python stuff
 *.pyc
 __pycache__
 
@@ -8,10 +9,17 @@ __pycache__
 MANIFEST
 dist/
 build/
-snmpfwd.egg-info/
+*.egg-info/
 
 # PyCharm stuff
 .idea/
 
-# virtualenv
+# Sphinx template
+docs/source/.templates/layout.html
+
+# Eclipse stuff
+.project
+.pydevproject
+
+# Virtual envs
 venv*

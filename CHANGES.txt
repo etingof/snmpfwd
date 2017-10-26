@@ -3,6 +3,7 @@ Revision 0.2.3, released XX-09-2017
 -----------------------------------
 
 - Fixed crash during TRAPv1 handling at the server part
+- Sphinx docs layout updated
 
 Revision 0.2.2, released 04-07-2017
 -----------------------------------
