@@ -3,7 +3,7 @@
 # This file is part of snmpfwd software.
 #
 # Copyright (c) 2014-2017, Ilya Etingof <etingof@gmail.com>
-# License: https://github.com/etingof/snmpfwd/blob/master/LICENSE.txt
+# License: http://snmplabs.com/snmpfwd/license.html
 #
 import os
 import sys
@@ -496,7 +496,7 @@ def main():
           and matching them against proxying rules.
 
         Documentation:
-          http://snmpfwd.sourceforge.io/
+          http://snmplabs.com/snmpfwd/
 
     %s
     """ % helpMessage)
