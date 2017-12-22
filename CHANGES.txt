@@ -2,6 +2,8 @@
 Revision 0.3.1, released 22-12-2017
 -----------------------------------
 
+- HMAC-SHA-2 authentication and strong AES encryption protocols
+  support added
 - The pycryptodome dependency replaced with pycryptodomex as
   it is recommended by the upstream to avoid unwanted interference
 - Migrated references from SourceForge
