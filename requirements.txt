@@ -1,2 +1,2 @@
-pycryptodome
-pysnmp>=4.3.0
+pycryptodomex
+pysnmp>=4.4.0

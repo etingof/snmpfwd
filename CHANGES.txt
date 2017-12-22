@@ -1,7 +1,11 @@
 
-Revision 0.2.3, released XX-11-2017
+Revision 0.3.1, released 22-12-2017
 -----------------------------------
 
+- HMAC-SHA-2 authentication and strong AES encryption protocols
+  support added
+- The pycryptodome dependency replaced with pycryptodomex as
+  it is recommended by the upstream to avoid unwanted interference
 - Migrated references from SourceForge
 - Fixed crash during TRAPv1 handling at the server part
 - Sphinx docs layout updated

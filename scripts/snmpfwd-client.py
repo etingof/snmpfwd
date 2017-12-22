@@ -47,6 +47,10 @@ PLUGIN_API_VERSION = 2
 authProtocols = {
   'MD5': config.usmHMACMD5AuthProtocol,
   'SHA': config.usmHMACSHAAuthProtocol,
+  'SHA224': config.usmHMAC128SHA224AuthProtocol,
+  'SHA256': config.usmHMAC192SHA256AuthProtocol,
+  'SHA384': config.usmHMAC256SHA384AuthProtocol,
+  'SHA512': config.usmHMAC384SHA512AuthProtocol,
   'NONE': config.usmNoAuthProtocol
 }
 
@@ -56,7 +60,9 @@ privProtocols = {
   'AES': config.usmAesCfb128Protocol,
   'AES128': config.usmAesCfb128Protocol,
   'AES192': config.usmAesCfb192Protocol,
+  'AES192BLMT': config.usmAesBlumenthalCfb192Protocol,
   'AES256': config.usmAesCfb256Protocol,
+  'AES256BLMT': config.usmAesBlumenthalCfb256Protocol,
   'NONE': config.usmNoPrivProtocol
 }
 
@@ -388,23 +394,22 @@ def main():
     #
 
     helpMessage = """\
-    Usage: %s [--help]
-        [--version ]
-        [--debug-snmp=<%s>]
-        [--debug-asn1=<%s>]
-        [--daemonize]
-        [--process-user=<uname>] [--process-group=<gname>]
-        [--pid-file=<file>]
-        [--logging-method=<%s[:args>]>]
-        [--log-level=<%s>]
-        [--config-file=<file>]""" % (
+Usage: %s [--help]
+    [--version ]
+    [--debug-snmp=<%s>]
+    [--debug-asn1=<%s>]
+    [--daemonize]
+    [--process-user=<uname>] [--process-group=<gname>]
+    [--pid-file=<file>]
+    [--logging-method=<%s[:args>]>]
+    [--log-level=<%s>]
+    [--config-file=<file>]""" % (
             sys.argv[0],
             '|'.join([x for x in pysnmp_debug.flagMap.keys() if x != 'mibview']),
             '|'.join([x for x in pyasn1_debug.flagMap.keys()]),
             '|'.join(log.methodsMap),
             '|'.join(log.levelsMap)
         )
-
 
     loggingMethod = ['stderr']
     loggingLevel = None
@@ -432,16 +437,16 @@ def main():
     for opt in opts:
         if opt[0] == '-h' or opt[0] == '--help':
             sys.stderr.write("""\
-    Synopsis:
-      SNMP Proxy Forwarder: client part. Receives SNMP PDUs via one or many
-      encrypted trunks established with the Forwarder's Agent part(s) running
-      elsewhere and routes PDUs to built-in SNMP Managers for further
-      transmission towards SNMP Agents.
-      Can implement complex routing and protocol conversion logic through
-      analyzing parts of SNMP messages and matching them against proxying rules.
+Synopsis:
+  SNMP Proxy Forwarder: client part. Receives SNMP PDUs via one or many
+  encrypted trunks established with the Forwarder's Agent part(s) running
+  elsewhere and routes PDUs to built-in SNMP Managers for further
+  transmission towards SNMP Agents.
+  Can implement complex routing and protocol conversion logic through
+  analyzing parts of SNMP messages and matching them against proxying rules.
 
-    Documentation:
-      http://snmplabs.com/snmpfwd/
+Documentation:
+  http://snmplabs.com/snmpfwd/
 
 %s
 """ % helpMessage)
@@ -451,12 +456,12 @@ def main():
             import pysnmp
             import pyasn1
             sys.stderr.write("""\
-    SNMP Proxy Forwarder version %s, written by Ilya Etingof <etingof@gmail.com>
-    Using foundation libraries: pysnmp %s, pyasn1 %s.
-    Python interpreter: %s
-    Software documentation and support at https://github.com/etingof/snmpfwd
-    %s
-    """ % (snmpfwd.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
+SNMP Proxy Forwarder version %s, written by Ilya Etingof <etingof@gmail.com>
+Using foundation libraries: pysnmp %s, pyasn1 %s.
+Python interpreter: %s
+Software documentation and support at http://snmplabs.com/snmpfwd/
+%s
+""" % (snmpfwd.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
             return
         elif opt[0] == '--debug-snmp':
             pysnmp_debug.setLogger(pysnmp_debug.Debug(*opt[1].split(','), **dict(loggerName=PROGRAM_NAME + '.pysnmp')))
@@ -673,12 +678,20 @@ def main():
 
                 if securityLevel in (2, 3):
                     usmAuthProto = cfgTree.getAttrValue('snmp-usm-auth-protocol', *peerEntryPath, **dict(default=config.usmHMACMD5AuthProtocol))
+                    try:
+                        usmAuthProto = authProtocols[usmAuthProto.upper()]
+                    except KeyError:
+                        pass
                     usmAuthProto = rfc1902.ObjectName(usmAuthProto)
                     usmAuthKey = cfgTree.getAttrValue('snmp-usm-auth-key', *peerEntryPath)
                     log.info('new USM authentication key: %s, authentication protocol: %s' % (usmAuthKey, usmAuthProto))
 
                     if securityLevel == 3:
                         usmPrivProto = cfgTree.getAttrValue('snmp-usm-priv-protocol', *peerEntryPath, **dict(default=config.usmDESPrivProtocol))
+                        try:
+                            usmPrivProto = privProtocols[usmPrivProto.upper()]
+                        except KeyError:
+                            pass
                         usmPrivProto = rfc1902.ObjectName(usmPrivProto)
                         usmPrivKey = cfgTree.getAttrValue('snmp-usm-priv-key', *peerEntryPath, **dict(default=None))
                         log.info('new USM encryption key: %s, encryption protocol: %s' % (usmPrivKey, usmPrivProto))

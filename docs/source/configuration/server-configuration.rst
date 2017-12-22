@@ -226,9 +226,23 @@ SNMPv3 USM username.
 
 SNMPv3 message authentication protocol to use. Valid values are:
 
-* *1.3.6.1.6.3.10.1.1.1* - no authentication
-* *1.3.6.1.6.3.10.1.1.2* - the HMAC-MD5-96 Digest Authentication Protocol (:RFC:`3414#section-6`)
-* *1.3.6.1.6.3.10.1.1.3* - the HMAC-SHA-96 Digest Authentication Protocol (:RFC:`3414#section-7`)
++--------+----------------+-------------+
+| *ID*   |  *Algorithm*   | *Reference* |
++--------+----------------+-------------+
+| NONE   | -              | RFC3414     |
++--------+----------------+-------------+
+| MD5    | HMAC MD5       | RFC3414     |
++--------+----------------+-------------+
+| SHA    | HMAC SHA-1 128 | RFC3414     |
++--------+----------------+-------------+
+| SHA224 | HMAC SHA-2 224 | RFC7860     |
++--------+----------------+-------------+
+| SHA256 | HMAC SHA-2 256 | RFC7860     |
++--------+----------------+-------------+
+| SHA384 | HMAC SHA-2 384 | RFC7860     |
++--------+----------------+-------------+
+| SHA512 | HMAC SHA-2 512 | RFC7860     |
++--------+----------------+-------------+
 
 .. _snmp-usm-auth-key-server-option:
 
@@ -248,12 +262,25 @@ SNMPv3 message authentication key.
 
 SNMPv3 message encryption protocol to use. Valid values are:
 
-* *1.3.6.1.6.3.10.1.2.1* - no encryption
-* *1.3.6.1.6.3.10.1.2.2* - CBC-DES Symmetric Encryption Protocol (:RFC:`3414#section-8`)
-* *1.3.6.1.6.3.10.1.2.3* - CBC-3DES Symmetric Encryption Protocol `reeder-snmpv3-usm-3desede <https://tools.ietf.org/html/draft-reeder-snmpv3-usm-3desede-00#section-5>`_
-* *1.3.6.1.6.3.10.1.2.4* - CFB128-AES-128 Symmetric Encryption Protocol (:RFC:`3826#section-3`)
-* *1.3.6.1.4.1.9.12.6.1.1* - CFB128-AES-192 Symmetric Encryption Protocol (`draft-blumenthal-aes-usm-04 <https://tools.ietf.org/html/draft-blumenthal-aes-usm-04#section-3>`_) with Reeder key localization
-* *1.3.6.1.4.1.9.12.6.1.2* - CFB128-AES-256 Symmetric Encryption Protocol (`draft-blumenthal-aes-usm-04 <https://tools.ietf.org/html/draft-blumenthal-aes-usm-04#section-3>`_) with Reeder key localization
++------------+------------------------+----------------------+
+| *ID*       | *Algorithm*            | *Reference*          |
++------------+------------------------+----------------------+
+| NONE       | -                      | RFC3414              |
++------------+------------------------+----------------------+
+| DES        | DES                    | RFC3414              |
++------------+------------------------+----------------------+
+| AES        | AES CFB 128            | RFC3826              |
++------------+------------------------+----------------------+
+| AES192     | AES CFB 192            | RFC Draft            |
++------------+------------------------+----------------------+
+| AES256     | AES CFB 256            | RFC Draft            |
++------------+------------------------+----------------------+
+| AES192BLMT | AES CFB 192 Blumenthal | RFC Draft            |
++------------+------------------------+----------------------+
+| AES256BLMT | AES CFB 256 Blumenthal | RFC Draft            |
++------------+------------------------+----------------------+
+| 3DES       | Triple DES EDE         | RFC Draft            |
++------------+------------------------+----------------------+
 
 .. _snmp-usm-priv-key-server-option:
 
