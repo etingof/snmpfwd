@@ -678,12 +678,20 @@ Software documentation and support at http://snmplabs.com/snmpfwd/
 
                 if securityLevel in (2, 3):
                     usmAuthProto = cfgTree.getAttrValue('snmp-usm-auth-protocol', *peerEntryPath, **dict(default=config.usmHMACMD5AuthProtocol))
+                    try:
+                        usmAuthProto = authProtocols[usmAuthProto.upper()]
+                    except KeyError:
+                        pass
                     usmAuthProto = rfc1902.ObjectName(usmAuthProto)
                     usmAuthKey = cfgTree.getAttrValue('snmp-usm-auth-key', *peerEntryPath)
                     log.info('new USM authentication key: %s, authentication protocol: %s' % (usmAuthKey, usmAuthProto))
 
                     if securityLevel == 3:
                         usmPrivProto = cfgTree.getAttrValue('snmp-usm-priv-protocol', *peerEntryPath, **dict(default=config.usmDESPrivProtocol))
+                        try:
+                            usmPrivProto = privProtocols[usmPrivProto.upper()]
+                        except KeyError:
+                            pass
                         usmPrivProto = rfc1902.ObjectName(usmPrivProto)
                         usmPrivKey = cfgTree.getAttrValue('snmp-usm-priv-key', *peerEntryPath, **dict(default=None))
                         log.info('new USM encryption key: %s, encryption protocol: %s' % (usmPrivKey, usmPrivProto))
