@@ -20,6 +20,8 @@ Features
 --------
 
 * SNMPv1/v2c/v3 operations with built-in protocol and transport translation capabilities
+* SNMPv3 USM supports MD5/SHA/SHA224/SHA256/SHA384/SHA512 auth and
+  DES/3DES/AES128/AES192/AES256 privacy crypto algorithms
 * Forwards SNMP commands and notifications
 * Maintains multiple independent SNMP engines and network transports
 * Split client and server parts interconnected through encrypted TCP links
