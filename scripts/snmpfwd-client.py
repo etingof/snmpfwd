@@ -410,10 +410,6 @@ Usage: %s [--help]
             '|'.join(log.methodsMap),
             '|'.join(log.levelsMap)
         )
-
-    loggingMethod = ['stderr']
-    loggingLevel = None
-
     try:
         opts, params = getopt.getopt(sys.argv[1:], 'hv', [
             'help', 'version', 'debug=', 'debug-snmp=', 'debug-asn1=', 'daemonize',
@@ -433,6 +429,9 @@ Usage: %s [--help]
     cfgFile = CONFIG_FILE
     foregroundFlag = True
     procUser = procGroup = None
+
+    loggingMethod = ['stderr']
+    loggingLevel = None
 
     for opt in opts:
         if opt[0] == '-h' or opt[0] == '--help':
