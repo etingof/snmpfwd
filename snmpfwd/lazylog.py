@@ -33,10 +33,11 @@ class LazyLogString(object):
                     elif isinstance(val, int):
                         val = str(val)
                     else:
-                        val = v2c.OctetString(val).prettyPrint()
+                        if val:
+                            val = v2c.OctetString(val).prettyPrint()
 
                     if key in self.ALIASES:
-                        aliasKey = self.ALIASES[key]
+                        key = self.ALIASES[key]
 
                     self._logMsg += '%s=%s ' % (key, val or '<nil>')
 
