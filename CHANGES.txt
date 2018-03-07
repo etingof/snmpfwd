@@ -2,7 +2,7 @@
 Revision 0.3.3, released XX-03-2018
 -----------------------------------
 
-No changes so far
+- Support 'S' for seconds in log rotation syntax
 
 Revision 0.3.2, released 07-03-2018
 -----------------------------------

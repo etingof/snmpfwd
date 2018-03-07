@@ -74,13 +74,15 @@ class FileLogger(AbstractLogger):
                 maxsize = int(priv[1][:-1]) * 1024 * 1024
             elif priv[1][-1] in ('g', 'G'):
                 maxsize = int(priv[1][:-1]) * 1024 * 1024 * 1024
+            elif priv[1][-1] in ('s', 'S'):
+                maxage = ('S', int(priv[1][:-1]))
             elif priv[1][-1] in ('h', 'H'):
                 maxage = ('H', int(priv[1][:-1]))
             elif priv[1][-1] in ('d', 'D'):
                 maxage = ('D', int(priv[1][:-1]))
             else:
                 raise SnmpfwdError(
-                    'Unknown log rotation criteria %s, use <NNN>K,M,G for size or <NNN>H,D for time limits' % priv[1]
+                    'Unknown log rotation criteria %s, use <NNN>K,M,G for size or <NNN>S,H,D for time limits' % priv[1]
                 )
 
         try:
