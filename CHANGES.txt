@@ -1,4 +1,9 @@
 
+Revision 0.3.2, released XX-03-2018
+-----------------------------------
+
+- Copyright notice extended to the year 2018
+
 Revision 0.3.1, released 22-12-2017
 -----------------------------------
 
