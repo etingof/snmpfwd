@@ -57,7 +57,12 @@ Sets the limit for rotated files being kept on the filesystem.
 ++++++++++++++++
 
 Together with the *file.interval* option defines the frequency of
-file rotation.
+file rotation. Valid values are:
+
+* S - *file.interval* is measured in seconds
+* M - *file.interval* is measured in minutes
+* H - *file.interval* is measured in hours
+* D - *file.interval* is measured in days
 
 *file.interval*
 +++++++++++++++
