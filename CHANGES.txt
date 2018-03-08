@@ -2,6 +2,8 @@
 Revision 0.3.3, released XX-03-2018
 -----------------------------------
 
+- Added a workaround to preserve log files rotation time
+  on process restart
 - Support 'S' for seconds in log rotation syntax
 
 Revision 0.3.2, released 07-03-2018

@@ -9,6 +9,8 @@
 import logging
 from logging import handlers
 import time
+import os
+import stat
 try:
     from ConfigParser import RawConfigParser, Error
 except ImportError:
@@ -47,15 +49,29 @@ for moduleOption in moduleOptions:
         if method == 'file':
 
             rotation = config.get('file', 'rotation')
+
             if rotation == 'timed':
+                filename = config.get('file', 'destination')
+
                 handler = handlers.TimedRotatingFileHandler(
-                    config.get('file', 'destination'),
+                    filename,
                     config.get('file', 'timescale'),
                     int(config.get('file', 'interval')),
                     int(config.get('file', 'backupcount'))
                 )
+
+                # Use file metadata change time instead of last modification
+                # time as the stock implementation does.
+                # This is to work-around the increasing rotation intervals
+                # on process restart.
+                # Warning: this is based on undocumented logger features.
+                if os.path.exists(filename):
+                    createdAt = os.stat(filename)[stat.ST_CTIME]
+                    handler.rolloverAt = handler.computeRollover(createdAt)
+
             else:
                 raise SnmpfwdError('%s: unknown rotation method %s at %s' % (PLUGIN_NAME, rotation, configFile))
+
         else:
             raise SnmpfwdError('%s: unknown logging method %s at %s' % (PLUGIN_NAME, method, configFile))
 
