@@ -35,6 +35,16 @@ Server is configured to:
 * forward all queries to snmpfwd client through an unencrypted trunk connection
   running in *client* mode
 
+.. warning::
+
+    Since SNMP TRAP is always a one-way communication, SNMPv3 parties can't
+    negotiate authoritative SNMP engine ID automatically which is used
+    for authentication and encryption purposes.
+
+    When SNMPv3 authentication or encryption services are being used, it is
+    required to statically configure SNMP engine ID of the TRAP sender
+    at SNMP Proxy Forwarder server configuration.
+
 .. literalinclude:: /../../conf/trap-forwarding-snmpv2c/server.conf
 
 :download:`Download </../../conf/trap-forwarding-snmpv2c/server.conf>` server configuration file.
@@ -47,6 +57,16 @@ Client is configured to:
 * listen on server-mode unencrypted trunk connection
 * place inbound TRAP PDUs into SNMP v2c messages and forward them to public
   SNMP manager running at *demo.snmplabs.com*
+
+.. warning::
+
+    Since SNMP TRAP is always a one-way communication, SNMPv3 parties can't
+    negotiate authoritative SNMP engine ID automatically which is used
+    for authentication and encryption purposes.
+
+    When SNMPv3 authentication or encryption services are being used, it is
+    required to statically configure SNMP engine ID of the TRAP receiver
+    at SNMP Proxy Forwarder client configuration.
 
 .. literalinclude:: /../../conf/trap-forwarding-snmpv2c/client.conf
 
