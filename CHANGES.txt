@@ -1,5 +1,5 @@
 
-Revision 0.3.3, released XX-03-2018
+Revision 0.3.3, released 16-04-2018
 -----------------------------------
 
 - Added a workaround to preserve log files rotation time
