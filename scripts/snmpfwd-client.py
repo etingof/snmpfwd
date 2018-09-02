@@ -673,7 +673,9 @@ Software documentation and support at http://snmplabs.com/snmpfwd/
                     raise SnmpfwdError('security-name %s already in use at security-model %s' % (securityName, securityModel))
             else:
                 usmUser = cfgTree.getAttrValue('snmp-usm-user', *peerEntryPath)
-                log.info('new USM user %s, security-model %s, security-level %s, security-name %s' % (usmUser, securityModel, securityLevel, securityName))
+
+                log.info('new USM user %s, security-model %s, security-level %s, '
+                         'security-name %s' % (usmUser, securityModel, securityLevel, securityName))
 
                 if securityLevel in (2, 3):
                     usmAuthProto = cfgTree.getAttrValue('snmp-usm-auth-protocol', *peerEntryPath, **dict(default=config.usmHMACMD5AuthProtocol))
@@ -698,14 +700,16 @@ Software documentation and support at http://snmplabs.com/snmpfwd/
                         config.addV3User(
                             snmpEngine, usmUser,
                             usmAuthProto, usmAuthKey,
-                            usmPrivProto, usmPrivKey
+                            usmPrivProto, usmPrivKey,
                         )
 
                     else:
-                        config.addV3User(snmpEngine, usmUser, usmAuthProto, usmAuthKey)
+                        config.addV3User(snmpEngine, usmUser,
+                                         usmAuthProto, usmAuthKey,
+                                         securityEngineId=securityEngineId)
 
                 else:
-                    config.addV3User(snmpEngine, usmUser)
+                    config.addV3User(snmpEngine, usmUser, securityEngineId=securityEngineId)
 
                 snmpEngineMap['securityName'][securityName] = securityModel
 
