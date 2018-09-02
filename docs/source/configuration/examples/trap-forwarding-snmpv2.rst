@@ -2,8 +2,8 @@
 TRAP forwarder, SNMPv2c
 =======================
 
-In this configuration SNMP Proxy Forwarder performs SNMP TRAP forwarding not
-changing SNMP version on the way.
+In this configuration SNMP Proxy Forwarder performs SNMPv2c TRAP
+forwarding without SNMP version change along the way.
 
 .. note::
 
@@ -20,7 +20,7 @@ You could test this configuration by running:
 
 .. code-block:: bash
 
-    $ snmptrap -v2c -c public 127.0.0.1:1161 12345 1.3.6.1.2.5 sysDescr s myagent
+    $ snmptrap -v2c -c public 127.0.0.1:1162 12345 1.3.6.1.2.5 sysDescr s myagent
 
 .. toctree::
    :maxdepth: 2
@@ -34,16 +34,6 @@ Server is configured to:
 * expect SNMP TRAP packets sent over SNMPv2c, community name "public"
 * forward all queries to snmpfwd client through an unencrypted trunk connection
   running in *client* mode
-
-.. warning::
-
-    Since SNMP TRAP is always a one-way communication, SNMPv3 parties can't
-    negotiate authoritative SNMP engine ID automatically which is used
-    for authentication and encryption purposes.
-
-    When SNMPv3 authentication or encryption services are being used, it is
-    required to statically configure SNMP engine ID of the TRAP sender
-    at SNMP Proxy Forwarder server configuration.
 
 .. literalinclude:: /../../conf/trap-forwarding-snmpv2c/server.conf
 

@@ -115,6 +115,14 @@ to the SNMP engine instance serving this request.
 from incoming SNMP request. Should match the *snmp-security-name* configured
 to the SNMP engine instance serving this request.
 
+.. _snmp-security-engine-id-macro:
+
+*snmp-security-engine-id*
++++++++++++++++++++++++++
+
+`SNMP Security Engine ID <https://tools.ietf.org/html/rfc3412#section-7.1>`_ value
+from incoming SNMP request.
+
 .. _snmp-context-engine-id-macro:
 
 *snmp-context-engine-id*

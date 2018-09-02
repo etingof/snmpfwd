@@ -11,7 +11,7 @@ from pysnmp.proto import rfc1905
 from snmpfwd.trunking import crypto
 from snmpfwd.error import SnmpfwdError
 
-PROTOCOL_VERSION = 2
+PROTOCOL_VERSION = 3
 
 MSG_TYPE_REQUEST = 0
 MSG_TYPE_RESPONSE = 1
@@ -42,6 +42,7 @@ class Request(univ.Sequence):
         namedtype.NamedType('snmp-security-model', univ.Integer()),
         namedtype.NamedType('snmp-security-level', univ.Integer()),
         namedtype.NamedType('snmp-security-name', univ.OctetString()),
+        namedtype.NamedType('snmp-security-engine-id', univ.OctetString()),
         namedtype.NamedType('snmp-context-engine-id', univ.OctetString()),
         namedtype.NamedType('snmp-context-name', univ.OctetString()),
         namedtype.NamedType('snmp-pdu', univ.OctetString()),
@@ -101,6 +102,7 @@ def prepareRequestData(msgId, req, secret):
               'snmp-security-model',
               'snmp-security-level',
               'snmp-security-name',
+              'snmp-security-engine-id',
               'snmp-context-engine-id',
               'snmp-context-name',
               'snmp-credentials-id',
@@ -217,6 +219,7 @@ def prepareDataElements(octets, secret):
                   'snmp-security-model',
                   'snmp-security-level',
                   'snmp-security-name',
+                  'snmp-security-engine-id',
                   'snmp-context-engine-id',
                   'snmp-context-name',
                   'snmp-credentials-id',

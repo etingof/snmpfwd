@@ -316,7 +316,6 @@ def main():
                 # except error.StatusInformation:
                 #         log.error('processPdu: stateReference %s, statusInformation %s' % (stateReference, sys.exc_info()[1]))
 
-
     class LogString(LazyLogString):
 
         GROUPINGS = [
@@ -368,6 +367,15 @@ def main():
 
         log.error(logMsg)
 
+    def usmRequestObserver(snmpEngine, execpoint, variables, cbCtx):
+
+        trunkReq = {
+            'snmp-security-engine-id': variables['securityEngineId']
+        }
+
+        cbCtx.clear()
+        cbCtx.update(trunkReq)
+
     def requestObserver(snmpEngine, execpoint, variables, cbCtx):
 
         trunkReq = {
@@ -384,6 +392,12 @@ def main():
             'snmp-context-engine-id': variables['contextEngineId'],
             'snmp-context-name': variables['contextName'],
         }
+
+        try:
+            trunkReq['snmp-security-engine-id'] = cbCtx.pop('snmp-security-engine-id')
+
+        except KeyError:
+            pass
 
         trunkReq['snmp-credentials-id'] = macro.expandMacro(
             credIdMap.get(
@@ -640,6 +654,12 @@ Software documentation and support at http://snmplabs.com/snmpfwd/
                 cbCtx=gCurrentRequestContext
             )
 
+            snmpEngine.observer.registerObserver(
+                usmRequestObserver,
+                'rfc3414.processIncomingMsg',
+                cbCtx=gCurrentRequestContext
+            )
+
             CommandResponder(snmpEngine, snmpContext)
 
             NotificationReceiver(snmpEngine, None)
@@ -717,7 +737,14 @@ Software documentation and support at http://snmplabs.com/snmpfwd/
                 log.info('using USM security-name: %s' % securityName)
             else:
                 usmUser = cfgTree.getAttrValue('snmp-usm-user', *configEntryPath)
-                log.info('new USM user %s, security-model %s, security-level %s, security-name %s' % (usmUser, securityModel, securityLevel, securityName))
+                securityEngineId = cfgTree.getAttrValue('snmp-security-engine-id', *configEntryPath,
+                                                        **dict(default=None))
+                if securityEngineId:
+                    securityEngineId = rfc1902.OctetString(securityEngineId)
+
+                log.info('new USM user %s, security-model %s, security-level %s, '
+                         'security-name %s, security-engine-id %s' % (usmUser, securityModel, securityLevel,
+                                                                      securityName, securityEngineId and securityEngineId.prettyPrint() or '<none>'))
 
                 if securityLevel in (2, 3):
                     usmAuthProto = cfgTree.getAttrValue('snmp-usm-auth-protocol', *configEntryPath, **dict(default=config.usmHMACMD5AuthProtocol))
@@ -742,14 +769,18 @@ Software documentation and support at http://snmplabs.com/snmpfwd/
                         config.addV3User(
                             snmpEngine, usmUser,
                             usmAuthProto, usmAuthKey,
-                            usmPrivProto, usmPrivKey
+                            usmPrivProto, usmPrivKey,
+                            securityEngineId=securityEngineId
                         )
 
                     else:
-                        config.addV3User(snmpEngine, usmUser, usmAuthProto, usmAuthKey)
+                        config.addV3User(snmpEngine, usmUser,
+                                         usmAuthProto, usmAuthKey,
+                                         securityEngineId=securityEngineId)
 
                 else:
-                    config.addV3User(snmpEngine, usmUser)
+                    config.addV3User(snmpEngine, usmUser,
+                                     securityEngineId=securityEngineId)
 
                 snmpEngineMap['securityName'][securityName] = securityModel
 

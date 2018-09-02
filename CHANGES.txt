@@ -1,7 +1,9 @@
 
-Revision 0.3.4, released XX-07-2018
+Revision 0.3.4, released XX-09-2018
 -----------------------------------
 
+- Missing *snmp-security-engine-id* option implemented
+  in the server part to make SNMPv3 TRAP forwarding operational
 - Bumped upper Python version to 3.7
 
 Revision 0.3.3, released 16-04-2018
