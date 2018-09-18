@@ -397,7 +397,8 @@ def main():
             trunkReq['snmp-security-engine-id'] = cbCtx.pop('snmp-security-engine-id')
 
         except KeyError:
-            pass
+            # SNMPv1/v2c
+            trunkReq['snmp-security-engine-id'] = trunkReq['snmp-engine-id']
 
         trunkReq['snmp-credentials-id'] = macro.expandMacro(
             credIdMap.get(
