@@ -209,9 +209,13 @@ def main():
 
             if messageProcessingModel == 0:
                 pdu = rfc2576.v1ToV2(pdu)
+                #get varBinds from original trap
+                orig_varbinds = v2c.apiTrapPDU.getVarBinds(pdu)
 
                 # TODO: why this is not automatic?
                 v2c.apiTrapPDU.setDefaults(pdu)
+                #replace varBinds from original traps
+                v2c.apiTrapPDU.setVarBinds(pdu, orig_varbinds)
 
             trunkReq['snmp-pdu'] = pdu
 
