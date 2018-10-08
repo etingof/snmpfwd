@@ -73,6 +73,6 @@ Client is configured to:
     table at the receiving end must be configured to accept messages from
     *snmp-engine-id*.
 
-.. literalinclude:: /../../conf/trap-forwarding-snmpv2c/client.conf
+.. literalinclude:: /../../conf/trap-forwarding-snmpv3/client.conf
 
-:download:`Download </../../conf/trap-forwarding-snmpv2c/client.conf>` client configuration file.
+:download:`Download </../../conf/trap-forwarding-snmpv3/client.conf>` client configuration file.

@@ -235,6 +235,30 @@ Identifier that logically groups SNMP configuration settings together.
 
     Must be unique within SNMP engine instance (e.g. `snmp-engine-id`_).
 
+.. _snmp-security-engine-id-client-option:
+
+*snmp-security-engine-id*
++++++++++++++++++++++++++
+
+The authoritative (security) SNMPv3 Engine ID to use when sending SNMPv3
+messages to SNMP peers. For SNMP Commands it is not necessary to specify
+*snmp-security-engine-id* engine ID of the authoritative SNMP engine, as the
+engine ID of the receiving SNMP entity will normally be discovered
+automatically. In rare cases, if SNMP Engine ID discovery is disabled,
+configuring *snmp-security-engine-id* may be necessary.
+
+It might make sense to override *snmp-engine-id* with
+*snmp-security-engine-id* when sending SNMPv3 TRAP notifications. The reason
+can be to preserve original engine ID of the SNMP entity sending SNMPv3 TRAP.
+
+Example:
+
+.. code-block:: bash
+
+    {
+        snmp-security-engine-id: 0x0102030405070809
+    }
+
 .. _snmp-community-name-client-option:
 
 *snmp-community-name*

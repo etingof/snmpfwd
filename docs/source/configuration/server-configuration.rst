@@ -211,14 +211,13 @@ Identifier that logically groups SNMP configuration settings together.
 +++++++++++++++++++++++++
 
 The authoritative (security) SNMPv3 Engine ID to use when receiving SNMPv3
-messages from SNMP peers. For most cases it is not necessary to specify
-this engine ID, as it will usually be  discovered automatically.
+messages from SNMP peers. For receiving SNMP Commands, it is not necessary to
+specify *snmp-security-engine-id* engine ID, as *snmp-engine-id* might suffice.
 
-.. note::
-
-   It is absolutely essential to configure *snmp-security-engine-id* when
-   receiving SNMPv3 TRAP notifications. The reason is that TRAP is a
-   unidirectional message, that makes SNMP engine ID autodiscovery impossible.
+However, it is absolutely essential to configure *snmp-security-engine-id*
+matching SNMP engine ID of the SNMP entity sending SNMPv3 TRAP (known as
+*authoritative* SNMP engine). The reason is that TRAP is a unidirectional
+message what makes automatic SNMP engine ID discovery impossible.
 
 Example:
 
@@ -227,6 +226,11 @@ Example:
     {
         snmp-security-engine-id: 0x0102030405070809
     }
+
+.. warning::
+
+   SNMPv3 TRAP reception will not work unless SNMP engine ID of the
+   authoritative SNMP engine is configured as *snmp-security-engine-id*.
 
 .. _snmp-community-name-server-option:
 
