@@ -673,9 +673,14 @@ Software documentation and support at http://snmplabs.com/snmpfwd/
                     raise SnmpfwdError('security-name %s already in use at security-model %s' % (securityName, securityModel))
             else:
                 usmUser = cfgTree.getAttrValue('snmp-usm-user', *peerEntryPath)
+                securityEngineId = cfgTree.getAttrValue('snmp-security-engine-id', *peerEntryPath,
+                                                        **dict(default=None))
+                if securityEngineId:
+                    securityEngineId = rfc1902.OctetString(securityEngineId)
 
                 log.info('new USM user %s, security-model %s, security-level %s, '
-                         'security-name %s' % (usmUser, securityModel, securityLevel, securityName))
+                         'security-name %s, security-engine-id %s' % (usmUser, securityModel, securityLevel,
+                                                                      securityName, securityEngineId and securityEngineId.prettyPrint() or '<none>'))
 
                 if securityLevel in (2, 3):
                     usmAuthProto = cfgTree.getAttrValue('snmp-usm-auth-protocol', *peerEntryPath, **dict(default=config.usmHMACMD5AuthProtocol))
