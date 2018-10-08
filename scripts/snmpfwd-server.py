@@ -210,9 +210,6 @@ def main():
             if messageProcessingModel == 0:
                 pdu = rfc2576.v1ToV2(pdu)
 
-                # TODO: why this is not automatic?
-                v2c.apiTrapPDU.setDefaults(pdu)
-
             trunkReq['snmp-pdu'] = pdu
 
             pluginIdList = trunkReq['plugins-list']
