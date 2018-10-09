@@ -5,6 +5,7 @@ Revision 0.3.4, released XX-10-2018
 - Missing *snmp-security-engine-id* option implemented
   in the server part to make SNMPv3 TRAP forwarding operational
 - Added SNMPv2c->SNMPv3 command forwarder example configuration
+- TRAP forwarding examples made more versatile
 - Bumped upper Python version to 3.7
 - Fixed v1->v2c TRAP PDU translation in snmpfwd server
 

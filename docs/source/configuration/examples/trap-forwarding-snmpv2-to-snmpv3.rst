@@ -1,9 +1,9 @@
 
-TRAP forwarder, SNMPv2c
-=======================
+TRAP forwarder, SNMPv2c to SNMPv3
+=================================
 
-In this configuration SNMP Proxy Forwarder performs SNMPv2c TRAP
-forwarding without SNMP version change along the way.
+In this configuration SNMP Proxy Forwarder receives SNMPv2c TRAP PDU
+and forwards it as SNMPv3 TRAP PDU.
 
 .. note::
 
@@ -35,9 +35,9 @@ Server is configured to:
 * forward all queries to snmpfwd client through an unencrypted trunk connection
   running in *client* mode
 
-.. literalinclude:: /../../conf/trap-forwarding-snmpv2c/server.conf
+.. literalinclude:: /../../conf/trap-forwarding-snmpv2c-to-snmpv3/server.conf
 
-:download:`Download </../../conf/trap-forwarding-snmpv2c/server.conf>` server configuration file.
+:download:`Download </../../conf/trap-forwarding-snmpv2c-to-snmpv3/server.conf>` server configuration file.
 
 Client configuration
 --------------------
@@ -45,7 +45,7 @@ Client configuration
 Client is configured to:
 
 * listen on server-mode unencrypted trunk connection
-* place inbound TRAP PDUs into SNMP v2c messages and forward them to public
+* place inbound TRAP PDUs into SNMP v3 messages and forward them to public
   SNMP manager running at *demo.snmplabs.com*
 
 .. warning::
@@ -54,10 +54,16 @@ Client is configured to:
     negotiate authoritative SNMP engine ID automatically which is used
     for authentication and encryption purposes.
 
-    When SNMPv3 authentication or encryption services are being used, it is
-    required to statically configure SNMP engine ID of the TRAP receiver
-    at SNMP Proxy Forwarder client configuration.
+    When SNMPv3 authentication or encryption services are being used,
+    *snmp-engine-id* of the client SNMP engine becomes the authoritative
+    SNMP engine ID for the purpose of sending SNMPv3 TRAP. If the
+    :ref:`snmp-security-engine-id <snmp-security-engine-id-client-option>`
+    is configured, it overrides :ref:`snmp-engine-id <snmp-engine-id-client-option>`
+    for the purpose of sending SNMP v3 notifications.
 
-.. literalinclude:: /../../conf/trap-forwarding-snmpv2c/client.conf
+    The USM user table at the receiving end must be configured to accept
+    messages from *snmp-engine-id* or *snmp-security-engine-id*.
 
-:download:`Download </../../conf/trap-forwarding-snmpv2c/client.conf>` client configuration file.
+.. literalinclude:: /../../conf/trap-forwarding-snmpv2c-to-snmpv3/client.conf
+
+:download:`Download </../../conf/trap-forwarding-snmpv2c-to-snmpv3/client.conf>` client configuration file.

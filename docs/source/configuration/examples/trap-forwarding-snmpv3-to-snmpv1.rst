@@ -1,9 +1,9 @@
 
-TRAP forwarder, SNMPv3
-======================
+TRAP forwarder, SNMPv3 to SNMPv1
+================================
 
-In this configuration SNMP Proxy Forwarder performs SNMPv3 TRAP forwarding
-without SNMP version change along the way.
+In this configuration SNMP Proxy Forwarder receives SNMPv3 TRAP PDU
+and forwards it as SNMPv1 TRAP PDU.
 
 .. note::
 
@@ -48,9 +48,9 @@ Server is configured to:
     (also known as *authoritative* SNMP engine ID) to match SNMP engine ID of
     the SNMP engine sending SNMP TRAP message.
 
-.. literalinclude:: /../../conf/trap-forwarding-snmpv3/server.conf
+.. literalinclude:: /../../conf/trap-forwarding-snmpv3-to-snmpv1/server.conf
 
-:download:`Download </../../conf/trap-forwarding-snmpv3/server.conf>` server configuration file.
+:download:`Download </../../conf/trap-forwarding-snmpv3-to-snmpv1/server.conf>` server configuration file.
 
 Client configuration
 --------------------
@@ -58,21 +58,9 @@ Client configuration
 Client is configured to:
 
 * listen on server-mode unencrypted trunk connection
-* place inbound TRAP PDUs into SNMP v3 messages and forward them to public
+* place inbound TRAP PDUs into SNMP v1 messages and forward them to public
   SNMP manager running at *demo.snmplabs.com*
 
-.. warning::
+.. literalinclude:: /../../conf/trap-forwarding-snmpv3-to-snmpv1/client.conf
 
-    Since SNMP TRAP is always a one-way communication, SNMPv3 parties can't
-    negotiate authoritative SNMP engine ID automatically which is used
-    for authentication and encryption purposes.
-
-    When SNMPv3 authentication or encryption services are being used,
-    *snmp-engine-id* of the client SNMP engine becomes the authoritative
-    SNMP engine ID for the purpose of sending SNMPv3 TRAP. The USM user
-    table at the receiving end must be configured to accept messages from
-    *snmp-engine-id*.
-
-.. literalinclude:: /../../conf/trap-forwarding-snmpv3/client.conf
-
-:download:`Download </../../conf/trap-forwarding-snmpv3/client.conf>` client configuration file.
+:download:`Download </../../conf/trap-forwarding-snmpv3-to-snmpv1/client.conf>` client configuration file.
