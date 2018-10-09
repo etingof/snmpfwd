@@ -105,15 +105,23 @@ Recognized OID prefixes are:
 
 Any integer value can serve as OID suffix.
 
-Example:
+Examples:
 
 .. code-block:: bash
 
     snmp-transport-domain: 1.3.6.1.6.1.1.123
-    snmp-bind-address: 127.0.0.1:5555
+    snmp-bind-address: 0.0.0.0:0
 
 Where *1.3.6.1.6.1.1* identifies UDP-over-IPv4 transport and *123* identifies
-transport endpoint listening at address 127.0.0.1, UDP port 5555.
+transport endpoint bound to a primary local IPv4 interface, any available UDP port.
+
+.. code-block:: bash
+
+    snmp-transport-domain: 1.3.6.1.2.1.100.1.2.123
+    snmp-bind-address: [::0]:0
+
+Here *1.3.6.1.2.1.100.1.2* identifies UDP-over-IPv6 transport and *123* identifies
+transport endpoint bound to a primary local IPv6 interface, any available UDP port.
 
 .. _snmp-transport-options-client-option:
 

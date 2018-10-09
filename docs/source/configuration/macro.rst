@@ -215,3 +215,8 @@ network addresses. The spoofing part can be captured by configuring a macro:
 
         ... the rest of SNMP options
     }
+
+.. warning::
+
+   For spoofing to succeed *snmp-transport-domain* types should belong to the
+   same address family e.g. UDP/IPv4 or UDP/IPv6.
