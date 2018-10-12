@@ -443,14 +443,15 @@ maintained for the purpose of relaying SNMP messages.
 *trunk-bind-address*
 ++++++++++++++++++++
 
-Local network endpoint address to bind trunk connection to.
+Local IPv4 or IPv6 network endpoint address to bind trunk connection to.
 
 .. _trunk-peer-address-server-option:
 
 *trunk-peer-address*
 ++++++++++++++++++++
 
-Remote network endpoint address to connect to when establishing trunk connection.
+Remote IPv4 or IPv6 network endpoint address to connect to when establishing
+trunk connection.
 
 .. _trunk-ping-period-server-option:
 
@@ -509,15 +510,15 @@ clients.
     trunking-group {
       trunk-crypto-key: 1234567890
 
-      host-A {
-        trunk-bind-address: 127.0.0.1
-        trunk-peer-address: 127.0.0.1:30301
+      connect-over-ipv6 {
+        trunk-bind-address: [::1]
+        trunk-peer-address: [::1]:30301
         trunk-connection-mode: client
 
         trunk-id: servertrunk
       }
 
-      interface-1 {
+      listen-on-ipv4 {
         trunk-bind-address: 127.0.0.1:30201
         trunk-connection-mode: server
 
