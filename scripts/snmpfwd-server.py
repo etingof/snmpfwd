@@ -31,7 +31,7 @@ from pysnmp.proto.api import v1, v2c
 from pyasn1 import debug as pyasn1_debug
 from pysnmp import debug as pysnmp_debug
 from snmpfwd.error import SnmpfwdError
-from snmpfwd import log, daemon, cparser, macro
+from snmpfwd import log, daemon, cparser, macro, endpoint
 from snmpfwd.plugins.manager import PluginManager
 from snmpfwd.plugins import status
 from snmpfwd.trunking.manager import TrunkingManager
@@ -671,27 +671,34 @@ Software documentation and support at http://snmplabs.com/snmpfwd/
         transportDomain = cfgTree.getAttrValue('snmp-transport-domain', *configEntryPath)
         transportDomain = rfc1902.ObjectName(transportDomain)
 
+        if (transportDomain[:len(udp.domainName)] != udp.domainName and
+                udp6 and transportDomain[:len(udp6.domainName)] != udp6.domainName):
+            log.error('unknown transport domain %s' % (transportDomain,))
+            return
+
         if transportDomain in snmpEngineMap['transportDomain']:
             h, p, transportDomain = snmpEngineMap['transportDomain'][transportDomain]
-            log.info('using transport endpoint %s:%s, transport ID %s' % (h, p, transportDomain))
+            log.info('using transport endpoint [%s]:%s, transport ID %s' % (h, p, transportDomain))
+
         else:
-            if transportDomain[:len(udp.domainName)] == udp.domainName:
-                transport = udp.UdpTransport()
-            elif transportDomain[:len(udp6.domainName)] == udp6.domainName:
-                transport = udp6.Udp6Transport()
-            else:
-                log.error('unknown transport domain %s' % (transportDomain,))
-                return
-
-            h, p = cfgTree.getAttrValue('snmp-bind-address', *configEntryPath).split(':', 1)
-
-            snmpEngine.registerTransportDispatcher(
-                transportDispatcher, transportDomain
-            )
+            bindAddr = cfgTree.getAttrValue('snmp-bind-address', *configEntryPath)
 
             transportOptions = cfgTree.getAttrValue('snmp-transport-options', *configEntryPath, **dict(default=[], vector=True))
 
-            t = transport.openServerMode((h, int(p)))
+            try:
+                bindAddr, bindAddrMacro = endpoint.parseTransportAddress(transportDomain, bindAddr,
+                                                                         transportOptions)
+
+            except SnmpfwdError:
+                log.error('bad snmp-bind-address specification %s at %s' % (bindAddr, '.'.join(configEntryPath)))
+                return
+
+            if transportDomain[:len(udp.domainName)] == udp.domainName:
+                transport = udp.UdpTransport()
+            else:
+                transport = udp6.Udp6Transport()
+
+            t = transport.openServerMode(bindAddr)
 
             if 'transparent-proxy' in transportOptions:
                 t.enablePktInfo()
@@ -699,11 +706,15 @@ Software documentation and support at http://snmplabs.com/snmpfwd/
             elif 'virtual-interface' in transportOptions:
                 t.enablePktInfo()
 
+            snmpEngine.registerTransportDispatcher(
+                transportDispatcher, transportDomain
+            )
+
             config.addSocketTransport(snmpEngine, transportDomain, t)
 
-            snmpEngineMap['transportDomain'][transportDomain] = h, p, transportDomain
+            snmpEngineMap['transportDomain'][transportDomain] = bindAddr, transportDomain
 
-            log.info('new transport endpoint %s:%s, options %s, transport ID %s' % (h, p, transportOptions and '/'.join(transportOptions) or '<none>', transportDomain))
+            log.info('new transport endpoint [%s]:%s, options %s, transport ID %s' % (bindAddr[0], bindAddr[1], transportOptions and '/'.join(transportOptions) or '<none>', transportDomain))
 
         configKey.append(transportDomain)
 

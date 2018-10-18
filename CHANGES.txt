@@ -1,7 +1,10 @@
 
-Revision 0.3.4, released XX-10-2018
+Revision 0.4.1, released XX-10-2018
 -----------------------------------
 
+- Added IPv6 support to SNMP engines built into snmpfwd server
+  and client effectively allowing IP version translation of the
+  SNMP traffic
 - Missing *snmp-security-engine-id* option implemented
   in the server part to make SNMPv3 TRAP forwarding operational
 - Added SNMPv2c->SNMPv3 command forwarder example configuration
