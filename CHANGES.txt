@@ -1,5 +1,5 @@
 
-Revision 0.4.1, released XX-10-2018
+Revision 0.4.1, released 18-10-2018
 -----------------------------------
 
 - Added IPv6 support to SNMP engines built into snmpfwd server
