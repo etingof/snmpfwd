@@ -36,6 +36,7 @@ from snmpfwd import log, daemon, cparser, endpoint
 from snmpfwd.plugins.manager import PluginManager
 from snmpfwd.plugins import status
 from snmpfwd.trunking.manager import TrunkingManager
+from snmpfwd.trunking.endpoint import parseTrunkEndpoint
 from snmpfwd.lazylog import LazyLogString
 
 # Settings
@@ -837,13 +838,6 @@ Software documentation and support at http://snmplabs.com/snmpfwd/
 
     trunkingManager = TrunkingManager(trunkCbFun)
 
-    def getTrunkAddr(a, port=0):
-        f = lambda h, p=port: (h, int(p))
-        try:
-            return f(*a.split(':'))
-        except Exception:
-            raise SnmpfwdError('improper IPv4 endpoint %s' % a)
-
     for trunkCfgPath in cfgTree.getPathsToAttr('trunk-id'):
         trunkId = cfgTree.getAttrValue('trunk-id', *trunkCfgPath)
         secret = cfgTree.getAttrValue('trunk-crypto-key', *trunkCfgPath, **dict(default=''))
@@ -853,15 +847,15 @@ Software documentation and support at http://snmplabs.com/snmpfwd/
         if connectionMode == 'client':
             trunkingManager.addClient(
                 trunkId,
-                getTrunkAddr(cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath)),
-                getTrunkAddr(cfgTree.getAttrValue('trunk-peer-address', *trunkCfgPath), 30201),
+                parseTrunkEndpoint(cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath)),
+                parseTrunkEndpoint(cfgTree.getAttrValue('trunk-peer-address', *trunkCfgPath), 30201),
                 cfgTree.getAttrValue('trunk-ping-period', *trunkCfgPath, default=0, expect=int),
                 secret
             )
             log.info('new trunking client from %s to %s' % (cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath), cfgTree.getAttrValue('trunk-peer-address', *trunkCfgPath)))
         if connectionMode == 'server':
             trunkingManager.addServer(
-                getTrunkAddr(cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath), 30201),
+                parseTrunkEndpoint(cfgTree.getAttrValue('trunk-bind-address', *trunkCfgPath), 30201),
                 cfgTree.getAttrValue('trunk-ping-period', *trunkCfgPath, default=0, expect=int),
                 secret
             )

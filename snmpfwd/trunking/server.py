@@ -15,15 +15,16 @@ from pyasn1.compat.octets import null
 
 class TrunkingSuperServer(asyncore.dispatcher):
     def __init__(self, localEndpoint, secret, dataCbFun, ctlCbFun, ctlCbCtx):
-        self.__localEndpoint = localEndpoint
+        localAf, self.__localEndpoint = localEndpoint[0], localEndpoint[1:]
         self.__secret = secret
         self.__dataCbFun = dataCbFun
         self.__ctlCbFun = ctlCbFun
         self.__ctlCbCtx = ctlCbCtx
+
         asyncore.dispatcher.__init__(self)
 
         try: 
-            self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.create_socket(localAf, socket.SOCK_STREAM)
             self.socket.setsockopt(
                 socket.SOL_SOCKET, socket.SO_SNDBUF, 65535
             )
@@ -32,8 +33,9 @@ class TrunkingSuperServer(asyncore.dispatcher):
             )
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.bind(localEndpoint)
+            self.bind(self.__localEndpoint)
             self.listen(10)
+
         except socket.error:
             raise error.SnmpfwdError('%s socket error: %s' % (self, sys.exc_info()[1]))
 

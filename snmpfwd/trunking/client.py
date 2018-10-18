@@ -17,18 +17,22 @@ class TrunkingClient(asyncore.dispatcher_with_send):
     isUp = False
 
     def __init__(self, localEndpoint, remoteEndpoint, secret, dataCbFun):
-        self.__localEndpoint = localEndpoint
-        self.__remoteEndpoint = remoteEndpoint
+        localAf, self.__localEndpoint = localEndpoint[0], localEndpoint[1:]
+        remoteAf, self.__remoteEndpoint = remoteEndpoint[0], remoteEndpoint[1:]
         self.__secret = secret
         self.__dataCbFun = dataCbFun
         self.__pendingReqs = {}
         self.__pendingCounter = 0
         self.__input = null
         self.__announcementData = null
+
+        if localAf != remoteAf:
+            raise error.SnmpfwdError('%s: mismatching address family')
+
         asyncore.dispatcher_with_send.__init__(self)
 
-        try: 
-            self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            self.create_socket(localAf, socket.SOCK_STREAM)
             self.socket.setsockopt(
                 socket.SOL_SOCKET, socket.SO_SNDBUF, 65535
             )
@@ -36,8 +40,9 @@ class TrunkingClient(asyncore.dispatcher_with_send):
                 socket.SOL_SOCKET, socket.SO_RCVBUF, 65535
             )
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-            self.bind(localEndpoint)
-            self.connect(remoteEndpoint)
+            self.bind(self.__localEndpoint)
+            self.connect(self.__remoteEndpoint)
+
         except socket.error:
             raise error.SnmpfwdError('%s socket error: %s' % (self, sys.exc_info()[1]))
 
