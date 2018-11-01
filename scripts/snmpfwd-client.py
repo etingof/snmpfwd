@@ -344,7 +344,7 @@ def main():
 
                     except PySnmpError:
                         errorIndication = 'failure sending SNMP notification'
-                        log.error(errorIndication, ctx=logCtx)
+                        log.error('trunk message #%s, SNMP error: %s' % (msgId, sys.exc_info()[1]), ctx=logCtx)
 
                     else:
                         errorIndication = None
@@ -367,7 +367,7 @@ def main():
                         snmpMessageSent = True
 
                     except PySnmpError:
-                        log.error('failure sending SNMP notification', ctx=logCtx)
+                        log.error('trunk message #%s, SNMP error: %s' % (msgId, sys.exc_info()[1]), ctx=logCtx)
 
             elif pdu.tagSet not in rfc3411.unconfirmedClassPDUs:
                 try:
@@ -385,7 +385,7 @@ def main():
 
                 except PySnmpError:
                     errorIndication = 'failure sending SNMP command'
-                    log.error(errorIndication, ctx=logCtx)
+                    log.error('trunk message #%s, SNMP error: %s' % (msgId, sys.exc_info()[1]), ctx=logCtx)
 
                     # respond to trunk right away
                     snmpCbFun(snmpEngine, None, errorIndication, None, cbCtx)

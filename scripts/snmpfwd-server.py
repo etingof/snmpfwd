@@ -120,7 +120,7 @@ def main():
                         self.sendPdu(snmpEngine, stateReference, pdu)
 
                     except PySnmpError:
-                        log.error('failure sending SNMP response', ctx=logCtx)
+                        log.error('failure sending SNMP response: %s' % sys.exc_info()[1], ctx=logCtx)
 
                     else:
                         self.releaseStateInformation(stateReference)
@@ -186,7 +186,8 @@ def main():
                     self.sendPdu(snmpEngine, stateReference, pdu)
 
                 except PySnmpError:
-                    log.error('failure sending SNMP response', ctx=logCtx)
+                    log.error('trunk message #%s, SNMP response error: %s' % (msgId, sys.exc_info()[1]),
+                              ctx=logCtx)
 
                 else:
                     log.debug('received trunk message #%s, forwarded as SNMP message' % msgId, ctx=logCtx)
