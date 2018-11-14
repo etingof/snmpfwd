@@ -3,6 +3,8 @@ Revision 0.4.2, released XX-11-2018
 -----------------------------------
 
 - SNMP error logging improved
+- Fixed snmpfwd-server crash when multiple SNMP credentials are
+  configured for a single transport endpoint
 
 Revision 0.4.1, released 18-10-2018
 -----------------------------------

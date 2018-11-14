@@ -679,8 +679,8 @@ Software documentation and support at http://snmplabs.com/snmpfwd/
             return
 
         if transportDomain in snmpEngineMap['transportDomain']:
-            h, p, transportDomain = snmpEngineMap['transportDomain'][transportDomain]
-            log.info('using transport endpoint [%s]:%s, transport ID %s' % (h, p, transportDomain))
+            bindAddr, transportDomain = snmpEngineMap['transportDomain'][transportDomain]
+            log.info('using transport endpoint [%s]:%s, transport ID %s' % (bindAddr[0], bindAddr[1], transportDomain))
 
         else:
             bindAddr = cfgTree.getAttrValue('snmp-bind-address', *configEntryPath)
