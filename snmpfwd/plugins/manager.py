@@ -30,41 +30,40 @@ class PluginManager(object):
                 log.error('directory "%s" does not exist' % pluginModulesDir)
                 continue
 
-            mod = os.path.join(pluginModulesDir, pluginModuleName + '.py')
-            if not os.path.exists(mod):
-                log.error('Variation module "%s" not found' % mod)
+            modPath = os.path.join(pluginModulesDir, pluginModuleName + '.py')
+            if not os.path.exists(modPath):
+                log.error('Variation module "%s" not found' % modPath)
                 continue
             
-            ctx = {'modulePath': mod,
+            ctx = {'modulePath': modPath,
                    'moduleContext': {},
                    'moduleOptions': pluginOptions}
 
+            modData = open(modPath).read()
+
             try:
-                if sys.version_info[0] > 2:
-                    exec(compile(open(mod).read(), mod, 'exec'), ctx)
-                else:
-                    execfile(mod, ctx)
+                exec(compile(modData, modPath, 'exec'), ctx)
 
             except Exception:
-                raise error.SnmpfwdError('plugin module "%s" execution failure: %s' % (mod, sys.exc_info()[1]))
+                raise error.SnmpfwdError('plugin module "%s" execution failure: %s' % (modPath, sys.exc_info()[1]))
 
             else:
                 pluginModule = ctx
                 try:
                     if self.__progId not in pluginModule['hostProgs']:
-                        log.error('ignoring plugin module "%s" (unmatched program ID)' % mod)
+                        log.error('ignoring plugin module "%s" (unmatched program ID)' % modPath)
                         continue
 
                     if self.__apiVer not in pluginModule['apiVersions']:
-                        log.error('ignoring plugin module "%s" (incompatible API version)' % mod)
+                        log.error('ignoring plugin module "%s" (incompatible API version)' % modPath)
                         continue
                 except KeyError:
-                    log.error('ignoring plugin module "%s" (missing versioning info)' % mod)
+                    log.error('ignoring plugin module "%s" (missing versioning info)' % modPath)
                     continue
                     
                 self.__plugins[pluginId] = pluginModule
 
-                log.info('plugin module "%s" loaded' % mod)
+                log.info('plugin module "%s" loaded' % modPath)
                 break
 
         else:
