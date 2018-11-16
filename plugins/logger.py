@@ -51,23 +51,51 @@ for moduleOption in moduleOptions:
             rotation = config.get('file', 'rotation')
 
             if rotation == 'timed':
+
+                class TimedRotatingFileHandler(handlers.TimedRotatingFileHandler):
+                    """Store log creation time in a stand-alone file''s mtime"""
+                    def __init__(self, *args, **kwargs):
+                        handlers.TimedRotatingFileHandler.__init__(self, *args, **kwargs)
+
+                        try:
+                            timestamp = os.stat(self.__filename)[stat.ST_MTIME]
+
+                        except IOError:
+                            return
+
+                        # Use a stand-aside file metadata time instead of the last
+                        # modification of the log file itself, as the stock
+                        # implementation does.
+                        # This is to work-around the increasing rotation intervals
+                        # on process restart.
+                        self.rolloverAt = self.computeRollover(timestamp)
+
+                    @property
+                    def __filename(self):
+                        return os.path.join(
+                            os.path.dirname(self.baseFilename),
+                            '.' + os.path.basename(self.baseFilename) + '-timestamp'
+                        )
+
+                    def doRollover(self):
+                        handlers.TimedRotatingFileHandler.doRollover(self)
+
+                        try:
+                            # note log file creation time
+                            open(self.__filename, 'w').close()
+
+                        except IOError:
+                            pass
+
+
                 filename = config.get('file', 'destination')
 
-                handler = handlers.TimedRotatingFileHandler(
+                handler = TimedRotatingFileHandler(
                     filename,
                     config.get('file', 'timescale'),
                     int(config.get('file', 'interval')),
                     int(config.get('file', 'backupcount'))
                 )
-
-                # Use file metadata change time instead of last modification
-                # time as the stock implementation does.
-                # This is to work-around the increasing rotation intervals
-                # on process restart.
-                # Warning: this is based on undocumented logger features.
-                if os.path.exists(filename):
-                    createdAt = os.stat(filename)[stat.ST_CTIME]
-                    handler.rolloverAt = handler.computeRollover(createdAt)
 
             else:
                 raise SnmpfwdError('%s: unknown rotation method %s at %s' % (PLUGIN_NAME, rotation, configFile))

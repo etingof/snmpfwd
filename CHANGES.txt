@@ -2,7 +2,8 @@
 Revision 0.4.3, released XX-11-2018
 -----------------------------------
 
-No changed yet
+- Fixed timed log file rotation in the `logger` plugin to respect
+  log file creation time when computing next rotation time
 
 Revision 0.4.2, released 14-11-2018
 -----------------------------------
