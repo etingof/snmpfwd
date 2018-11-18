@@ -139,7 +139,7 @@ elif method == 'syslog':
     except KeyError:
         raise SnmpfwdError('%s: unknown syslog transport at %s' % (PLUGIN_NAME, configFile))
 
-    facility = config.get('syslog', 'facility').upper()
+    facility = config.get('syslog', 'facility').lower()
     syslog_host = config.get('syslog', 'host')
     syslog_port = int(config.get('syslog', 'port'))
 

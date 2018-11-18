@@ -292,7 +292,7 @@ This configuration forwards important facts about passing SNMP RESPONSE PDUs to 
     method: syslog
 
     [syslog]
-    facility: LOCAL1
+    facility: local1
     priority: INFO
     transport: udp
 
