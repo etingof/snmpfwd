@@ -36,12 +36,22 @@ options in form of *section.option*.
 *general.method*
 ++++++++++++++++
 
-The logging method: either *file* or *syslog*.
+The logging method:
+
+* snmpfwd - log through main snmpfwd process (default)
+* file - log into a local file
+* syslog - log through local or remote syslog service
+* null - inhibit any logging
+
+*general.level*
++++++++++++++++
+
+Minimal log level to log messages at. Valid values are *debug*, *info* and *error*. Default is *info*.
 
 *file.destination*
 ++++++++++++++++++
 
-Sets path to log file.
+Sets path to a log file.
 
 *file.rotation*
 +++++++++++++++
@@ -51,7 +61,7 @@ Sets the criterion for log file rotation. Valid value is *timed*.
 *file.backupcount*
 ++++++++++++++++++
 
-Sets the limit for rotated files being kept on the filesystem.
+Sets the limit for rotated files to keep on the filesystem. Default is *30*.
 
 *file.timescale*
 ++++++++++++++++
@@ -62,29 +72,59 @@ file rotation. Valid values are:
 * S - *file.interval* is measured in seconds
 * M - *file.interval* is measured in minutes
 * H - *file.interval* is measured in hours
-* D - *file.interval* is measured in days
+* D - *file.interval* is measured in days (default)
 
 *file.interval*
 +++++++++++++++
 
 Together with the *file.timescale* option defines the frequency of
-file rotation.
-
-*syslog.facility*
-+++++++++++++++++
-
-Sets the syslog service facility to use for messages being generated.
-
-*syslog.priority*
-+++++++++++++++++
-
-Sets syslog service priority for the messages being generated. Valid values are *DEBUG*,
-*INFO*, *NOTICE*, *ERROR*, *CRITICAL*.
+file rotation. Default is *1*.
 
 *syslog.transport*
 ++++++++++++++++++
 
-Sets network transport to use by the syslog client to talk to the syslog service.
+Use either *udp* (default) or *tcp* transport for syslog messages.
+
+*syslog.facility*
++++++++++++++++++
+
+Use this syslog service facility. Valid values are:
+
+* *auth*
+* *cron*
+* *daemon* (default)
+* *ftp*
+* *kern*
+* *lpr*
+* *mail*
+* *news*
+* *user*
+* *uucp*
+* *local0* .. *local7*
+
+*syslog.priority*
++++++++++++++++++
+
+Use this syslog service priority. Valid values are:
+
+* Emergency
+* Alert
+* Critical
+* Error
+* Warning
+* Notice
+* Info (default)
+* Debug
+
+*syslog.host*
++++++++++++++
+
+Use syslog service running on *host*. Default is *localhost*.
+
+*syslog.port*
++++++++++++++
+
+Use syslog service running on *host* at port *port*. Default is *514*.
 
 *content.pdus*
 ++++++++++++++
@@ -97,14 +137,28 @@ Sets SNMP PDU types to process. Non-matching PDUs will not be logged. Valid PDU 
 ++++++++++++++++++
 
 Log message template optionally containing `macros`_ to be expanded in the context of
-passing SNMP message.
+passing SNMP message. Additionally to common macros, the following macros specific
+to the `logger` plugin are defined:
+
+* *snmp-var-binds* -- variable-binding pairs that PDU contains
+* *snmp-pdu-type* -- SNMP PDU type
+* *asctime* -- current date/time in default time zone
+* *isotime* -- current date/time in UTC time zone
+* *timestamp* -- current time in seconds from epoch
+* *uptime* -- seconds elapsed since snmpfwd process start
+
+The default is:
+
+.. code-block:: bash
+
+   ${isotime} ${callflow-id} ${snmp-peer-address} ${snmp-pdu-type} ${snmp-var-binds}
 
 *content.parentheses*
 +++++++++++++++++++++
 
 Values in SNMP PDU variable-bindings may contain whitespaces. The *parentheses* option
 may contain two characters or strings which will surround each value in the variable-bindings
-being logged.
+being logged. Default is double quotes (")
 
 .. _logger-macros:
 
