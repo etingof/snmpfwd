@@ -128,8 +128,7 @@ if method == 'file':
         logger.addHandler(handler)
 
     else:
-        raise SnmpfwdError('%s: unknown rotation method '
-                           '%s at %s' % (PLUGIN_NAME, rotation, configFile))
+        raise SnmpfwdError('%s: unknown rotation method %s' % (PLUGIN_NAME, rotation))
 
 elif method == 'syslog':
 
@@ -137,7 +136,7 @@ elif method == 'syslog':
         transport = SYSLOG_TRANSPORTS[config.get('syslog', 'transport')]
 
     except KeyError:
-        raise SnmpfwdError('%s: unknown syslog transport at %s' % (PLUGIN_NAME, configFile))
+        raise SnmpfwdError('%s: unknown syslog transport' % PLUGIN_NAME)
 
     facility = config.get('syslog', 'facility').lower()
     syslog_host = config.get('syslog', 'host')
@@ -170,7 +169,7 @@ elif method == 'null':
     logger.addHandler(handler)
 
 else:
-    raise SnmpfwdError('%s: unknown logging method %s at %s' % (PLUGIN_NAME, method, configFile))
+    raise SnmpfwdError('%s: unknown logging method %s' % (PLUGIN_NAME, method))
 
 level = config.get('general', 'level').upper()
 
