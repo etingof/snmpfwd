@@ -125,7 +125,6 @@ if method == 'file':
             int(config.get('file', 'interval')),
             int(config.get('file', 'backupcount'))
         )
-        logger.addHandler(handler)
 
     else:
         raise SnmpfwdError('%s: unknown rotation method %s' % (PLUGIN_NAME, rotation))
@@ -146,7 +145,6 @@ elif method == 'syslog':
         address=(syslog_host, syslog_port),
         facility=facility,
         socktype=transport)
-    logger.addHandler(handler)
 
 elif method == 'snmpfwd':
 
@@ -159,25 +157,25 @@ elif method == 'snmpfwd':
         def __str__(self):
             return PLUGIN_NAME
 
-        def setLevel(self, *args):
-            return
-
+    handler = None
     logger = ProxyLogger()
 
 elif method == 'null':
     handler = logging.NullHandler()
-    logger.addHandler(handler)
 
 else:
     raise SnmpfwdError('%s: unknown logging method %s' % (PLUGIN_NAME, method))
 
 level = config.get('general', 'level').upper()
 
-try:
-    logger.setLevel(getattr(logging, level))
+if handler:
+    try:
+        handler.setLevel(getattr(logging, level))
 
-except AttributeError:
-    raise SnmpfwdError('%s: unknown log level %s' % (PLUGIN_NAME, level))
+    except AttributeError:
+        raise SnmpfwdError('%s: unknown log level %s' % (PLUGIN_NAME, level))
+
+    logger.addHandler(handler)
 
 template = config.get('content', 'template')
 
