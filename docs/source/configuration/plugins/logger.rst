@@ -83,7 +83,8 @@ file rotation. Default is *1*.
 *syslog.transport*
 ++++++++++++++++++
 
-Use either *udp* (default) or *tcp* transport for syslog messages.
+Use *udp* or *tcp* or *socket* (default) transport for syslog messages. Absolute
+path to the syslog device can also be configured (e.g. */dev/log*).
 
 *syslog.facility*
 +++++++++++++++++
@@ -119,12 +120,14 @@ Use this syslog service priority. Valid values are:
 *syslog.host*
 +++++++++++++
 
-Use syslog service running on *host*. Default is *localhost*.
+Use syslog service running on *host* when `syslog.transport`_ is *tcp* or *udp*.
+Default is *localhost*.
 
 *syslog.port*
 +++++++++++++
 
-Use syslog service running on *host* at port *port*. Default is *514*.
+Use syslog service listening on *port* when `syslog.transport`_ is *tcp* or *udp*.
+Default is *514*.
 
 *content.pdus*
 ++++++++++++++
@@ -137,15 +140,7 @@ Sets SNMP PDU types to process. Non-matching PDUs will not be logged. Valid PDU 
 ++++++++++++++++++
 
 Log message template optionally containing `macros`_ to be expanded in the context of
-passing SNMP message. Additionally to common macros, the following macros specific
-to the `logger` plugin are defined:
-
-* *snmp-var-binds* -- variable-binding pairs that PDU contains
-* *snmp-pdu-type* -- SNMP PDU type
-* *asctime* -- current date/time in default time zone
-* *isotime* -- current date/time in UTC time zone
-* *timestamp* -- current time in seconds from epoch
-* *uptime* -- seconds elapsed since snmpfwd process start
+passing SNMP message.
 
 The default is:
 

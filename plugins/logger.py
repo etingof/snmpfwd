@@ -39,8 +39,8 @@ DEFAULTS = {
     'interval': 1,
 
     # syslog
-    'transport': 'udp',
-    'facility': 'DAEMON',
+    'transport': 'socket',
+    'facility': 'daemon',
     'host': 'localhost',
     'port': 514,
 
@@ -56,6 +56,11 @@ SYSLOG_TRANSPORTS = {
     'udp': socket.SOCK_DGRAM,
     'tcp': socket.SOCK_STREAM
 }
+
+SYSLOG_SOCKET_PATHS = (
+    '/dev/log',
+    '/var/run/syslog'
+)
 
 PDU_MAP = {}
 
@@ -131,18 +136,34 @@ if method == 'file':
 
 elif method == 'syslog':
 
-    try:
-        transport = SYSLOG_TRANSPORTS[config.get('syslog', 'transport')]
+    transport = config.get('syslog', 'transport')
 
-    except KeyError:
-        raise SnmpfwdError('%s: unknown syslog transport' % PLUGIN_NAME)
+    if transport in SYSLOG_TRANSPORTS:
+        address = (
+            config.get('syslog', 'host'),
+            int(config.get('syslog', 'port'))
+        )
+
+    else:
+        address = None
+
+        for dev in SYSLOG_SOCKET_PATHS:
+            if os.path.exists(dev):
+                address = dev
+                transport = None
+                break
+
+        if transport and transport.startswith(os.path.sep):
+            address = transport
+            transport = None
+
+        if not address:
+            raise SnmpfwdError('Unknown syslog transport configured')
 
     facility = config.get('syslog', 'facility').lower()
-    syslog_host = config.get('syslog', 'host')
-    syslog_port = int(config.get('syslog', 'port'))
 
     handler = handlers.SysLogHandler(
-        address=(syslog_host, syslog_port),
+        address=address,
         facility=facility,
         socktype=transport)
 
