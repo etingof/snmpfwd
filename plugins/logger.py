@@ -187,14 +187,19 @@ elif method == 'null':
 else:
     raise SnmpfwdError('%s: unknown logging method %s' % (PLUGIN_NAME, method))
 
-level = config.get('general', 'level').upper()
-
 if handler:
+    level = config.get('general', 'level').upper()
+
     try:
-        handler.setLevel(getattr(logging, level))
+        level = getattr(logging, level)
 
     except AttributeError:
         raise SnmpfwdError('%s: unknown log level %s' % (PLUGIN_NAME, level))
+
+    handler.setLevel(level)
+
+    # set logger level if this is a root logger (i.e. separate from snmpfwd)
+    logger.setLevel(level)
 
     logger.addHandler(handler)
 
