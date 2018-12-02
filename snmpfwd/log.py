@@ -66,6 +66,8 @@ class FileLogger(AbstractLogger):
         def __init__(self, *args, **kwargs):
             handlers.TimedRotatingFileHandler.__init__(self, *args, **kwargs)
 
+            self.__failure = False
+
             try:
                 timestamp = os.stat(self.__filename)[stat.ST_MTIME]
 
@@ -96,12 +98,17 @@ class FileLogger(AbstractLogger):
 
                 open(self.__filename, 'w').close()
 
+                self.__failure = False
+
             except IOError:
                 # File rotation seems to fail, postpone the next run
                 timestamp = time.time()
                 self.rolloverAt = self.computeRollover(timestamp)
 
-                error('Failed to rotate log/timestamp file %s: %s' % (self.__filename, sys.exc_info()[1]))
+                if not self.__failure:
+                    self.__failure = True
+                    error('Failed to rotate log/timestamp file '
+                          '%s: %s' % (self.__filename, sys.exc_info()[1]))
 
     def init(self, *priv):
         if not priv:
