@@ -553,15 +553,17 @@ Software documentation and support at http://snmplabs.com/snmpfwd/
         elif opt[0] == '--config-file':
             cfgFile = opt[1]
 
-    try:
-        log.setLogger(PROGRAM_NAME, *loggingMethod, **dict(force=True))
+    with daemon.PrivilegesOf(procUser, procGroup):
 
-        if loggingLevel:
-            log.setLevel(loggingLevel)
+        try:
+            log.setLogger(PROGRAM_NAME, *loggingMethod, **dict(force=True))
 
-    except SnmpfwdError:
-        sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-        return
+            if loggingLevel:
+                log.setLevel(loggingLevel)
+
+        except SnmpfwdError:
+            sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+            return
 
     try:
         cfgTree = cparser.Config().load(cfgFile)
@@ -616,12 +618,14 @@ Software documentation and support at http://snmplabs.com/snmpfwd/
 
         log.info('configuring plugin ID %s (at %s) from module %s with options %s...' % (pluginId, '.'.join(pluginCfgPath), pluginMod, ', '.join(pluginOptions) or '<none>'))
 
-        try:
-            pluginManager.loadPlugin(pluginId, pluginMod, pluginOptions)
+        with daemon.PrivilegesOf(procUser, procGroup):
 
-        except SnmpfwdError:
-            log.error('plugin %s not loaded: %s' % (pluginId, sys.exc_info()[1]))
-            return
+            try:
+                pluginManager.loadPlugin(pluginId, pluginMod, pluginOptions)
+
+            except SnmpfwdError:
+                log.error('plugin %s not loaded: %s' % (pluginId, sys.exc_info()[1]))
+                return
 
     for configEntryPath in cfgTree.getPathsToAttr('snmp-credentials-id'):
         credId = cfgTree.getAttrValue('snmp-credentials-id', *configEntryPath)
@@ -939,13 +943,6 @@ Software documentation and support at http://snmplabs.com/snmpfwd/
         trunkingManager.monitorTrunks, random.randrange(1, 5)
     )
 
-    try:
-        daemon.dropPrivileges(procUser, procGroup)
-
-    except Exception:
-        log.error('can not drop privileges: %s' % sys.exc_info()[1])
-        return
-
     if not foregroundFlag:
         try:
             daemon.daemonize(pidFile)
@@ -962,17 +959,19 @@ Software documentation and support at http://snmplabs.com/snmpfwd/
 
     # Python 2.4 does not support the "finally" clause
 
-    while True:
-        try:
-            transportDispatcher.runDispatcher()
+    with daemon.PrivilegesOf(procUser, procGroup, final=True):
 
-        except (PySnmpError, SnmpfwdError, socket.error):
-            log.error(str(sys.exc_info()[1]))
-            continue
+        while True:
+            try:
+                transportDispatcher.runDispatcher()
 
-        except Exception:
-            transportDispatcher.closeDispatcher()
-            raise
+            except (PySnmpError, SnmpfwdError, socket.error):
+                log.error(str(sys.exc_info()[1]))
+                continue
+
+            except Exception:
+                transportDispatcher.closeDispatcher()
+                raise
 
 
 if __name__ == '__main__':

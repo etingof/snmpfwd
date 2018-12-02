@@ -2,12 +2,12 @@
 Revision 0.4.3, released XX-11-2018
 -----------------------------------
 
-- Added `snmpfwd`, `syslog` and `null` destinations to the `logger` plugin.
-  Most parameters has been defaulted.
-- Fixed timed log file rotation in the `logger` plugin to respect
-  log file creation time when computing next rotation time. Also moved
-  custom time-based rotation code from logger plugin into snmpfwd
-  package for code reuse.
+- Added `snmpfwd`, `syslog` and `null` destinations to the `logger` plugin,
+  most parameters has been defaulted
+- Fixed timed log file rotation to respect log file creation time when
+  computing next rotation time
+- Fixed possible file permission issues by initializing logger and plugin
+  subsystems under reduced user privileges
 
 Revision 0.4.2, released 14-11-2018
 -----------------------------------
