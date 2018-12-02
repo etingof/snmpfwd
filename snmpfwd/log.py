@@ -68,23 +68,28 @@ class FileLogger(AbstractLogger):
         maxsize = 0
         maxage = None
         if len(priv) > 1 and priv[1]:
-            if priv[1][-1] == 'k':
-                maxsize = int(priv[1][:-1]) * 1024
-            elif priv[1][-1] == 'm':
-                maxsize = int(priv[1][:-1]) * 1024 * 1024
-            elif priv[1][-1] == 'g':
-                maxsize = int(priv[1][:-1]) * 1024 * 1024 * 1024
-            elif priv[1][-1] == 'S':
-                maxage = ('S', int(priv[1][:-1]))
-            elif priv[1][-1] == 'M':
-                maxage = ('M', int(priv[1][:-1]))
-            elif priv[1][-1] == 'H':
-                maxage = ('H', int(priv[1][:-1]))
-            elif priv[1][-1] == 'D':
-                maxage = ('D', int(priv[1][:-1]))
-            else:
+            try:
+                if priv[1][-1] == 'k':
+                    maxsize = int(priv[1][:-1]) * 1024
+                elif priv[1][-1] == 'm':
+                    maxsize = int(priv[1][:-1]) * 1024 * 1024
+                elif priv[1][-1] == 'g':
+                    maxsize = int(priv[1][:-1]) * 1024 * 1024 * 1024
+                elif priv[1][-1] == 'S':
+                    maxage = ('S', int(priv[1][:-1]))
+                elif priv[1][-1] == 'M':
+                    maxage = ('M', int(priv[1][:-1]))
+                elif priv[1][-1] == 'H':
+                    maxage = ('H', int(priv[1][:-1]))
+                elif priv[1][-1] == 'D':
+                    maxage = ('D', int(priv[1][:-1]))
+                else:
+                    raise ValueError('Unknown log rotation criterion: %s' % priv[1][-1])
+
+            except ValueError:
                 raise SnmpfwdError(
-                    'Unknown log rotation criteria %s, use <NNN>k,m,g for size or <NNN>S,M,H,D for time limits' % priv[1]
+                    'Error in timed log rotation specification. Use <NNN>k,m,g '
+                    'for size or <NNN>S,M,H,D for time limits'
                 )
 
         try:
@@ -95,9 +100,9 @@ class FileLogger(AbstractLogger):
             else:
                 handler = handlers.WatchedFileHandler(priv[0])
 
-        except AttributeError:
+        except Exception:
             raise SnmpfwdError(
-                'Bad log rotation criteria: %s' % sys.exc_info()[1]
+                'Failure configure logging: %s' % sys.exc_info()[1]
             )
 
         handler.setFormatter(logging.Formatter('%(message)s'))
