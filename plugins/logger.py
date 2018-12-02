@@ -10,6 +10,7 @@ import logging
 from logging import handlers
 import time
 import os
+import sys
 import socket
 import stat
 try:
@@ -116,9 +117,13 @@ if method == 'file':
 
                 try:
                     # note log file creation time
+                    if os.path.exists(self.__filename):
+                        os.unlink(self.__filename)
+
                     open(self.__filename, 'w').close()
 
                 except IOError:
+                    logger.warning('Failed to update timestamp file %s: %s' % (self.__filename, sys.exc_info()[1]))
                     pass
 
 
