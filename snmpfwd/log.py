@@ -4,9 +4,11 @@
 # Copyright (c) 2014-2018, Ilya Etingof <etingof@gmail.com>
 # License: http://snmplabs.com/snmpfwd/license.html
 #
+import os
 import sys
 import logging
 import socket
+import stat
 import time
 from logging import handlers
 from snmpfwd.error import SnmpfwdError
@@ -57,6 +59,46 @@ class SyslogLogger(AbstractLogger):
 
 
 class FileLogger(AbstractLogger):
+
+    class TimedRotatingFileHandler(handlers.TimedRotatingFileHandler):
+        """Store log creation time in a stand-alone file''s mtime"""
+
+        def __init__(self, *args, **kwargs):
+            handlers.TimedRotatingFileHandler.__init__(self, *args, **kwargs)
+
+            try:
+                timestamp = os.stat(self.__filename)[stat.ST_MTIME]
+
+            except IOError:
+                return
+
+            # Use a stand-aside file metadata time instead of the last
+            # modification of the log file itself, as the stock
+            # implementation does.
+            # This is to work-around the increasing rotation intervals
+            # on process restart.
+            self.rolloverAt = self.computeRollover(timestamp)
+
+        @property
+        def __filename(self):
+            return os.path.join(
+                os.path.dirname(self.baseFilename),
+                '.' + os.path.basename(self.baseFilename) + '-timestamp'
+            )
+
+        def doRollover(self):
+            handlers.TimedRotatingFileHandler.doRollover(self)
+
+            try:
+                # note log file creation time
+                if os.path.exists(self.__filename):
+                    os.unlink(self.__filename)
+
+                open(self.__filename, 'w').close()
+
+            except IOError:
+                error('Failed to update timestamp file %s: %s' % (self.__filename, sys.exc_info()[1]))
+
     def init(self, *priv):
         if not priv:
             raise SnmpfwdError('Bad log file params, need filename')
@@ -96,7 +138,7 @@ class FileLogger(AbstractLogger):
             if maxsize:
                 handler = handlers.RotatingFileHandler(priv[0], backupCount=30, maxBytes=maxsize)
             elif maxage:
-                handler = handlers.TimedRotatingFileHandler(priv[0], backupCount=30, when=maxage[0], interval=maxage[1])
+                handler = self.TimedRotatingFileHandler(priv[0], backupCount=30, when=maxage[0], interval=maxage[1])
             else:
                 handler = handlers.WatchedFileHandler(priv[0])
 
