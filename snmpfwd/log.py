@@ -87,9 +87,9 @@ class FileLogger(AbstractLogger):
             )
 
         def doRollover(self):
-            handlers.TimedRotatingFileHandler.doRollover(self)
-
             try:
+                handlers.TimedRotatingFileHandler.doRollover(self)
+
                 # note log file creation time
                 if os.path.exists(self.__filename):
                     os.unlink(self.__filename)
@@ -97,7 +97,11 @@ class FileLogger(AbstractLogger):
                 open(self.__filename, 'w').close()
 
             except IOError:
-                error('Failed to update timestamp file %s: %s' % (self.__filename, sys.exc_info()[1]))
+                # File rotation seems to fail, postpone the next run
+                timestamp = time.time()
+                self.rolloverAt = self.computeRollover(timestamp)
+
+                error('Failed to rotate log/timestamp file %s: %s' % (self.__filename, sys.exc_info()[1]))
 
     def init(self, *priv):
         if not priv:
