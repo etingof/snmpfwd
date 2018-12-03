@@ -41,7 +41,7 @@ class SyslogLogger(AbstractLogger):
     def init(self, *priv):
         if len(priv) < 1:
             raise SnmpfwdError('Bad syslog params, need at least facility, also accept '
-                               'priority, host, port, socktype (tcp|udp)')
+                               'host, port, socktype (tcp|udp)')
         if len(priv) < 2:
             priv = [priv[0], 'debug']
         if len(priv) < 3:
@@ -53,6 +53,7 @@ class SyslogLogger(AbstractLogger):
                     break
             else:
                 priv = [priv[0], priv[1], 'localhost', 514, 'udp']
+
         if not priv[2].startswith('/'):
             if len(priv) < 4:
                 priv = [priv[0], priv[1], priv[2], 514, 'udp']
@@ -61,7 +62,11 @@ class SyslogLogger(AbstractLogger):
             priv = [priv[0], priv[1], priv[2], int(priv[3]), priv[4]]
 
         try:
-            handler = handlers.SysLogHandler(priv[2].startswith('/') and priv[2] or (priv[2], int(priv[3])), priv[0].lower(), len(priv) > 4 and priv[4] == 'tcp' and socket.SOCK_STREAM or socket.SOCK_DGRAM)
+            handler = handlers.SysLogHandler(
+                address=priv[2].startswith('/') and priv[2] or (priv[2], int(priv[3])),
+                facility=priv[0].lower(),
+                socktype=len(priv) > 4 and priv[4] == 'tcp' and socket.SOCK_STREAM or socket.SOCK_DGRAM
+            )
 
         except Exception:
             raise SnmpfwdError('Bad syslog option(s): %s' % sys.exc_info()[1])

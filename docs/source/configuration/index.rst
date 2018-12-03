@@ -118,15 +118,14 @@ The *syslog* logging method requires the following sub-options:
 
 .. code-block:: bash
 
-    --logging-method=syslog:facility[:priority[:dest[:port:[tcp|udp]]]]
+    --logging-method=syslog:facility[:address[:port:[tcp|udp]]]]
 
 Where:
 
 * *facility* -- one of the recognized syslog service `facilities <https://en.wikipedia.org/wiki/Syslog#Facility>`_
-* *priority* -- one of recognized syslog service `priorities <https://en.wikipedia.org/wiki/Syslog#Severity_level>`_ (optional)
-* *dest* -- can be either an absolute path to a local socket or network address where syslog service is listening (optional)
-* *port* -- if network address of the syslog service is used for *dest*, *port* be a TCP or UDP port number (optional)
-* *tcp* or *udp* -- TCP or UDP network protocol to use (optional)
+* *address* -- can be either an absolute path to a local socket or network address where syslog service is listening (optional)
+* *port* -- if network address of the syslog service is used for *address*, *port* be a TCP or UDP port number (optional)
+* *tcp* or *udp* -- TCP (stream) or UDP (datagram) protocol to use for syslog service communication (optional)
 
 **--logging-method=file**
 ~~~~~~~~~~~~~~~~~~~~~~~~~
