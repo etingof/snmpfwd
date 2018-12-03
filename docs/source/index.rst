@@ -3,7 +3,7 @@ SNMP Proxy Forwarder
 ====================
 
 The SNMP Proxy Forwarder tool is a standards-compliant, flexible,
-multiprotocol SNMP proxy implementation.
+multi-protocol SNMP proxy implementation.
 
 Key features:
 
@@ -55,9 +55,10 @@ plugins and let SNMP Proxy Forwarder calling them.
 Configuration
 -------------
 
-The system is driven by configuration files. Depending on the desired system's
-configuration, the complexity of configuration files can vary. We maintain a
-collection of use-cases and example configurations implementing them.
+The system is driven by command-line options and configuration files. Depending
+on the desired system's configuration, the complexity of configuration files can
+vary. We maintain a collection of use-cases and example configurations implementing
+them.
 
 .. toctree::
    :maxdepth: 2
