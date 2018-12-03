@@ -33,13 +33,26 @@ class AbstractLogger(object):
 
 
 class SyslogLogger(AbstractLogger):
+    SYSLOG_SOCKET_PATHS = (
+        '/dev/log',
+        '/var/run/syslog'
+    )
+
     def init(self, *priv):
         if len(priv) < 1:
-            raise SnmpfwdError('Bad syslog params, need at least facility, also accept priority, host, port, socktype (tcp|udp)')
+            raise SnmpfwdError('Bad syslog params, need at least facility, also accept '
+                               'priority, host, port, socktype (tcp|udp)')
         if len(priv) < 2:
             priv = [priv[0], 'debug']
         if len(priv) < 3:
-            priv = [priv[0], priv[1], 'localhost', 514, 'udp']
+            # search for syslog local socket
+
+            for dev in self.SYSLOG_SOCKET_PATHS:
+                if os.path.exists(dev):
+                    priv = [priv[0], priv[1], dev]
+                    break
+            else:
+                priv = [priv[0], priv[1], 'localhost', 514, 'udp']
         if not priv[2].startswith('/'):
             if len(priv) < 4:
                 priv = [priv[0], priv[1], priv[2], 514, 'udp']
