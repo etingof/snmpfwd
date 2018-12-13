@@ -1,15 +1,15 @@
 
-Revision 0.4.3, released XX-12-2018
+Revision 0.4.3, released 13-12-2018
 -----------------------------------
 
 - Default daemon syslog service destination to a local socket
 - Updated documentation on daemons command-line options
-- Added `snmpfwd`, `syslog` and `null` destinations to the `logger` plugin,
-  most parameters has been defaulted
-- Fixed timed log file rotation to respect log file creation time when
-  computing next rotation time
-- Fixed possible file permission issues by initializing logger and plugin
-  subsystems under reduced user privileges
+- Added `snmpfwd`, `syslog` and `null` destinations to the `logger`
+  plugin, most parameters has been defaulted
+- Fixed timed log file rotation to respect log file creation time
+  when computing next rotation time
+- Fixed possible file permission issues by initializing logger
+  and plugin subsystems under reduced user privileges
 
 Revision 0.4.2, released 14-11-2018
 -----------------------------------
