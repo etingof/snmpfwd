@@ -55,7 +55,7 @@ try:
     from setuptools import setup
 
     params = {
-        'install_requires': ['pysnmp>=4.4.3', 'pycryptodomex'],
+        'install_requires': ['pysnmp>=4.4.3,<5.0.0', 'pycryptodomex'],
         'zip_safe': True
     }
 
@@ -69,7 +69,7 @@ except ImportError:
 
     params = {}
     if sys.version_info[:2] > (2, 4):
-        params['requires'] = ['pysnmp(>=4.4.3)', 'pycryptodomex']
+        params['requires'] = ['pysnmp(>=4.4.3,5.0.0)', 'pycryptodomex']
 
 doclines = [x.strip() for x in (__doc__ or '').split('\n') if x]
 
