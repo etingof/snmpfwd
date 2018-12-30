@@ -2,7 +2,8 @@
 Revision 0.4.4, released XX-12-2018
 -----------------------------------
 
-No changes yet
+- Fixed pysnmp/pyasn1 debugging flags print out in `--help` to work
+  with newer pyasn1/pysnmp
 
 Revision 0.4.3, released 13-12-2018
 -----------------------------------
