@@ -1,7 +1,8 @@
 
-Revision 0.4.4, released XX-12-2018
+Revision 0.4.4, released 30-12-2018
 -----------------------------------
 
+- Copyright notice bumped up to year 2019
 - Fixed pysnmp/pyasn1 debugging flags print out in `--help` to work
   with newer pyasn1/pysnmp
 
