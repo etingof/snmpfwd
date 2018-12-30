@@ -52,7 +52,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'SNMP Proxy Forwarder'
-copyright = 'Copyright (c) 2014-2018, Ilya Etingof'
+copyright = 'Copyright (c) 2014-2019, Ilya Etingof'
 author = 'Ilya Etingof'
 
 # The version info for the project you're documenting, acts as replacement for
