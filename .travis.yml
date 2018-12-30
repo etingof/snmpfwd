@@ -39,3 +39,6 @@ matrix:
 install:
   - pip install -r requirements.txt -r devel-requirements.txt
   - pip install -e .
+script:
+  - snmpfwd-client.py --help 2>&1 | grep Usage
+  - snmpfwd-server.py --help 2>&1 | grep Usage
