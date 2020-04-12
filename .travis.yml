@@ -8,13 +8,12 @@ matrix:
   - os: linux
     dist: trusty
     python: '2.7'
-# pycryptodomex seems to fail on AES import
-#  - os: linux
-#    dist: trusty
-#    python: '3.2'
-#  - os: linux
-#    dist: trusty
-#    python: '3.3'
+  - os: linux
+    dist: trusty
+    python: '3.2'
+  - os: linux
+    dist: trusty
+    python: '3.3'
   - os: linux
     dist: trusty
     python: '3.4'
